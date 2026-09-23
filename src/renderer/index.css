@@ -1,0 +1,106 @@
+:root {
+  --bg-app: #0F1117;
+  --bg-surface: #151821;
+  --bg-panel: #191D27;
+  --bg-hover: #222736;
+  --bg-active: #293042;
+  --border-color: #282D38;
+  --border-subtle: #1F232D;
+
+  --text-primary: #E6EAF2;
+  --text-secondary: #8B93A5;
+  --text-muted: #5B6376;
+
+  --accent: #6366F1;
+  --accent-hover: #818CF8;
+  --accent-bg: rgba(99, 102, 241, 0.15);
+
+  --success: #22C55E;
+  --warning: #F59E0B;
+  --error: #EF4444;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", Menlo, Monaco, "Courier New", monospace;
+
+  --titlebar-height: 38px;
+  --statusbar-height: 24px;
+  --activitybar-width: 48px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
+
+body, html, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139, 147, 165, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 147, 165, 0.4);
+}
+
+/* Inputs & Buttons */
+input, textarea, select {
+  font-family: inherit;
+  font-size: 12px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.15s ease;
+  user-select: text;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+}
+
+button {
+  font-family: inherit;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+/* App drag regions for macOS */
+.app-drag {
+  -webkit-app-region: drag;
+}
+
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
