@@ -5,12 +5,13 @@ import { useFilesStore } from '../stores/filesStore';
 import { FileTree } from './FileTree';
 
 export const FileExplorer: React.FC = () => {
-  const { rootPath, rootName, openFolderDialog, isLoading } = useWorkspaceStore();
+  const { rootPath, rootName, openFolderDialog, isLoading, error: workspaceError } = useWorkspaceStore();
   const {
     fileTree,
     loadWorkspaceTree,
     createFile,
     createDirectory,
+    error: filesError,
   } = useFilesStore();
 
   const [isCreatingFile, setIsCreatingFile] = useState(false);
@@ -19,10 +20,7 @@ export const FileExplorer: React.FC = () => {
   const [newFolderName, setNewFolderName] = useState('');
 
   const handleOpenFolder = async () => {
-    const selected = await openFolderDialog();
-    if (selected) {
-      await loadWorkspaceTree(selected);
-    }
+    await openFolderDialog();
   };
 
   const handleRefresh = async () => {
@@ -83,35 +81,79 @@ export const FileExplorer: React.FC = () => {
           {rootName ? rootName : 'Explorer'}
         </span>
 
-        {rootPath && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <button
-              onClick={() => setIsCreatingFile(true)}
-              title="New File"
-              style={{ padding: '3px', color: 'var(--text-muted)' }}
-            >
-              <FilePlus size={14} />
-            </button>
-            <button
-              onClick={() => setIsCreatingFolder(true)}
-              title="New Folder"
-              style={{ padding: '3px', color: 'var(--text-muted)' }}
-            >
-              <FolderPlus size={14} />
-            </button>
-            <button
-              onClick={handleRefresh}
-              title="Refresh Explorer"
-              style={{ padding: '3px', color: 'var(--text-muted)' }}
-            >
-              <RefreshCw size={13} />
-            </button>
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <button
+            onClick={handleOpenFolder}
+            title={rootPath ? 'Open Another Folder (⌘O)' : 'Open Folder (⌘O)'}
+            style={{ padding: '3px', color: 'var(--text-muted)' }}
+          >
+            <FolderOpen size={14} />
+          </button>
+          {rootPath && (
+            <>
+              <button
+                onClick={() => setIsCreatingFile(true)}
+                title="New File"
+                style={{ padding: '3px', color: 'var(--text-muted)' }}
+              >
+                <FilePlus size={14} />
+              </button>
+              <button
+                onClick={() => setIsCreatingFolder(true)}
+                title="New Folder"
+                style={{ padding: '3px', color: 'var(--text-muted)' }}
+              >
+                <FolderPlus size={14} />
+              </button>
+              <button
+                onClick={handleRefresh}
+                title="Refresh Explorer"
+                style={{ padding: '3px', color: 'var(--text-muted)' }}
+              >
+                <RefreshCw size={13} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Main Content */}
       <div style={{ flex: 1, overflowY: 'auto' }}>
+        {(workspaceError || filesError) && (
+          <div
+            style={{
+              margin: '8px',
+              padding: '8px 10px',
+              borderRadius: '6px',
+              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.3)',
+              fontSize: '11px',
+              color: '#F87171',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '6px',
+            }}
+          >
+            <span>{workspaceError || filesError}</span>
+            {rootPath && (
+              <button
+                onClick={handleRefresh}
+                style={{
+                  alignSelf: 'flex-start',
+                  padding: '2px 8px',
+                  borderRadius: '3px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.2)',
+                  color: '#ffffff',
+                  fontSize: '10px',
+                  cursor: 'pointer',
+                }}
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
+
         {!rootPath ? (
           <div
             style={{

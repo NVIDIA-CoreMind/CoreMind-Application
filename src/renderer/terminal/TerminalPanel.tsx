@@ -1,18 +1,32 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
-import { Trash2, X, Terminal as TerminalIcon } from 'lucide-react';
+import { Trash2, X, Terminal as TerminalIcon, RotateCcw, Folder } from 'lucide-react';
 import { useUiStore } from '../stores/uiStore';
+import { useWorkspaceStore } from '../stores/workspaceStore';
 
 export const TerminalPanel: React.FC = () => {
   const { toggleTerminal } = useUiStore();
+  const { rootPath, rootName } = useWorkspaceStore();
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const sessionIdRef = useRef<string>(`term-${Date.now()}`);
+  const [isConnected, setIsConnected] = useState(false);
 
-  useEffect(() => {
+  const initTerminal = useCallback(async () => {
     if (!terminalRef.current) return;
+
+    // Clean up previous instance if restarting
+    if (xtermRef.current) {
+      window.coreMindAPI.closeTerminal(sessionIdRef.current);
+      xtermRef.current.dispose();
+      xtermRef.current = null;
+    }
+
+    const sessionId = `term-${Date.now()}`;
+    sessionIdRef.current = sessionId;
 
     const term = new XTerm({
       cursorBlink: true,
@@ -20,10 +34,11 @@ export const TerminalPanel: React.FC = () => {
       fontFamily: '"JetBrains Mono", Menlo, Monaco, "Courier New", monospace',
       fontSize: 12,
       lineHeight: 1.3,
+      allowTransparency: true,
       theme: {
         background: '#151821',
         foreground: '#E6EAF2',
-        cursor: '#6366F1',
+        cursor: '#818CF8',
         selectionBackground: 'rgba(99, 102, 241, 0.3)',
         black: '#191D27',
         red: '#EF4444',
@@ -47,83 +62,99 @@ export const TerminalPanel: React.FC = () => {
     const fitAddon = new FitAddon();
     term.loadAddon(fitAddon);
 
+    // Clear DOM container before mounting
+    terminalRef.current.innerHTML = '';
     term.open(terminalRef.current);
-    fitAddon.fit();
 
     xtermRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    // CoreMind Welcome Banner
-    term.writeln('\x1b[1;35mCoreMind Terminal\x1b[0m — macOS Apple Silicon (arm64)');
-    term.writeln('\x1b[90mTerminal execution will be enabled in the next development phase (Phase 2 with node-pty).\x1b[0m');
-    term.writeln('\x1b[90mType "help" for a list of available built-in commands.\x1b[0m');
-    term.writeln('');
+    try {
+      fitAddon.fit();
+    } catch {
+      // ignore initial fit error before layout settles
+    }
 
-    let currentLine = '';
-    const prompt = () => term.write('\x1b[1;32mcoremind\x1b[0m:\x1b[1;34m~$\x1b[0m ');
-    prompt();
+    // Spawn backend PTY process
+    const res = await window.coreMindAPI.createTerminal(sessionId, {
+      cols: term.cols || 80,
+      rows: term.rows || 24,
+      cwd: rootPath || undefined,
+    });
 
-    const disposable = term.onData((data) => {
-      // Enter key
-      if (data === '\r') {
-        term.writeln('');
-        const trimmed = currentLine.trim();
+    if (res.success) {
+      setIsConnected(true);
+    } else {
+      term.writeln(`\x1b[31mFailed to start terminal: ${res.error.message}\x1b[0m`);
+    }
 
-        if (trimmed === 'clear') {
-          term.clear();
-        } else if (trimmed === 'help') {
-          term.writeln('  \x1b[1;33mclear\x1b[0m       - Clear terminal output');
-          term.writeln('  \x1b[1;33mstatus\x1b[0m      - Print CoreMind runtime info');
-          term.writeln('  \x1b[1;33marchitecture\x1b[0m- Display system architecture');
-          term.writeln('  \x1b[1;33mhelp\x1b[0m        - Show this message');
-        } else if (trimmed === 'status') {
-          term.writeln('  CoreMind IDE: \x1b[1;32mv0.1.0 (Phase 1 Foundation)\x1b[0m');
-          term.writeln('  Platform:     macOS Darwin');
-          term.writeln('  Target:       Apple Silicon M4 (arm64)');
-          term.writeln('  Status:       Ready');
-        } else if (trimmed === 'architecture') {
-          term.writeln('  Architecture: arm64 (Apple M4 Optimized)');
-          term.writeln('  Engine:       Electron + Vite + Monaco + xterm');
-        } else if (trimmed.length > 0) {
-          term.writeln(`  coremind: command not found: ${trimmed} (Live execution disabled in Phase 1)`);
-        }
+    // Forward keystrokes to PTY
+    const onDataDisposable = term.onData((data) => {
+      window.coreMindAPI.terminalWrite(sessionId, data);
+    });
 
-        currentLine = '';
-        prompt();
-      }
-      // Backspace
-      else if (data === '\u007F') {
-        if (currentLine.length > 0) {
-          currentLine = currentLine.slice(0, -1);
-          term.write('\b \b');
-        }
-      }
-      // Printable characters
-      else if (data >= ' ' && data <= '~') {
-        currentLine += data;
-        term.write(data);
+    // Listen for data from backend PTY
+    const removeDataListener = window.coreMindAPI.onTerminalData((payload) => {
+      if (payload.id === sessionIdRef.current && xtermRef.current) {
+        xtermRef.current.write(payload.data);
       }
     });
 
-    const handleResize = () => {
-      try {
-        fitAddon.fit();
-      } catch {
-        // Ignore fit error if unmounted
+    // Listen for process exit
+    const removeExitListener = window.coreMindAPI.onTerminalExit((payload) => {
+      if (payload.id === sessionIdRef.current && xtermRef.current) {
+        xtermRef.current.writeln(`\r\n\x1b[90m[Process completed (exit code ${payload.exitCode})]\x1b[0m\r\n`);
+        setIsConnected(false);
       }
-    };
-
-    window.addEventListener('resize', handleResize);
+    });
 
     return () => {
-      disposable.dispose();
-      window.removeEventListener('resize', handleResize);
+      onDataDisposable.dispose();
+      removeDataListener();
+      removeExitListener();
+      window.coreMindAPI.closeTerminal(sessionId);
       term.dispose();
     };
-  }, []);
+  }, [rootPath]);
+
+  useEffect(() => {
+    let cleanupFn: (() => void) | undefined;
+    initTerminal().then((cleanup) => {
+      cleanupFn = cleanup;
+    });
+
+    // Observe container resize for auto-fitting
+    const resizeObserver = new ResizeObserver(() => {
+      if (fitAddonRef.current && xtermRef.current) {
+        try {
+          fitAddonRef.current.fit();
+          const cols = xtermRef.current.cols;
+          const rows = xtermRef.current.rows;
+          if (cols > 0 && rows > 0) {
+            window.coreMindAPI.terminalResize(sessionIdRef.current, cols, rows);
+          }
+        } catch {
+          // ignore
+        }
+      }
+    });
+
+    if (terminalRef.current) {
+      resizeObserver.observe(terminalRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+      if (cleanupFn) cleanupFn();
+    };
+  }, [initTerminal]);
 
   const handleClear = () => {
     xtermRef.current?.clear();
+  };
+
+  const handleRestart = () => {
+    initTerminal();
   };
 
   return (
@@ -140,7 +171,7 @@ export const TerminalPanel: React.FC = () => {
       {/* Header */}
       <div
         style={{
-          height: '30px',
+          height: '32px',
           backgroundColor: 'var(--bg-app)',
           borderBottom: '1px solid var(--border-color)',
           display: 'flex',
@@ -149,25 +180,50 @@ export const TerminalPanel: React.FC = () => {
           padding: '0 12px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <TerminalIcon size={13} color="var(--accent)" />
           <span style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)' }}>
             TERMINAL
           </span>
+          <span
+            style={{
+              fontSize: '10px',
+              padding: '1px 6px',
+              borderRadius: '3px',
+              backgroundColor: isConnected ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+              color: isConnected ? '#22C55E' : '#EF4444',
+              fontWeight: 500,
+            }}
+          >
+            {isConnected ? 'zsh (active)' : 'offline'}
+          </span>
+          {rootName && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)', fontSize: '10px' }}>
+              <Folder size={11} />
+              <span>{rootName}</span>
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
-            onClick={handleClear}
-            title="Clear Terminal"
-            style={{ padding: '3px', color: 'var(--text-muted)' }}
+            onClick={handleRestart}
+            title="Restart Terminal Session"
+            style={{ padding: '4px', color: 'var(--text-muted)', borderRadius: '4px' }}
           >
-            <Trash2 size={13} />
+            <RotateCcw size={12} />
+          </button>
+          <button
+            onClick={handleClear}
+            title="Clear Terminal Output"
+            style={{ padding: '4px', color: 'var(--text-muted)', borderRadius: '4px' }}
+          >
+            <Trash2 size={12} />
           </button>
           <button
             onClick={toggleTerminal}
             title="Close Panel (⌘J)"
-            style={{ padding: '3px', color: 'var(--text-muted)' }}
+            style={{ padding: '4px', color: 'var(--text-muted)', borderRadius: '4px' }}
           >
             <X size={13} />
           </button>
@@ -179,7 +235,7 @@ export const TerminalPanel: React.FC = () => {
         ref={terminalRef}
         style={{
           flex: 1,
-          padding: '8px 12px',
+          padding: '6px 10px',
           overflow: 'hidden',
         }}
       />

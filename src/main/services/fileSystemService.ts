@@ -1,4 +1,5 @@
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import path from 'node:path';
 import { FileNode, FileSearchResult } from '../../shared/types/file';
 import { IpcResult } from '../../shared/types/ipc';
@@ -10,8 +11,8 @@ export class FileSystemService {
    */
   public validateWorkspacePath(targetPath: string, rootPath: string): boolean {
     if (!rootPath || !targetPath) return false;
-    const resolvedRoot = path.resolve(rootPath);
-    const resolvedTarget = path.resolve(targetPath);
+    const resolvedRoot = path.normalize(path.resolve(rootPath));
+    const resolvedTarget = path.normalize(path.resolve(targetPath));
 
     // Ensure target path starts with root path
     if (resolvedTarget === resolvedRoot) {
@@ -19,7 +20,20 @@ export class FileSystemService {
     }
 
     const relative = path.relative(resolvedRoot, resolvedTarget);
-    return !relative.startsWith('..') && !path.isAbsolute(relative);
+    if (!relative.startsWith('..') && !path.isAbsolute(relative)) {
+      return true;
+    }
+
+    // Fallback for macOS symlinks (e.g. /var vs /private/var, /tmp vs /private/tmp)
+    try {
+      const realRoot = fsSync.realpathSync(resolvedRoot);
+      const realTarget = fsSync.realpathSync(resolvedTarget);
+      if (realRoot === realTarget) return true;
+      const realRel = path.relative(realRoot, realTarget);
+      return !realRel.startsWith('..') && !path.isAbsolute(realRel);
+    } catch {
+      return false;
+    }
   }
 
   /**
@@ -48,12 +62,15 @@ export class FileSystemService {
         }
 
         const fullPath = path.join(dirPath, entry.name);
-        const isDirectory = entry.isDirectory();
+        let isDirectory = entry.isDirectory();
         let size: number | undefined;
         let lastModified: number | undefined;
 
         try {
           const stat = await fs.stat(fullPath);
+          if (entry.isSymbolicLink()) {
+            isDirectory = stat.isDirectory();
+          }
           size = stat.size;
           lastModified = stat.mtimeMs;
         } catch {

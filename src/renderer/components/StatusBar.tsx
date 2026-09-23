@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { GitBranch } from 'lucide-react';
+import React from 'react';
+import { Folder } from 'lucide-react';
 import { useTabsStore } from '../stores/tabsStore';
 import { useEditorStore } from '../stores/editorStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
@@ -7,34 +7,9 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 export const StatusBar: React.FC = () => {
   const { tabs, activeTabId } = useTabsStore();
   const { cursorPosition } = useEditorStore();
-  const { rootPath } = useWorkspaceStore();
-  const [gitBranch, setGitBranch] = useState<string | null>(null);
+  const { rootName } = useWorkspaceStore();
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
-
-  useEffect(() => {
-    let mounted = true;
-    async function checkGit() {
-      if (!rootPath) {
-        setGitBranch(null);
-        return;
-      }
-      try {
-        const res = await window.coreMindAPI.getGitStatus(rootPath);
-        if (mounted && res.success && res.data.isRepo) {
-          setGitBranch(res.data.branch);
-        } else if (mounted) {
-          setGitBranch(null);
-        }
-      } catch {
-        if (mounted) setGitBranch(null);
-      }
-    }
-    checkGit();
-    return () => {
-      mounted = false;
-    };
-  }, [rootPath]);
 
   return (
     <div
@@ -51,7 +26,7 @@ export const StatusBar: React.FC = () => {
         zIndex: 50,
       }}
     >
-      {/* Left: Status & Git */}
+      {/* Left: Status & Workspace */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
           <div
@@ -65,10 +40,10 @@ export const StatusBar: React.FC = () => {
           <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>Ready</span>
         </div>
 
-        {gitBranch && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <GitBranch size={12} color="var(--accent)" />
-            <span>{gitBranch}</span>
+        {rootName && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
+            <Folder size={12} color="var(--accent)" />
+            <span>{rootName}</span>
           </div>
         )}
       </div>

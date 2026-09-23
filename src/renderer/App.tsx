@@ -6,7 +6,7 @@ import { useUiStore } from './stores/uiStore';
 
 export const App: React.FC = () => {
   const { saveActiveTab, closeTab, activeTabId } = useTabsStore();
-  const { rootPath } = useWorkspaceStore();
+  const { rootPath, openFolderDialog, openWorkspacePath, restoreLastWorkspace } = useWorkspaceStore();
   const {
     toggleSidebar,
     toggleTerminal,
@@ -17,10 +17,61 @@ export const App: React.FC = () => {
     isQuickOpenOpen,
   } = useUiStore();
 
+  // Restore previous workspace on startup
+  useEffect(() => {
+    restoreLastWorkspace();
+  }, [restoreLastWorkspace]);
+
+  // Listen for Open Folder events from native macOS application menu
+  useEffect(() => {
+    const unsub = window.coreMindAPI?.onOpenWorkspacePath?.((path) => {
+      if (path) {
+        openWorkspacePath(path);
+      }
+    });
+    return () => unsub?.();
+  }, [openWorkspacePath]);
+
+  // Window drag & drop for opening folders from Finder
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer && e.dataTransfer.files.length > 0) {
+        const dropped = e.dataTransfer.files[0];
+        const filePath = (dropped as any).path;
+        if (filePath) {
+          openWorkspacePath(filePath);
+        }
+      }
+    };
+
+    window.addEventListener('dragover', handleDragOver);
+    window.addEventListener('drop', handleDrop);
+
+    return () => {
+      window.removeEventListener('dragover', handleDragOver);
+      window.removeEventListener('drop', handleDrop);
+    };
+  }, [openWorkspacePath]);
+
+  // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
       const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      // Cmd+O: Open Folder
+      if (cmdOrCtrl && !e.shiftKey && (e.key === 'o' || e.key === 'O')) {
+        e.preventDefault();
+        openFolderDialog();
+        return;
+      }
 
       // Cmd+Shift+P: Command Palette
       if (cmdOrCtrl && e.shiftKey && (e.key === 'p' || e.key === 'P')) {
@@ -83,6 +134,7 @@ export const App: React.FC = () => {
   }, [
     rootPath,
     activeTabId,
+    openFolderDialog,
     saveActiveTab,
     closeTab,
     toggleSidebar,

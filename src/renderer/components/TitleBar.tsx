@@ -1,10 +1,10 @@
 import React from 'react';
-import { Search, Terminal, Sidebar, PanelRight, Sparkles } from 'lucide-react';
+import { Search, Terminal, Sidebar, PanelRight, Sparkles, FolderOpen } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useUiStore } from '../stores/uiStore';
 
 export const TitleBar: React.FC = () => {
-  const { rootName } = useWorkspaceStore();
+  const { rootName, openFolderDialog } = useWorkspaceStore();
   const {
     toggleSidebar,
     toggleRightPanel,
@@ -108,6 +108,18 @@ export const TitleBar: React.FC = () => {
 
       {/* Right: Panel Toggles & Actions */}
       <div className="app-no-drag" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <button
+          onClick={() => openFolderDialog()}
+          title="Open Project Folder (⌘O)"
+          style={{
+            padding: '5px',
+            borderRadius: '4px',
+            color: 'var(--text-secondary)',
+          }}
+        >
+          <FolderOpen size={14} />
+        </button>
+
         <button
           onClick={() => setCommandPaletteOpen(true)}
           title="Command Palette (⌘⇧P)"

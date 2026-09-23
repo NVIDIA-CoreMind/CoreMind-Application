@@ -5,7 +5,6 @@ import { StatusBar } from '../components/StatusBar';
 import { ResizableSplitter } from '../components/ResizableSplitter';
 import { FileExplorer } from '../explorer/FileExplorer';
 import { SearchPanel } from '../search/SearchPanel';
-import { SourceControlPanel } from '../git/SourceControlPanel';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { MonacoEditor } from '../editor/MonacoEditor';
 import { TerminalPanel } from '../terminal/TerminalPanel';
@@ -34,8 +33,6 @@ export const IDELayout: React.FC = () => {
         return <FileExplorer />;
       case 'search':
         return <SearchPanel />;
-      case 'git':
-        return <SourceControlPanel />;
       case 'settings':
         return <SettingsPanel />;
       default:

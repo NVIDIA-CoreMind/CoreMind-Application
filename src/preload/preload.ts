@@ -1,7 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_CHANNELS, IpcResult, SystemInfo } from '../shared/types/ipc';
+import { IPC_CHANNELS, IpcResult, SystemInfo, TerminalSpawnOptions } from '../shared/types/ipc';
 import { FileNode, FileSearchResult } from '../shared/types/file';
-import { GitStatusResult } from '../shared/types/git';
 
 export interface CoreMindAPI {
   // File System
@@ -15,9 +14,16 @@ export interface CoreMindAPI {
   delete: (targetPath: string, rootPath: string) => Promise<IpcResult<void>>;
   searchFiles: (query: string, rootPath: string) => Promise<IpcResult<FileSearchResult[]>>;
 
-  // Git
-  getGitStatus: (rootPath: string) => Promise<IpcResult<GitStatusResult>>;
-  getGitDiff: (filePath: string, rootPath: string) => Promise<IpcResult<string>>;
+  // Terminal
+  createTerminal: (id: string, options?: TerminalSpawnOptions) => Promise<IpcResult<boolean>>;
+  terminalWrite: (id: string, data: string) => Promise<void>;
+  terminalResize: (id: string, cols: number, rows: number) => Promise<void>;
+  closeTerminal: (id: string) => Promise<void>;
+  onTerminalData: (callback: (payload: { id: string; data: string }) => void) => () => void;
+  onTerminalExit: (callback: (payload: { id: string; exitCode: number }) => void) => () => void;
+
+  // Workspace events
+  onOpenWorkspacePath: (callback: (path: string) => void) => () => void;
 
   // System & Window
   getSystemInfo: () => Promise<IpcResult<SystemInfo>>;
@@ -27,6 +33,7 @@ export interface CoreMindAPI {
 }
 
 const api: CoreMindAPI = {
+  // File System
   openDirectoryDialog: () => ipcRenderer.invoke(IPC_CHANNELS.FILE_OPEN_DIRECTORY_DIALOG),
   readDirectory: (dirPath, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.FILE_READ_DIRECTORY, { dirPath, rootPath }),
@@ -45,11 +52,34 @@ const api: CoreMindAPI = {
   searchFiles: (query, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.FILE_SEARCH, { query, rootPath }),
 
-  getGitStatus: (rootPath) =>
-    ipcRenderer.invoke(IPC_CHANNELS.GIT_GET_STATUS, { rootPath }),
-  getGitDiff: (filePath, rootPath) =>
-    ipcRenderer.invoke(IPC_CHANNELS.GIT_GET_DIFF, { filePath, rootPath }),
+  // Terminal
+  createTerminal: (id, options) =>
+    ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_CREATE, { id, options }),
+  terminalWrite: (id, data) =>
+    ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_WRITE, { id, data }),
+  terminalResize: (id, cols, rows) =>
+    ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_RESIZE, { id, cols, rows }),
+  closeTerminal: (id) =>
+    ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_CLOSE, { id }),
+  onTerminalData: (callback) => {
+    const handler = (_event: unknown, payload: { id: string; data: string }) => callback(payload);
+    ipcRenderer.on(IPC_CHANNELS.TERMINAL_DATA, handler);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL_DATA, handler);
+  },
+  onTerminalExit: (callback) => {
+    const handler = (_event: unknown, payload: { id: string; exitCode: number }) => callback(payload);
+    ipcRenderer.on(IPC_CHANNELS.TERMINAL_EXIT, handler);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL_EXIT, handler);
+  },
 
+  // Workspace events
+  onOpenWorkspacePath: (callback) => {
+    const handler = (_event: unknown, path: string) => callback(path);
+    ipcRenderer.on('workspace:open-path', handler);
+    return () => ipcRenderer.removeListener('workspace:open-path', handler);
+  },
+
+  // System & Window
   getSystemInfo: () => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_SYSTEM_INFO),
   minimizeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.APP_WINDOW_MINIMIZE),
   maximizeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.APP_WINDOW_MAXIMIZE),

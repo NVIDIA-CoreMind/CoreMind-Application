@@ -1,10 +1,9 @@
 import { ipcMain, dialog, app, BrowserWindow } from 'electron';
 import os from 'node:os';
-import { IPC_CHANNELS, IpcResult, SystemInfo } from '../../shared/types/ipc';
+import { IPC_CHANNELS, IpcResult, SystemInfo, TerminalSpawnOptions } from '../../shared/types/ipc';
 import { FileNode, FileSearchResult } from '../../shared/types/file';
-import { GitStatusResult } from '../../shared/types/git';
 import { fileSystemService } from '../services/fileSystemService';
-import { gitService } from '../services/gitService';
+import { terminalService } from '../services/terminalService';
 import { logger } from '../services/logger';
 
 export function registerIpcHandlers(): void {
@@ -15,13 +14,17 @@ export function registerIpcHandlers(): void {
     IPC_CHANNELS.FILE_OPEN_DIRECTORY_DIALOG,
     async (): Promise<IpcResult<string | null>> => {
       try {
-        const focusedWindow = BrowserWindow.getFocusedWindow();
-        const result = await dialog.showOpenDialog(focusedWindow || undefined as any, {
+        if (process.platform === 'darwin') {
+          app.focus({ steal: true });
+        }
+        const result = await dialog.showOpenDialog({
           title: 'Open Project Folder',
+          buttonLabel: 'Select Folder',
           properties: ['openDirectory', 'createDirectory'],
         });
 
         if (result.canceled || result.filePaths.length === 0) {
+          logger.info('User cancelled folder picker');
           return { success: true, data: null };
         }
 
@@ -30,7 +33,7 @@ export function registerIpcHandlers(): void {
         return { success: true, data: selectedPath };
       } catch (err: unknown) {
         const error = err as Error;
-        logger.error('Failed to open directory dialog', { message: error.message });
+        logger.error('Failed to open directory dialog', { message: error.message, stack: error.stack });
         return {
           success: false,
           error: {
@@ -146,29 +149,76 @@ export function registerIpcHandlers(): void {
     }
   );
 
-  // 10. Git Status
+  // 10. Terminal Create
   ipcMain.handle(
-    IPC_CHANNELS.GIT_GET_STATUS,
+    IPC_CHANNELS.TERMINAL_CREATE,
     async (
-      _event,
-      { rootPath }: { rootPath: string }
-    ): Promise<IpcResult<GitStatusResult>> => {
-      return gitService.getStatus(rootPath);
+      event,
+      { id, options }: { id: string; options?: TerminalSpawnOptions }
+    ): Promise<IpcResult<boolean>> => {
+      const sender = event.sender;
+      const success = terminalService.createSession(
+        id,
+        options,
+        (data: string) => {
+          if (!sender.isDestroyed()) {
+            sender.send(IPC_CHANNELS.TERMINAL_DATA, { id, data });
+          }
+        },
+        (exitCode: number) => {
+          if (!sender.isDestroyed()) {
+            sender.send(IPC_CHANNELS.TERMINAL_EXIT, { id, exitCode });
+          }
+        }
+      );
+
+      if (success) {
+        return { success: true, data: true };
+      }
+      return {
+        success: false,
+        error: {
+          code: 'TERMINAL_SPAWN_FAILED',
+          message: 'Failed to spawn live terminal shell process.',
+        },
+      };
     }
   );
 
-  // 11. Git Diff
+  // 11. Terminal Write
   ipcMain.handle(
-    IPC_CHANNELS.GIT_GET_DIFF,
+    IPC_CHANNELS.TERMINAL_WRITE,
     async (
       _event,
-      { filePath, rootPath }: { filePath: string; rootPath: string }
-    ): Promise<IpcResult<string>> => {
-      return gitService.getDiff(filePath, rootPath);
+      { id, data }: { id: string; data: string }
+    ): Promise<void> => {
+      terminalService.write(id, data);
     }
   );
 
-  // 12. App & System Info
+  // 12. Terminal Resize
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_RESIZE,
+    async (
+      _event,
+      { id, cols, rows }: { id: string; cols: number; rows: number }
+    ): Promise<void> => {
+      terminalService.resize(id, cols, rows);
+    }
+  );
+
+  // 13. Terminal Close
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_CLOSE,
+    async (
+      _event,
+      { id }: { id: string }
+    ): Promise<void> => {
+      terminalService.closeSession(id);
+    }
+  );
+
+  // 14. App & System Info
   ipcMain.handle(
     IPC_CHANNELS.APP_GET_SYSTEM_INFO,
     async (): Promise<IpcResult<SystemInfo>> => {

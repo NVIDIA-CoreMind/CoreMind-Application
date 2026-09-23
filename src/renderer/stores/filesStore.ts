@@ -52,6 +52,10 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
 
   loadWorkspaceTree: async (rootPath: string) => {
     try {
+      if (!window.coreMindAPI) {
+        set({ error: 'CoreMind system API is initializing. Please wait a moment.' });
+        return;
+      }
       const result = await window.coreMindAPI.readDirectory(rootPath, rootPath);
       if (result.success) {
         set({ fileTree: result.data, error: null });

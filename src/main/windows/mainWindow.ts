@@ -1,5 +1,6 @@
 import { BrowserWindow } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { logger } from '../services/logger';
 
@@ -14,8 +15,12 @@ export function getMainWindow(): BrowserWindow | null {
 export function createMainWindow(): BrowserWindow {
   logger.info('Initializing CoreMind Main Window');
 
-  const preloadPath = path.join(__dirname, 'preload.mjs');
+  const preloadPathCjs = path.join(__dirname, 'preload.cjs');
+  const preloadPathMjs = path.join(__dirname, 'preload.mjs');
+  const preloadPath = fs.existsSync(preloadPathCjs) ? preloadPathCjs : preloadPathMjs;
   logger.info('Preload path resolved', { preloadPath });
+
+  const iconPath = path.join(__dirname, '../assets/icon.png');
 
   mainWindow = new BrowserWindow({
     width: 1300,
@@ -23,6 +28,7 @@ export function createMainWindow(): BrowserWindow {
     minWidth: 1100,
     minHeight: 700,
     title: 'CoreMind',
+    icon: iconPath,
     backgroundColor: '#0F1117',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 14 },

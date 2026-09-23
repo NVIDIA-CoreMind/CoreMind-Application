@@ -20,9 +20,13 @@ export const IPC_CHANNELS = {
   FILE_DELETE: 'file:delete',
   FILE_SEARCH: 'file:search',
 
-  // Git
-  GIT_GET_STATUS: 'git:get-status',
-  GIT_GET_DIFF: 'git:get-diff',
+  // Terminal
+  TERMINAL_CREATE: 'terminal:create',
+  TERMINAL_WRITE: 'terminal:write',
+  TERMINAL_RESIZE: 'terminal:resize',
+  TERMINAL_CLOSE: 'terminal:close',
+  TERMINAL_DATA: 'terminal:data',
+  TERMINAL_EXIT: 'terminal:exit',
 
   // App & Window
   APP_GET_SYSTEM_INFO: 'app:get-system-info',
@@ -30,6 +34,12 @@ export const IPC_CHANNELS = {
   APP_WINDOW_MAXIMIZE: 'app:window-maximize',
   APP_WINDOW_CLOSE: 'app:window-close',
 } as const;
+
+export interface TerminalSpawnOptions {
+  cols?: number;
+  rows?: number;
+  cwd?: string;
+}
 
 export interface SystemInfo {
   platform: string;
