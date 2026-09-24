@@ -45,7 +45,11 @@ if (!gotTheLock) {
   app.whenReady().then(() => {
     logger.info('CoreMind app is ready. Initializing subsystems...');
 
-    if (process.platform === 'darwin' && app.dock) {
+    // On macOS, packaged apps natively manage their Dock icon from the bundle's icon.icns.
+    // Dynamically calling app.dock.setIcon() in production causes a size/resolution discrepancy
+    // between the closed/pinned dock state and the running state.
+    // Therefore, only set dock icon dynamically during development mode.
+    if (!app.isPackaged && process.platform === 'darwin' && app.dock) {
       const iconPath = getAppIconPath();
       if (fs.existsSync(iconPath)) {
         try {
