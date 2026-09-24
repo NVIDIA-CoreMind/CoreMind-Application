@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron';
+import { app, BrowserWindow, nativeImage } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +12,23 @@ export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
 }
 
+function getAppIcon(): Electron.NativeImage | undefined {
+  const candidates = [
+    path.join(__dirname, '../assets/icon.png'),
+    path.join(process.resourcesPath, 'assets/icon.png'),
+    path.join(app.getAppPath(), 'assets/icon.png'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      const img = nativeImage.createFromPath(candidate);
+      if (!img.isEmpty()) {
+        return img;
+      }
+    }
+  }
+  return undefined;
+}
+
 export function createMainWindow(): BrowserWindow {
   logger.info('Initializing CoreMind Main Window');
 
@@ -20,7 +37,7 @@ export function createMainWindow(): BrowserWindow {
   const preloadPath = fs.existsSync(preloadPathCjs) ? preloadPathCjs : preloadPathMjs;
   logger.info('Preload path resolved', { preloadPath });
 
-  const iconPath = path.join(__dirname, '../assets/icon.png');
+  const appIcon = getAppIcon();
 
   mainWindow = new BrowserWindow({
     width: 1300,
@@ -28,7 +45,7 @@ export function createMainWindow(): BrowserWindow {
     minWidth: 1100,
     minHeight: 700,
     title: 'CoreMind',
-    icon: iconPath,
+    icon: appIcon,
     backgroundColor: '#0F1117',
     titleBarStyle: 'hiddenInset',
     trafficLightPosition: { x: 16, y: 14 },

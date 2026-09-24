@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, nativeImage } from 'electron';
 import { createMainWindow, getMainWindow } from './windows/mainWindow';
 import { registerIpcHandlers } from './ipc/registerIpcHandlers';
 import { setupApplicationMenu } from './menu';
@@ -10,6 +10,20 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function getAppIconPath(): string {
+  const candidates = [
+    path.join(__dirname, '../assets/icon.png'),
+    path.join(process.resourcesPath, 'assets/icon.png'),
+    path.join(app.getAppPath(), 'assets/icon.png'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return path.join(__dirname, '../assets/icon.png');
+}
 
 app.name = 'CoreMind';
 
@@ -32,12 +46,15 @@ if (!gotTheLock) {
     logger.info('CoreMind app is ready. Initializing subsystems...');
 
     if (process.platform === 'darwin' && app.dock) {
-      const iconPath = path.join(__dirname, '../assets/icon.png');
+      const iconPath = getAppIconPath();
       if (fs.existsSync(iconPath)) {
         try {
-          app.dock.setIcon(iconPath);
-        } catch {
-          // continue if dock icon cannot be set dynamically
+          const image = nativeImage.createFromPath(iconPath);
+          if (!image.isEmpty()) {
+            app.dock.setIcon(image);
+          }
+        } catch (error) {
+          logger.warn('Failed to set dock icon dynamically', { error });
         }
       }
     }

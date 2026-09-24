@@ -53,7 +53,14 @@
     "files": [
       "dist",
       "dist-electron",
+      "assets",
       "node_modules/node-pty/**"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
     ],
     "mac": {
       "target": [
