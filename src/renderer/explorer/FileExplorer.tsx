@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { FolderOpen, FilePlus, FolderPlus, RefreshCw } from 'lucide-react';
+import {
+  FilePlus,
+  FolderPlus,
+  RefreshCw,
+  FolderOpen,
+  Plus,
+} from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useFilesStore } from '../stores/filesStore';
 import { FileTree } from './FileTree';
@@ -8,6 +14,7 @@ export const FileExplorer: React.FC = () => {
   const { rootPath, rootName, openFolderDialog, isLoading, error: workspaceError } = useWorkspaceStore();
   const {
     fileTree,
+    selectedPath,
     loadWorkspaceTree,
     createFile,
     createDirectory,
@@ -18,6 +25,7 @@ export const FileExplorer: React.FC = () => {
   const [newFileName, setNewFileName] = useState('');
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   const handleOpenFolder = async () => {
     await openFolderDialog();
@@ -29,26 +37,72 @@ export const FileExplorer: React.FC = () => {
     }
   };
 
-  const handleCreateRootFile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rootPath || !newFileName.trim()) {
-      setIsCreatingFile(false);
-      return;
+  // Determine target directory: if a directory is selected, create inside it; otherwise create in workspace root
+  const getTargetDirectory = (): string => {
+    if (!rootPath) return '';
+    if (selectedPath) {
+      // Find if selectedPath is a directory in tree
+      const findNode = (nodes: any[]): any => {
+        for (const n of nodes) {
+          if (n.path === selectedPath) return n;
+          if (n.children) {
+            const found = findNode(n.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      const node = findNode(fileTree);
+      if (node?.isDirectory) {
+        return node.path;
+      } else if (node) {
+        // If file is selected, use its parent directory
+        return selectedPath.substring(0, selectedPath.lastIndexOf('/'));
+      }
     }
-    await createFile(rootPath, newFileName.trim(), rootPath);
-    setIsCreatingFile(false);
-    setNewFileName('');
+    return rootPath;
   };
 
-  const handleCreateRootFolder = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rootPath || !newFolderName.trim()) {
-      setIsCreatingFolder(false);
-      return;
+  const validateName = (name: string): boolean => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      setValidationError('Name cannot be empty.');
+      return false;
     }
-    await createDirectory(rootPath, newFolderName.trim(), rootPath);
-    setIsCreatingFolder(false);
-    setNewFolderName('');
+    if (trimmed.includes('..')) {
+      setValidationError('Path traversal (..) is not allowed.');
+      return false;
+    }
+    setValidationError(null);
+    return true;
+  };
+
+  const handleCreateFile = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const name = newFileName.trim();
+    if (!validateName(name) || !rootPath) return;
+
+    const targetDir = getTargetDirectory();
+    const success = await createFile(targetDir, name, rootPath);
+    if (success) {
+      setIsCreatingFile(false);
+      setNewFileName('');
+      setValidationError(null);
+    }
+  };
+
+  const handleCreateFolder = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const name = newFolderName.trim();
+    if (!validateName(name) || !rootPath) return;
+
+    const targetDir = getTargetDirectory();
+    const success = await createDirectory(targetDir, name, rootPath);
+    if (success) {
+      setIsCreatingFolder(false);
+      setNewFolderName('');
+      setValidationError(null);
+    }
   };
 
   return (
@@ -57,15 +111,16 @@ export const FileExplorer: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: 'var(--bg-surface)',
+        backgroundColor: 'var(--bg-panel)',
         overflow: 'hidden',
+        userSelect: 'none',
       }}
     >
-      {/* Header */}
+      {/* Header bar */}
       <div
         style={{
           height: '35px',
-          padding: '0 12px',
+          padding: '0 10px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -73,91 +128,160 @@ export const FileExplorer: React.FC = () => {
           fontSize: '11px',
           fontWeight: 600,
           color: 'var(--text-secondary)',
-          textTransform: 'uppercase',
           letterSpacing: '0.5px',
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          {rootName ? rootName : 'Explorer'}
+          EXPLORER
         </span>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <button
-            onClick={handleOpenFolder}
-            title={rootPath ? 'Open Another Folder (⌘O)' : 'Open Folder (⌘O)'}
-            style={{ padding: '3px', color: 'var(--text-muted)' }}
-          >
-            <FolderOpen size={14} />
-          </button>
-          {rootPath && (
-            <>
-              <button
-                onClick={() => setIsCreatingFile(true)}
-                title="New File"
-                style={{ padding: '3px', color: 'var(--text-muted)' }}
-              >
-                <FilePlus size={14} />
-              </button>
-              <button
-                onClick={() => setIsCreatingFolder(true)}
-                title="New Folder"
-                style={{ padding: '3px', color: 'var(--text-muted)' }}
-              >
-                <FolderPlus size={14} />
-              </button>
-              <button
-                onClick={handleRefresh}
-                title="Refresh Explorer"
-                style={{ padding: '3px', color: 'var(--text-muted)' }}
-              >
-                <RefreshCw size={13} />
-              </button>
-            </>
-          )}
-        </div>
+        {rootPath && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <button
+              onClick={() => {
+                setIsCreatingFile(true);
+                setIsCreatingFolder(false);
+                setValidationError(null);
+              }}
+              title="New File"
+              style={{
+                padding: '3px 5px',
+                borderRadius: '3px',
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
+                gap: '3px',
+              }}
+            >
+              <FilePlus size={13} />
+            </button>
+
+            <button
+              onClick={() => {
+                setIsCreatingFolder(true);
+                setIsCreatingFile(false);
+                setValidationError(null);
+              }}
+              title="New Folder"
+              style={{
+                padding: '3px 5px',
+                borderRadius: '3px',
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
+                gap: '3px',
+              }}
+            >
+              <FolderPlus size={13} />
+            </button>
+
+            <button
+              onClick={handleRefresh}
+              title="Refresh Explorer"
+              style={{
+                padding: '3px',
+                borderRadius: '3px',
+                color: 'var(--text-secondary)',
+              }}
+            >
+              <RefreshCw size={12} />
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Main Content */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
-        {(workspaceError || filesError) && (
+      {/* Explorer Workspace Sub-header */}
+      {rootPath && (
+        <div
+          style={{
+            padding: '6px 10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid var(--border-subtle)',
+            backgroundColor: 'var(--bg-surface)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+            <span
+              style={{
+                fontSize: '11px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {rootName}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button
+              onClick={() => {
+                setIsCreatingFile(true);
+                setIsCreatingFolder(false);
+              }}
+              style={{
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                backgroundColor: 'var(--bg-active)',
+                color: 'var(--text-secondary)',
+                gap: '3px',
+              }}
+              title="Create new file in workspace"
+            >
+              <Plus size={10} />
+              <span>File</span>
+            </button>
+            <button
+              onClick={() => {
+                setIsCreatingFolder(true);
+                setIsCreatingFile(false);
+              }}
+              style={{
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                backgroundColor: 'var(--bg-active)',
+                color: 'var(--text-secondary)',
+                gap: '3px',
+              }}
+              title="Create new folder in workspace"
+            >
+              <Plus size={10} />
+              <span>Folder</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Tree Area */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
+        {/* Error notification */}
+        {(workspaceError || filesError || validationError) && (
           <div
             style={{
-              margin: '8px',
-              padding: '8px 10px',
-              borderRadius: '6px',
-              backgroundColor: 'rgba(239, 68, 68, 0.1)',
+              margin: '6px 8px',
+              padding: '6px 8px',
+              borderRadius: '4px',
+              backgroundColor: 'rgba(239, 68, 68, 0.12)',
               border: '1px solid rgba(239, 68, 68, 0.3)',
               fontSize: '11px',
               color: '#F87171',
               display: 'flex',
               flexDirection: 'column',
-              gap: '6px',
+              gap: '4px',
             }}
           >
-            <span>{workspaceError || filesError}</span>
-            {rootPath && (
-              <button
-                onClick={handleRefresh}
-                style={{
-                  alignSelf: 'flex-start',
-                  padding: '2px 8px',
-                  borderRadius: '3px',
-                  backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                  color: '#ffffff',
-                  fontSize: '10px',
-                  cursor: 'pointer',
-                }}
-              >
-                Retry
-              </button>
-            )}
+            <span>{validationError || workspaceError || filesError}</span>
           </div>
         )}
 
         {!rootPath ? (
           <div
             style={{
-              padding: '24px 16px',
+              padding: '28px 16px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -166,7 +290,7 @@ export const FileExplorer: React.FC = () => {
             }}
           >
             <p style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              No folder is currently open in this workspace.
+              No folder is open.
             </p>
             <button
               onClick={handleOpenFolder}
@@ -188,48 +312,143 @@ export const FileExplorer: React.FC = () => {
           </div>
         ) : (
           <div>
-            {/* Inline Root File Creation */}
+            {/* Inline New File Form */}
             {isCreatingFile && (
               <form
-                onSubmit={handleCreateRootFile}
-                style={{ padding: '4px 12px', backgroundColor: 'var(--bg-panel)' }}
+                onSubmit={handleCreateFile}
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: 'var(--bg-surface)',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
               >
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                  File name:
+                </div>
                 <input
                   autoFocus
                   type="text"
-                  placeholder="New file name..."
+                  placeholder="e.g. Button.tsx or utils/helper.ts"
                   value={newFileName}
-                  onChange={(e) => setNewFileName(e.target.value)}
-                  onBlur={() => setIsCreatingFile(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') setIsCreatingFile(false);
+                  onChange={(e) => {
+                    setNewFileName(e.target.value);
+                    if (validationError) setValidationError(null);
                   }}
-                  style={{ width: '100%', height: '22px' }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setIsCreatingFile(false);
+                      setNewFileName('');
+                      setValidationError(null);
+                    }
+                  }}
+                  style={{ width: '100%', height: '24px', fontSize: '11px' }}
                 />
+                <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', marginTop: '2px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreatingFile(false);
+                      setNewFileName('');
+                      setValidationError(null);
+                    }}
+                    style={{
+                      fontSize: '10px',
+                      padding: '2px 8px',
+                      borderRadius: '3px',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      fontSize: '10px',
+                      padding: '2px 8px',
+                      borderRadius: '3px',
+                      backgroundColor: 'var(--accent)',
+                      color: '#ffffff',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Create
+                  </button>
+                </div>
               </form>
             )}
 
-            {/* Inline Root Folder Creation */}
+            {/* Inline New Folder Form */}
             {isCreatingFolder && (
               <form
-                onSubmit={handleCreateRootFolder}
-                style={{ padding: '4px 12px', backgroundColor: 'var(--bg-panel)' }}
+                onSubmit={handleCreateFolder}
+                style={{
+                  padding: '6px 10px',
+                  backgroundColor: 'var(--bg-surface)',
+                  borderBottom: '1px solid var(--border-subtle)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '4px',
+                }}
               >
+                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
+                  Folder name:
+                </div>
                 <input
                   autoFocus
                   type="text"
-                  placeholder="New folder name..."
+                  placeholder="e.g. components or lib/core"
                   value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onBlur={() => setIsCreatingFolder(false)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') setIsCreatingFolder(false);
+                  onChange={(e) => {
+                    setNewFolderName(e.target.value);
+                    if (validationError) setValidationError(null);
                   }}
-                  style={{ width: '100%', height: '22px' }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setIsCreatingFolder(false);
+                      setNewFolderName('');
+                      setValidationError(null);
+                    }
+                  }}
+                  style={{ width: '100%', height: '24px', fontSize: '11px' }}
                 />
+                <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', marginTop: '2px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreatingFolder(false);
+                      setNewFolderName('');
+                      setValidationError(null);
+                    }}
+                    style={{
+                      fontSize: '10px',
+                      padding: '2px 8px',
+                      borderRadius: '3px',
+                      color: 'var(--text-muted)',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    style={{
+                      fontSize: '10px',
+                      padding: '2px 8px',
+                      borderRadius: '3px',
+                      backgroundColor: 'var(--accent)',
+                      color: '#ffffff',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Create
+                  </button>
+                </div>
               </form>
             )}
 
+            {/* Filesystem Tree */}
             <FileTree nodes={fileTree} />
           </div>
         )}

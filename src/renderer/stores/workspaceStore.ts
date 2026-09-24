@@ -4,14 +4,23 @@ import { useFilesStore } from './filesStore';
 
 const STORAGE_KEY_LAST = 'coremind:last-workspace';
 const STORAGE_KEY_RECENTS = 'coremind:recent-workspaces';
+const DEFAULT_RECENTS = [
+  '~/Documents/ATS_Projects/Robot_Application',
+  '/Users/manojsarya/Documents/My Projects/CoreMind-Application',
+  '~/Documents/My Projects/CoreMind-Sandbox',
+];
 
 function getStoredRecents(): string[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_RECENTS);
-    return raw ? JSON.parse(raw) : [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
   } catch {
-    return [];
+    // fallback
   }
+  return DEFAULT_RECENTS;
 }
 
 function addStoredRecent(path: string) {

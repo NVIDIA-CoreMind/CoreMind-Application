@@ -1,19 +1,22 @@
 import React from 'react';
 import { TitleBar } from '../components/TitleBar';
 import { ActivityBar } from '../components/ActivityBar';
-import { StatusBar } from '../components/StatusBar';
 import { ResizableSplitter } from '../components/ResizableSplitter';
 import { FileExplorer } from '../explorer/FileExplorer';
 import { SearchPanel } from '../search/SearchPanel';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { MonacoEditor } from '../editor/MonacoEditor';
 import { TerminalPanel } from '../terminal/TerminalPanel';
-import { WorkspaceInfoPanel } from '../components/WorkspaceInfoPanel';
+import { AgentPanel } from '../agent/AgentPanel';
+import { EmptyState } from '../components/EmptyState';
+import { StatusBar } from '../components/StatusBar';
 import { CommandPalette } from '../components/CommandPalette';
 import { QuickOpen } from '../components/QuickOpen';
+import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useUiStore } from '../stores/uiStore';
 
 export const IDELayout: React.FC = () => {
+  const { rootPath } = useWorkspaceStore();
   const {
     activeSidebarTab,
     isSidebarOpen,
@@ -29,12 +32,11 @@ export const IDELayout: React.FC = () => {
 
   const renderSidebarContent = () => {
     switch (activeSidebarTab) {
-      case 'explorer':
-        return <FileExplorer />;
       case 'search':
         return <SearchPanel />;
       case 'settings':
         return <SettingsPanel />;
+      case 'explorer':
       default:
         return <FileExplorer />;
     }
@@ -54,7 +56,7 @@ export const IDELayout: React.FC = () => {
       {/* Top Title Bar */}
       <TitleBar />
 
-      {/* Center Body: Activity Bar + Sidebar + Editor + Terminal + Right Panel */}
+      {/* Main Work Area: Row with ActivityBar, Left Sidebar, Center Editor/EmptyState, Right Agent */}
       <div
         style={{
           display: 'flex',
@@ -64,10 +66,10 @@ export const IDELayout: React.FC = () => {
           position: 'relative',
         }}
       >
-        {/* Activity Bar */}
+        {/* Far Left: Activity Bar */}
         <ActivityBar />
 
-        {/* Primary Sidebar (Collapsible & Resizable) */}
+        {/* Left: Sidebar (Explorer, Search, Settings) */}
         {isSidebarOpen && (
           <>
             <div
@@ -88,24 +90,24 @@ export const IDELayout: React.FC = () => {
           </>
         )}
 
-        {/* Central Work Area (Editor + Bottom Terminal) */}
+        {/* Center: File Editor OR Empty State Welcome Page */}
         <div
           style={{
-            display: 'flex',
-            flexDirection: 'column',
             flex: 1,
             height: '100%',
             overflow: 'hidden',
             backgroundColor: 'var(--bg-panel)',
+            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
-          {/* Main Editor */}
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <MonacoEditor />
+          <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+            {!rootPath ? <EmptyState /> : <MonacoEditor />}
           </div>
 
-          {/* Integrated Terminal (Collapsible & Resizable) */}
-          {isTerminalOpen && (
+          {/* Integrated Terminal (when open and workspace active) */}
+          {isTerminalOpen && rootPath && (
             <>
               <ResizableSplitter
                 direction="vertical"
@@ -125,7 +127,7 @@ export const IDELayout: React.FC = () => {
           )}
         </div>
 
-        {/* Right Info Panel (Collapsible & Resizable) */}
+        {/* Right: AI Agent Panel */}
         {isRightPanelOpen && (
           <>
             <ResizableSplitter
@@ -140,16 +142,16 @@ export const IDELayout: React.FC = () => {
                 overflow: 'hidden',
               }}
             >
-              <WorkspaceInfoPanel />
+              <AgentPanel />
             </div>
           </>
         )}
       </div>
 
-      {/* Bottom Status Bar */}
+      {/* Bottom: Status Bar */}
       <StatusBar />
 
-      {/* Modals & Overlays */}
+      {/* Global Quick Modals */}
       <CommandPalette />
       <QuickOpen />
     </div>

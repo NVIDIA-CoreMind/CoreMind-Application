@@ -1,147 +1,137 @@
 import React from 'react';
-import { Search, Terminal, Sidebar, PanelRight, Sparkles, FolderOpen } from 'lucide-react';
+import {
+  FolderOpen,
+  PanelLeft,
+  Terminal,
+  Bot,
+} from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useUiStore } from '../stores/uiStore';
 
 export const TitleBar: React.FC = () => {
   const { rootName, openFolderDialog } = useWorkspaceStore();
   const {
+    isSidebarOpen,
     toggleSidebar,
-    toggleRightPanel,
+    isTerminalOpen,
     toggleTerminal,
-    setQuickOpenOpen,
-    setCommandPaletteOpen,
+    isRightPanelOpen,
+    toggleRightPanel,
   } = useUiStore();
 
   return (
     <div
       className="app-drag"
       style={{
+        position: 'relative',
         height: 'var(--titlebar-height)',
         backgroundColor: 'var(--bg-app)',
         borderBottom: '1px solid var(--border-color)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingLeft: '78px', // Clearance for macOS traffic lights
+        paddingLeft: '78px', // Clearance for macOS traffic light buttons
         paddingRight: '12px',
         zIndex: 50,
       }}
     >
-      {/* Left: Brand & Workspace */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span
-            style={{
-              fontWeight: 600,
-              fontSize: '12px',
-              letterSpacing: '0.5px',
-              color: 'var(--text-primary)',
-            }}
-          >
-            CoreMind
-          </span>
-          <span
-            style={{
-              fontSize: '10px',
-              padding: '1px 5px',
-              borderRadius: '3px',
-              backgroundColor: 'var(--accent-bg)',
-              color: 'var(--accent)',
-              fontWeight: 500,
-            }}
-          >
-            IDE
-          </span>
-        </div>
-
-        {rootName && (
-          <>
-            <span style={{ color: 'var(--text-muted)', fontSize: '11px' }}>/</span>
-            <span
-              style={{
-                fontSize: '12px',
-                color: 'var(--text-secondary)',
-                fontWeight: 500,
-              }}
-            >
-              {rootName}
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Center: Quick Search Bar */}
+      {/* Left: Active Workspace Breadcrumb (if open) */}
       <div
         className="app-no-drag"
-        onClick={() => setQuickOpenOpen(true)}
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
-          backgroundColor: 'var(--bg-surface)',
-          border: '1px solid var(--border-color)',
-          borderRadius: '6px',
-          padding: '4px 12px',
-          cursor: 'pointer',
-          width: '320px',
-          justifyContent: 'space-between',
+          gap: '6px',
+          minWidth: 0,
+          overflow: 'hidden',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-muted)' }}>
-          <Search size={13} />
-          <span style={{ fontSize: '11px' }}>Quick open files...</span>
-        </div>
-        <kbd
-          style={{
-            fontSize: '10px',
-            backgroundColor: 'var(--bg-panel)',
-            padding: '2px 5px',
-            borderRadius: '3px',
-            color: 'var(--text-secondary)',
-            border: '1px solid var(--border-subtle)',
-          }}
-        >
-          ⌘P
-        </kbd>
+        {rootName && (
+          <span
+            style={{
+              fontSize: '11px',
+              color: 'var(--text-secondary)',
+              fontWeight: 500,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {rootName}
+          </span>
+        )}
       </div>
 
-      {/* Right: Panel Toggles & Actions */}
-      <div className="app-no-drag" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+      {/* Center: Application Name CoreMind (Guaranteed absolute visual center) */}
+      <div
+        style={{
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+      >
+        <span
+          style={{
+            fontFamily: 'var(--font-sans)',
+            fontWeight: 600,
+            fontSize: '12px',
+            letterSpacing: '0.6px',
+            color: 'var(--text-primary)',
+          }}
+        >
+          CoreMind
+        </span>
+      </div>
+
+      {/* Right: Window Tools & Panel Toggles */}
+      <div
+        className="app-no-drag"
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+        }}
+      >
         <button
           onClick={() => openFolderDialog()}
-          title="Open Project Folder (⌘O)"
+          title="Open Folder (⌘O)"
           style={{
-            padding: '5px',
+            padding: '5px 7px',
             borderRadius: '4px',
             color: 'var(--text-secondary)',
+            fontSize: '11px',
+            gap: '5px',
           }}
         >
-          <FolderOpen size={14} />
+          <FolderOpen size={13} />
+          <span>Open Folder</span>
         </button>
 
-        <button
-          onClick={() => setCommandPaletteOpen(true)}
-          title="Command Palette (⌘⇧P)"
+        <div
           style={{
-            padding: '5px',
-            borderRadius: '4px',
-            color: 'var(--text-secondary)',
+            width: '1px',
+            height: '14px',
+            backgroundColor: 'var(--border-color)',
+            margin: '0 4px',
           }}
-        >
-          <Sparkles size={14} />
-        </button>
+        />
 
         <button
           onClick={toggleSidebar}
-          title="Toggle Sidebar (⌘B)"
+          title="Toggle Explorer (⌘B)"
           style={{
             padding: '5px',
             borderRadius: '4px',
-            color: 'var(--text-secondary)',
+            color: isSidebarOpen ? 'var(--text-primary)' : 'var(--text-muted)',
+            backgroundColor: isSidebarOpen ? 'var(--bg-active)' : 'transparent',
           }}
         >
-          <Sidebar size={14} />
+          <PanelLeft size={14} />
         </button>
 
         <button
@@ -150,7 +140,8 @@ export const TitleBar: React.FC = () => {
           style={{
             padding: '5px',
             borderRadius: '4px',
-            color: 'var(--text-secondary)',
+            color: isTerminalOpen ? 'var(--text-primary)' : 'var(--text-muted)',
+            backgroundColor: isTerminalOpen ? 'var(--bg-active)' : 'transparent',
           }}
         >
           <Terminal size={14} />
@@ -158,14 +149,15 @@ export const TitleBar: React.FC = () => {
 
         <button
           onClick={toggleRightPanel}
-          title="Toggle Workspace Info Panel"
+          title="Toggle Agent Panel"
           style={{
             padding: '5px',
             borderRadius: '4px',
-            color: 'var(--text-secondary)',
+            color: isRightPanelOpen ? 'var(--accent)' : 'var(--text-muted)',
+            backgroundColor: isRightPanelOpen ? 'var(--accent-bg)' : 'transparent',
           }}
         >
-          <PanelRight size={14} />
+          <Bot size={14} />
         </button>
       </div>
     </div>

@@ -1,9 +1,20 @@
 import { ipcMain, dialog, app, BrowserWindow } from 'electron';
 import os from 'node:os';
-import { IPC_CHANNELS, IpcResult, SystemInfo, TerminalSpawnOptions } from '../../shared/types/ipc';
+import {
+  IPC_CHANNELS,
+  IpcResult,
+  SystemInfo,
+  TerminalSpawnOptions,
+  AgentMessage,
+  AgentContext,
+  AgentResponse,
+  AgentStatus,
+  AgentToolAction,
+} from '../../shared/types/ipc';
 import { FileNode, FileSearchResult } from '../../shared/types/file';
 import { fileSystemService } from '../services/fileSystemService';
 import { terminalService } from '../services/terminalService';
+import { agentService } from '../services/agentService';
 import { logger } from '../services/logger';
 
 export function registerIpcHandlers(): void {
@@ -233,6 +244,36 @@ export function registerIpcHandlers(): void {
           nodeVersion: process.versions.node,
         },
       };
+    }
+  );
+
+  // 15. AI Agent - Send Message
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_SEND_MESSAGE,
+    async (
+      _event,
+      { messages, context }: { messages: AgentMessage[]; context?: AgentContext }
+    ): Promise<IpcResult<AgentResponse>> => {
+      return agentService.sendMessage(messages, context);
+    }
+  );
+
+  // 16. AI Agent - Get Status
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_GET_STATUS,
+    async (): Promise<IpcResult<AgentStatus>> => {
+      return { success: true, data: agentService.getStatus() };
+    }
+  );
+
+  // 17. AI Agent - Execute Controlled Tool
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_EXECUTE_TOOL,
+    async (
+      _event,
+      { action, rootPath }: { action: AgentToolAction; rootPath: string }
+    ): Promise<IpcResult<unknown>> => {
+      return agentService.executeTool(action, rootPath);
     }
   );
 

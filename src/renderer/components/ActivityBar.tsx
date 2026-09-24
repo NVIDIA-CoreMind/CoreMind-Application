@@ -1,5 +1,5 @@
 import React from 'react';
-import { Files, Search, Settings } from 'lucide-react';
+import { Files, Search, GitBranch, Play, Boxes, Settings } from 'lucide-react';
 import { useUiStore, SidebarTab } from '../stores/uiStore';
 
 export const ActivityBar: React.FC = () => {
@@ -8,6 +8,9 @@ export const ActivityBar: React.FC = () => {
   const topItems: { id: SidebarTab; label: string; icon: React.ReactNode }[] = [
     { id: 'explorer', label: 'Explorer', icon: <Files size={18} /> },
     { id: 'search', label: 'Search (⌘⇧F)', icon: <Search size={18} /> },
+    { id: 'git', label: 'Source Control', icon: <GitBranch size={18} /> },
+    { id: 'debug', label: 'Run & Debug', icon: <Play size={18} /> },
+    { id: 'extensions', label: 'Extensions', icon: <Boxes size={18} /> },
   ];
 
   return (

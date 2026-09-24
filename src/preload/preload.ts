@@ -1,5 +1,15 @@
 import { contextBridge, ipcRenderer } from 'electron';
-import { IPC_CHANNELS, IpcResult, SystemInfo, TerminalSpawnOptions } from '../shared/types/ipc';
+import {
+  IPC_CHANNELS,
+  IpcResult,
+  SystemInfo,
+  TerminalSpawnOptions,
+  AgentMessage,
+  AgentContext,
+  AgentResponse,
+  AgentStatus,
+  AgentToolAction,
+} from '../shared/types/ipc';
 import { FileNode, FileSearchResult } from '../shared/types/file';
 
 export interface CoreMindAPI {
@@ -21,6 +31,11 @@ export interface CoreMindAPI {
   closeTerminal: (id: string) => Promise<void>;
   onTerminalData: (callback: (payload: { id: string; data: string }) => void) => () => void;
   onTerminalExit: (callback: (payload: { id: string; exitCode: number }) => void) => () => void;
+
+  // AI Agent
+  sendAgentMessage: (messages: AgentMessage[], context?: AgentContext) => Promise<IpcResult<AgentResponse>>;
+  getAgentStatus: () => Promise<IpcResult<AgentStatus>>;
+  executeAgentTool: (action: AgentToolAction, rootPath: string) => Promise<IpcResult<unknown>>;
 
   // Workspace events
   onOpenWorkspacePath: (callback: (path: string) => void) => () => void;
@@ -71,6 +86,14 @@ const api: CoreMindAPI = {
     ipcRenderer.on(IPC_CHANNELS.TERMINAL_EXIT, handler);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL_EXIT, handler);
   },
+
+  // AI Agent
+  sendAgentMessage: (messages, context) =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENT_SEND_MESSAGE, { messages, context }),
+  getAgentStatus: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENT_GET_STATUS),
+  executeAgentTool: (action, rootPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENT_EXECUTE_TOOL, { action, rootPath }),
 
   // Workspace events
   onOpenWorkspacePath: (callback) => {

@@ -5,3 +5,4 @@ declare global {
     coreMindAPI: CoreMindAPI;
   }
 }
+

@@ -10,7 +10,6 @@ export const App: React.FC = () => {
   const {
     toggleSidebar,
     toggleTerminal,
-    setActiveSidebarTab,
     setCommandPaletteOpen,
     setQuickOpenOpen,
     isCommandPaletteOpen,
@@ -80,10 +79,10 @@ export const App: React.FC = () => {
         return;
       }
 
-      // Cmd+Shift+F: Search Project
-      if (cmdOrCtrl && e.shiftKey && (e.key === 'f' || e.key === 'F')) {
+      // Cmd+Shift+A or Cmd+L: Toggle Agent Panel
+      if ((cmdOrCtrl && e.shiftKey && (e.key === 'a' || e.key === 'A')) || (cmdOrCtrl && !e.shiftKey && (e.key === 'l' || e.key === 'L'))) {
         e.preventDefault();
-        setActiveSidebarTab('search');
+        useUiStore.getState().toggleRightPanel();
         return;
       }
 
@@ -139,7 +138,6 @@ export const App: React.FC = () => {
     closeTab,
     toggleSidebar,
     toggleTerminal,
-    setActiveSidebarTab,
     setCommandPaletteOpen,
     setQuickOpenOpen,
     isCommandPaletteOpen,

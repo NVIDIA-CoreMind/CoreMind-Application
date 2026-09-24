@@ -6,7 +6,6 @@ import { useEditorStore } from '../stores/editorStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { editorModelManager } from './EditorModelManager';
 import { EditorTabs } from './EditorTabs';
-import { EmptyState } from '../components/EmptyState';
 
 // Configure Monaco to use local npm package instead of CDN
 loader.config({ monaco });
@@ -28,24 +27,24 @@ export const MonacoEditor: React.FC = () => {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: '', background: '191D27' },
-        { token: 'comment', foreground: '5B6376', fontStyle: 'italic' },
-        { token: 'keyword', foreground: '818CF8', fontStyle: 'bold' },
+        { token: '', background: '1E1E1E' },
+        { token: 'comment', foreground: '666666', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '60A5FA', fontStyle: 'bold' },
         { token: 'string', foreground: '34D399' },
         { token: 'number', foreground: 'FBBF24' },
         { token: 'type', foreground: '38BDF8' },
-        { token: 'function', foreground: '60A5FA' },
+        { token: 'function', foreground: 'A78BFA' },
       ],
       colors: {
-        'editor.background': '#191D27',
-        'editor.foreground': '#E6EAF2',
-        'editor.lineHighlightBackground': '#22273640',
-        'editorCursor.foreground': '#818CF8',
-        'editorWhitespace.foreground': '#282D38',
-        'editorIndentGuide.background': '#282D38',
-        'editorIndentGuide.activeBackground': '#6366F1',
-        'editorLineNumber.foreground': '#5B6376',
-        'editorLineNumber.activeForeground': '#E6EAF2',
+        'editor.background': '#1E1E1E',
+        'editor.foreground': '#E6E6E6',
+        'editor.lineHighlightBackground': '#26262640',
+        'editorCursor.foreground': '#10B981',
+        'editorWhitespace.foreground': '#2A2A2A',
+        'editorIndentGuide.background': '#262626',
+        'editorIndentGuide.activeBackground': '#10B981',
+        'editorLineNumber.foreground': '#666666',
+        'editorLineNumber.activeForeground': '#E6E6E6',
       },
     });
 
@@ -106,9 +105,27 @@ export const MonacoEditor: React.FC = () => {
 
   if (!activeTab) {
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-panel)' }}>
         <EditorTabs />
-        <EmptyState />
+        <div
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: 'var(--text-muted)',
+            gap: '8px',
+            userSelect: 'none',
+          }}
+        >
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+            No File Open
+          </div>
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+            Select a file from the explorer or press <kbd style={{ padding: '1px 5px', borderRadius: '3px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>⌘P</kbd> to open
+          </div>
+        </div>
       </div>
     );
   }

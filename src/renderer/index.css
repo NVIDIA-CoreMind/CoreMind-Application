@@ -1,19 +1,21 @@
 :root {
-  --bg-app: #0F1117;
-  --bg-surface: #151821;
-  --bg-panel: #191D27;
-  --bg-hover: #222736;
-  --bg-active: #293042;
-  --border-color: #282D38;
-  --border-subtle: #1F232D;
+  /* Core IDE Palette */
+  --bg-app: #1E1E1E;
+  --bg-panel: #181818;
+  --bg-surface: #202020;
+  --bg-hover: #262626;
+  --bg-active: #2C2C2C;
+  --border-color: #2A2A2A;
+  --border-subtle: #242424;
 
-  --text-primary: #E6EAF2;
-  --text-secondary: #8B93A5;
-  --text-muted: #5B6376;
+  --text-primary: #E6E6E6;
+  --text-secondary: #9A9A9A;
+  --text-muted: #666666;
 
-  --accent: #6366F1;
-  --accent-hover: #818CF8;
-  --accent-bg: rgba(99, 102, 241, 0.15);
+  /* CoreMind Accent */
+  --accent: #10B981;
+  --accent-hover: #34D399;
+  --accent-bg: rgba(16, 185, 129, 0.12);
 
   --success: #22C55E;
   --warning: #F59E0B;
@@ -22,9 +24,7 @@
   --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", Menlo, Monaco, "Courier New", monospace;
 
-  --titlebar-height: 38px;
-  --statusbar-height: 24px;
-  --activitybar-width: 48px;
+  --titlebar-height: 36px;
 }
 
 * {
@@ -48,8 +48,8 @@ body, html, #root {
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
@@ -57,12 +57,12 @@ body, html, #root {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 147, 165, 0.2);
+  background: rgba(154, 154, 154, 0.2);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 147, 165, 0.4);
+  background: rgba(154, 154, 154, 0.4);
 }
 
 /* Inputs & Buttons */
@@ -96,6 +96,10 @@ button {
   transition: all 0.15s ease;
 }
 
+button:hover {
+  background-color: var(--bg-hover);
+}
+
 /* App drag regions for macOS */
 .app-drag {
   -webkit-app-region: drag;
@@ -103,4 +107,18 @@ button {
 
 .app-no-drag {
   -webkit-app-region: no-drag;
+}
+
+/* Tree Item Hover row */
+.tree-item-row:hover {
+  background-color: var(--bg-hover) !important;
+}
+
+.tree-item-row:hover .tree-item-actions {
+  opacity: 1 !important;
+}
+
+.tree-item-actions {
+  opacity: 0;
+  transition: opacity 0.1s ease;
 }

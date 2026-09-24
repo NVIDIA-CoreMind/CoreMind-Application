@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { FileNode, FileSearchResult } from '@shared/types/file';
+import { useTabsStore } from './tabsStore';
 
 interface FilesStore {
   fileTree: FileNode[];
@@ -98,6 +99,12 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
       const result = await window.coreMindAPI.createFile(filePath, rootPath);
       if (result.success) {
         await get().loadWorkspaceTree(rootPath);
+        // Automatically open the newly created file in the editor
+        try {
+          await useTabsStore.getState().openFile(filePath, fileName, rootPath);
+        } catch {
+          // ignore tab opening errors
+        }
         return true;
       }
       set({ error: result.error.message });

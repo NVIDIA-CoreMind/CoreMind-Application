@@ -23,19 +23,19 @@
 
 | Feature / Subsystem | Status | Description |
 |---|---|---|
-| **macOS Native Window** | ✅ Completed | Custom title bar, native traffic lights padding (`hiddenInset`) |
-| **Workspace & File Tree** | ✅ Completed | Native directory picker, recursive tree, expand/collapse |
-| **File CRUD & Security** | ✅ Completed | Create, read, write, rename, delete with traversal prevention |
-| **Monaco Code Editor** | ✅ Completed | TypeScript, Python, Dart, JS, JSON, Markdown with dark theme |
-| **Editor Model Manager** | ✅ Completed | In-memory Monaco models preserving scroll, undo, and cursor |
-| **Multi-Tab System** | ✅ Completed | Dirty tracking dot (`●`), close confirm, middle-click close |
-| **Project Search** | ✅ Completed | Fast text search across files with line preview and jump-to-code |
-| **Git Source Control** | ✅ Completed | Git branch detection, porcelain status, modified files |
-| **Terminal Interface** | ✅ Completed | xterm.js UI with interactive shell simulation (Phase 1) |
-| **Settings Panel** | ✅ Completed | Font size, tab size, minimap, word wrap, app diagnostics |
-| **Command Palette & Quick Open** | ✅ Completed | `⌘⇧P` Command Palette, `⌘P` file quick open |
-| **macOS arm64 Packaging** | ✅ Completed | Builds standalone `CoreMind.app` and `CoreMind.dmg` |
-| **AI / LLM / Autonomous Agent** | ⏳ Phase 2 | Scheduled for Phase 2 integration |
+| **macOS Native Window** | [Done] Completed | Custom title bar, native traffic lights padding (`hiddenInset`) |
+| **Workspace & File Tree** | [Done] Completed | Native directory picker, recursive tree, expand/collapse |
+| **File CRUD & Security** | [Done] Completed | Create, read, write, rename, delete with traversal prevention |
+| **Monaco Code Editor** | [Done] Completed | TypeScript, Python, Dart, JS, JSON, Markdown with dark theme |
+| **Editor Model Manager** | [Done] Completed | In-memory Monaco models preserving scroll, undo, and cursor |
+| **Multi-Tab System** | [Done] Completed | Dirty tracking dot (`●`), close confirm, middle-click close |
+| **Project Search** | [Done] Completed | Fast text search across files with line preview and jump-to-code |
+| **Git Source Control** | [Done] Completed | Git branch detection, porcelain status, modified files |
+| **Terminal Interface** | [Done] Completed | xterm.js UI with interactive shell simulation (Phase 1) |
+| **Settings Panel** | [Done] Completed | Font size, tab size, minimap, word wrap, app diagnostics |
+| **Command Palette & Quick Open** | [Done] Completed | `⌘⇧P` Command Palette, `⌘P` file quick open |
+| **macOS arm64 Packaging** | [Done] Completed | Builds standalone `CoreMind.app` and `CoreMind.dmg` |
+| **AI / LLM / Autonomous Agent** | [Phase 2] | Scheduled for Phase 2 integration |
 
 ---
 

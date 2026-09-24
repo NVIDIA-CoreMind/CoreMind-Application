@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { UI_DIMENSIONS } from '@shared/constants';
 
-export type SidebarTab = 'explorer' | 'search' | 'settings';
+export type SidebarTab = 'explorer' | 'search' | 'git' | 'debug' | 'extensions' | 'settings';
 
 interface UiStore {
   activeSidebarTab: SidebarTab;
