@@ -298,13 +298,18 @@ export const FileExplorer: React.FC = () => {
               style={{
                 padding: '6px 14px',
                 borderRadius: '5px',
-                backgroundColor: 'var(--accent)',
+                backgroundColor: '#10b981',
                 color: '#ffffff',
                 fontSize: '12px',
                 fontWeight: 500,
                 gap: '6px',
                 width: '100%',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'background-color 0.15s ease',
               }}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
             >
               <FolderOpen size={14} />
               Open Folder

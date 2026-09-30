@@ -1,7 +1,7 @@
 {
   "name": "coremind",
   "version": "0.1.0",
-  "description": "CoreMind - AI-Native Desktop Development Environment for macOS",
+  "description": "CoreMind - AI-Native Desktop Development Environment for macOS and Windows",
   "main": "dist-electron/main.js",
   "author": "CoreMind Team",
   "license": "MIT",
@@ -10,12 +10,13 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:mac": "npm run build && electron-builder --mac --arm64",
-    "package": "npm run build:mac",
+    "build:win": "npm run build && electron-builder --win",
+    "package": "npm run build && electron-builder --mac --arm64 --win",
     "typecheck": "tsc --noEmit",
     "lint": "eslint src/ --ext .ts,.tsx",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "chmod +x node_modules/node-pty/prebuilds/*/*helper* || true"
+    "postinstall": "node -e \"try { require('child_process').execSync('chmod +x node_modules/node-pty/prebuilds/*/*helper* 2>/dev/null'); } catch(e) {}\""
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
@@ -62,6 +63,21 @@
         "to": "assets"
       }
     ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true
+    },
     "mac": {
       "target": [
         {

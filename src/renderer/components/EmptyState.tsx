@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   FolderOpen,
   GitBranch,
-  Sparkles,
+  Cpu,
 } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import coreMindLogo from '../assets/icon.png';
@@ -116,7 +116,7 @@ export const EmptyState: React.FC = () => {
               width: '100%',
               height: '36px',
               borderRadius: '6px',
-              backgroundColor: '#0284c7',
+              backgroundColor: '#10b981',
               color: '#ffffff',
               fontSize: '13px',
               fontWeight: 500,
@@ -126,11 +126,11 @@ export const EmptyState: React.FC = () => {
               gap: '8px',
               cursor: 'pointer',
               border: 'none',
-              boxShadow: '0 2px 8px rgba(2, 132, 199, 0.3)',
+              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
               transition: 'background-color 0.15s ease',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#0369a1')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#0284c7')}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
           >
             <FolderOpen size={16} />
             <span>{isLoading ? 'Opening Folder...' : 'Open Folder'}</span>
@@ -322,14 +322,14 @@ export const EmptyState: React.FC = () => {
                   width: '32px',
                   height: '32px',
                   borderRadius: '6px',
-                  backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <Sparkles size={16} color="#10B981" />
+                <Cpu size={16} color="#d1d5db" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
                 <span
