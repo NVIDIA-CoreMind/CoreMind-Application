@@ -13,19 +13,23 @@ export const TerminalPanel: React.FC = () => {
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const sessionIdRef = useRef<string>(`term-${Date.now()}`);
+  const cleanupRef = useRef<(() => void) | null>(null);
+  const sessionSeqRef = useRef<number>(0);
   const [isConnected, setIsConnected] = useState(false);
 
   const initTerminal = useCallback(async () => {
     if (!terminalRef.current) return;
 
-    // Clean up previous instance if restarting
-    if (xtermRef.current) {
-      window.coreMindAPI.closeTerminal(sessionIdRef.current);
-      xtermRef.current.dispose();
-      xtermRef.current = null;
+    // Invalidate any pending in-flight async initializations
+    const currentSeq = ++sessionSeqRef.current;
+
+    // Synchronously clean up previous terminal instance and all listeners
+    if (cleanupRef.current) {
+      cleanupRef.current();
+      cleanupRef.current = null;
     }
 
-    const sessionId = `term-${Date.now()}`;
+    const sessionId = `term-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     sessionIdRef.current = sessionId;
 
     const term = new XTerm({
@@ -75,12 +79,51 @@ export const TerminalPanel: React.FC = () => {
       // ignore initial fit error before layout settles
     }
 
+    let isDisposed = false;
+    let removeDataListener: (() => void) | null = null;
+    let removeExitListener: (() => void) | null = null;
+    let onDataDisposable: { dispose: () => void } | null = null;
+
+    const cleanup = () => {
+      if (isDisposed) return;
+      isDisposed = true;
+      if (onDataDisposable) {
+        onDataDisposable.dispose();
+        onDataDisposable = null;
+      }
+      if (removeDataListener) {
+        removeDataListener();
+        removeDataListener = null;
+      }
+      if (removeExitListener) {
+        removeExitListener();
+        removeExitListener = null;
+      }
+      window.coreMindAPI.closeTerminal(sessionId);
+      term.dispose();
+      if (xtermRef.current === term) {
+        xtermRef.current = null;
+      }
+      if (fitAddonRef.current === fitAddon) {
+        fitAddonRef.current = null;
+      }
+    };
+
+    cleanupRef.current = cleanup;
+
     // Spawn backend PTY process
     const res = await window.coreMindAPI.createTerminal(sessionId, {
       cols: term.cols || 80,
       rows: term.rows || 24,
       cwd: rootPath || undefined,
     });
+
+    // If canceled/superseded during async await, abort immediately
+    if (sessionSeqRef.current !== currentSeq || isDisposed) {
+      window.coreMindAPI.closeTerminal(sessionId);
+      term.dispose();
+      return;
+    }
 
     if (res.success) {
       setIsConnected(true);
@@ -89,39 +132,28 @@ export const TerminalPanel: React.FC = () => {
     }
 
     // Forward keystrokes to PTY
-    const onDataDisposable = term.onData((data) => {
+    onDataDisposable = term.onData((data) => {
       window.coreMindAPI.terminalWrite(sessionId, data);
     });
 
-    // Listen for data from backend PTY
-    const removeDataListener = window.coreMindAPI.onTerminalData((payload) => {
-      if (payload.id === sessionIdRef.current && xtermRef.current) {
-        xtermRef.current.write(payload.data);
+    // Listen for data from backend PTY - strictly bound to this session and this term instance
+    removeDataListener = window.coreMindAPI.onTerminalData((payload) => {
+      if (payload.id === sessionId && xtermRef.current === term) {
+        term.write(payload.data);
       }
     });
 
-    // Listen for process exit
-    const removeExitListener = window.coreMindAPI.onTerminalExit((payload) => {
-      if (payload.id === sessionIdRef.current && xtermRef.current) {
-        xtermRef.current.writeln(`\r\n\x1b[90m[Process completed (exit code ${payload.exitCode})]\x1b[0m\r\n`);
+    // Listen for process exit - strictly bound to this session and this term instance
+    removeExitListener = window.coreMindAPI.onTerminalExit((payload) => {
+      if (payload.id === sessionId && xtermRef.current === term) {
+        term.writeln(`\r\n\x1b[90m[Process completed (exit code ${payload.exitCode})]\x1b[0m\r\n`);
         setIsConnected(false);
       }
     });
-
-    return () => {
-      onDataDisposable.dispose();
-      removeDataListener();
-      removeExitListener();
-      window.coreMindAPI.closeTerminal(sessionId);
-      term.dispose();
-    };
   }, [rootPath]);
 
   useEffect(() => {
-    let cleanupFn: (() => void) | undefined;
-    initTerminal().then((cleanup) => {
-      cleanupFn = cleanup;
-    });
+    initTerminal();
 
     // Observe container resize for auto-fitting
     const resizeObserver = new ResizeObserver(() => {
@@ -145,7 +177,10 @@ export const TerminalPanel: React.FC = () => {
 
     return () => {
       resizeObserver.disconnect();
-      if (cleanupFn) cleanupFn();
+      if (cleanupRef.current) {
+        cleanupRef.current();
+        cleanupRef.current = null;
+      }
     };
   }, [initTerminal]);
 

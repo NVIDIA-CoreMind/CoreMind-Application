@@ -34,6 +34,8 @@ export interface ActiveTerminalSession {
   id: string;
   ptyProcess: IPtyProcess;
   cwd: string;
+  dataDisposable?: { dispose(): void };
+  exitDisposable?: { dispose(): void };
 }
 
 export class TerminalService {
@@ -89,11 +91,11 @@ export class TerminalService {
         env,
       });
 
-      ptyProcess.onData((data: string) => {
+      const dataDisposable = ptyProcess.onData((data: string) => {
         onData(data);
       });
 
-      ptyProcess.onExit(({ exitCode }) => {
+      const exitDisposable = ptyProcess.onExit(({ exitCode }) => {
         logger.info('Terminal process exited', { id, exitCode });
         this.sessions.delete(id);
         onExit(exitCode);
@@ -103,6 +105,8 @@ export class TerminalService {
         id,
         ptyProcess,
         cwd: workingDir,
+        dataDisposable,
+        exitDisposable,
       });
 
       return true;
@@ -155,6 +159,8 @@ export class TerminalService {
     if (session) {
       logger.info('Killing terminal session', { id });
       try {
+        session.dataDisposable?.dispose();
+        session.exitDisposable?.dispose();
         session.ptyProcess.kill();
       } catch {
         // Process might already be dead

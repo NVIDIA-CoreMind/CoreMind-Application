@@ -13,9 +13,13 @@ export function getMainWindow(): BrowserWindow | null {
 }
 
 function getAppIcon(): Electron.NativeImage | undefined {
+  const iconName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
   const candidates = [
+    path.join(__dirname, '../assets', iconName),
     path.join(__dirname, '../assets/icon.png'),
+    path.join(process.resourcesPath, 'assets', iconName),
     path.join(process.resourcesPath, 'assets/icon.png'),
+    path.join(app.getAppPath(), 'assets', iconName),
     path.join(app.getAppPath(), 'assets/icon.png'),
   ];
   for (const candidate of candidates) {
