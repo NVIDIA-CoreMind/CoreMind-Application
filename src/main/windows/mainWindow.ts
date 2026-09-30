@@ -68,6 +68,10 @@ export function createMainWindow(): BrowserWindow {
     mainWindow?.show();
   });
 
+  mainWindow.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
+    logger.info(`[Renderer] ${message}`, { sourceId, line });
+  });
+
   mainWindow.on('closed', () => {
     mainWindow = null;
     logger.info('Main window closed');

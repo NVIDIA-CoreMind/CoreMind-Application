@@ -1,4 +1,4 @@
-import { ipcMain, dialog, app, BrowserWindow } from 'electron';
+import { ipcMain, dialog, app, BrowserWindow, shell } from 'electron';
 import os from 'node:os';
 import {
   IPC_CHANNELS,
@@ -16,6 +16,7 @@ import { fileSystemService } from '../services/fileSystemService';
 import { terminalService } from '../services/terminalService';
 import { agentService } from '../services/agentService';
 import { logger } from '../services/logger';
+import { getMainWindow } from '../windows/mainWindow';
 
 export function registerIpcHandlers(): void {
   logger.info('Registering IPC Handlers');
@@ -296,4 +297,100 @@ export function registerIpcHandlers(): void {
     const win = BrowserWindow.getFocusedWindow();
     win?.close();
   });
+
+  // External & Auth Handlers
+  ipcMain.handle(
+    IPC_CHANNELS.AUTH_OPEN_WINDOW,
+    async (_event, { authUrl }: { authUrl: string }): Promise<IpcResult<any>> => {
+      logger.info('Opening Google Auth Window', { authUrl });
+      return new Promise((resolve) => {
+        let resolved = false;
+        const parentWin = getMainWindow();
+
+        const authWin = new BrowserWindow({
+          width: 520,
+          height: 680,
+          title: 'Sign In with Google — CoreMind',
+          parent: parentWin || undefined,
+          modal: true,
+          show: false,
+          webPreferences: {
+            nodeIntegration: false,
+            contextIsolation: true,
+            sandbox: true,
+          },
+        });
+
+        authWin.setMenu(null);
+        authWin.once('ready-to-show', () => {
+          authWin.show();
+        });
+
+        const checkAuthSuccess = async () => {
+          if (resolved || authWin.isDestroyed()) return;
+          try {
+            const rawTokens = await authWin.webContents.executeJavaScript(`
+              (() => {
+                try {
+                  const stored = localStorage.getItem('coremind_auth');
+                  if (stored) return stored;
+                  const bodyText = document.body ? document.body.innerText : '';
+                  if (bodyText.includes('"access_token"')) return bodyText;
+                } catch(e) {}
+                return null;
+              })()
+            `);
+            if (rawTokens) {
+              try {
+                const parsed = JSON.parse(rawTokens);
+                if (parsed.access_token) {
+                  resolved = true;
+                  authWin.close();
+                  resolve({ success: true, data: parsed });
+                }
+              } catch {
+                // Not valid JSON yet
+              }
+            }
+          } catch {
+            // Script evaluation skipped
+          }
+        };
+
+        authWin.webContents.on('did-navigate', async (_e, navUrl) => {
+          logger.info('Auth window navigated', { navUrl });
+          if (navUrl.includes('/v1/auth/google/callback') || navUrl.includes('/auth')) {
+            await checkAuthSuccess();
+          }
+        });
+
+        authWin.webContents.on('did-finish-load', async () => {
+          await checkAuthSuccess();
+        });
+
+        authWin.on('closed', () => {
+          if (!resolved) {
+            resolve({
+              success: false,
+              error: {
+                code: 'AUTH_CANCELLED',
+                message: 'Authentication window was closed by the user.',
+              },
+            });
+          }
+        });
+
+        authWin.loadURL(authUrl);
+      });
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.OPEN_EXTERNAL_URL,
+    async (_event, { url }: { url: string }): Promise<void> => {
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        await shell.openExternal(url);
+      }
+    }
+  );
 }

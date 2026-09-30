@@ -88,4 +88,8 @@ export const IPC_CHANNELS = {
   APP_WINDOW_MINIMIZE: 'app:window-minimize',
   APP_WINDOW_MAXIMIZE: 'app:window-maximize',
   APP_WINDOW_CLOSE: 'app:window-close',
+
+  // External & Auth
+  AUTH_OPEN_WINDOW: 'auth:open-window',
+  OPEN_EXTERNAL_URL: 'app:open-external-url',
 } as const;

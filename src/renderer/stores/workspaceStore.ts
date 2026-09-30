@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import { WorkspaceState } from '@shared/types/workspace';
 import { useFilesStore } from './filesStore';
+import { ProjectMetadata, RepoMapResponse } from '../services/coremind/types';
+import { projectService } from '../services/coremind/project';
 
 const STORAGE_KEY_LAST = 'coremind:last-workspace';
 const STORAGE_KEY_RECENTS = 'coremind:recent-workspaces';
 const DEFAULT_RECENTS = [
-  '~/Documents/ATS_Projects/Robot_Application',
   '/Users/manojsarya/Documents/My Projects/CoreMind-Application',
-  '~/Documents/My Projects/CoreMind-Sandbox',
 ];
 
 function getStoredRecents(): string[] {
@@ -39,9 +39,13 @@ interface WorkspaceStore extends WorkspaceState {
   isLoading: boolean;
   error: string | null;
   recentWorkspaces: string[];
+  projectMetadata: ProjectMetadata | null;
+  repoMap: RepoMapResponse | null;
+
   openFolderDialog: () => Promise<string | null>;
   openWorkspacePath: (path: string) => Promise<boolean>;
   restoreLastWorkspace: () => Promise<boolean>;
+  refreshRepoMap: () => Promise<void>;
   closeWorkspace: () => void;
 }
 
@@ -52,6 +56,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   isLoading: false,
   error: null,
   recentWorkspaces: getStoredRecents(),
+  projectMetadata: null,
+  repoMap: null,
 
   openWorkspacePath: async (targetPath: string) => {
     try {
@@ -75,13 +81,36 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         // ignore
       }
 
-      // Automatically load the workspace file tree
+      // Automatically load the workspace file tree via local FS
       await useFilesStore.getState().loadWorkspaceTree(cleanPath);
+
+      // Register project with CoreMind Backend to retrieve metadata & language/framework detection
+      try {
+        const metadata = await projectService.openProject(cleanPath);
+        set({ projectMetadata: metadata });
+      } catch (backendErr: unknown) {
+        console.warn('[CoreMind] Backend openProject warning (backend may be offline):', backendErr);
+      }
+
+      // Fetch AST Repo Map in background
+      get().refreshRepoMap();
+
       return true;
     } catch (err: unknown) {
       const error = err as Error;
       set({ error: error.message || 'Failed to open directory', isLoading: false });
       return false;
+    }
+  },
+
+  refreshRepoMap: async () => {
+    const { rootPath } = get();
+    if (!rootPath) return;
+    try {
+      const repoMap = await projectService.getRepoMap(rootPath);
+      set({ repoMap });
+    } catch (err: unknown) {
+      console.warn('[CoreMind] Failed to fetch repo map:', err);
     }
   },
 
@@ -136,6 +165,8 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       rootName: null,
       isOpen: false,
       error: null,
+      projectMetadata: null,
+      repoMap: null,
     });
     useFilesStore.setState({ fileTree: [], selectedPath: null, expandedPaths: new Set() });
   },

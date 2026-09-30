@@ -12,6 +12,7 @@ import { EmptyState } from '../components/EmptyState';
 import { StatusBar } from '../components/StatusBar';
 import { CommandPalette } from '../components/CommandPalette';
 import { QuickOpen } from '../components/QuickOpen';
+import { DiffReviewModal } from '../components/DiffReviewModal';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useUiStore } from '../stores/uiStore';
 
@@ -154,6 +155,7 @@ export const IDELayout: React.FC = () => {
       {/* Global Quick Modals */}
       <CommandPalette />
       <QuickOpen />
+      <DiffReviewModal />
     </div>
   );
 };

@@ -3,6 +3,8 @@ import { IDELayout } from './layouts/IDELayout';
 import { useTabsStore } from './stores/tabsStore';
 import { useWorkspaceStore } from './stores/workspaceStore';
 import { useUiStore } from './stores/uiStore';
+import { useBackendStore } from './stores/backendStore';
+import { useAuthStore } from './stores/authStore';
 
 export const App: React.FC = () => {
   const { saveActiveTab, closeTab, activeTabId } = useTabsStore();
@@ -15,6 +17,12 @@ export const App: React.FC = () => {
     isCommandPaletteOpen,
     isQuickOpenOpen,
   } = useUiStore();
+
+  // Initialize CoreMind Backend WebSocket and Auth session on startup
+  useEffect(() => {
+    useBackendStore.getState().init();
+    useAuthStore.getState().initAuth();
+  }, []);
 
   // Restore previous workspace on startup
   useEffect(() => {

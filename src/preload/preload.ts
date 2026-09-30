@@ -45,6 +45,10 @@ export interface CoreMindAPI {
   minimizeWindow: () => Promise<void>;
   maximizeWindow: () => Promise<void>;
   closeWindow: () => Promise<void>;
+
+  // External & Auth
+  openAuthWindow: (authUrl: string) => Promise<IpcResult<any>>;
+  openExternalUrl: (url: string) => Promise<void>;
 }
 
 const api: CoreMindAPI = {
@@ -107,6 +111,10 @@ const api: CoreMindAPI = {
   minimizeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.APP_WINDOW_MINIMIZE),
   maximizeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.APP_WINDOW_MAXIMIZE),
   closeWindow: () => ipcRenderer.invoke(IPC_CHANNELS.APP_WINDOW_CLOSE),
+
+  // External & Auth
+  openAuthWindow: (authUrl: string) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_OPEN_WINDOW, { authUrl }),
+  openExternalUrl: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.OPEN_EXTERNAL_URL, { url }),
 };
 
 contextBridge.exposeInMainWorld('coreMindAPI', api);

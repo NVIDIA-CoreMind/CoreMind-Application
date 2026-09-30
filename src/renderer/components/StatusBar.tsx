@@ -1,17 +1,32 @@
 import React from 'react';
-import { GitBranch, XCircle, AlertTriangle, Settings } from 'lucide-react';
+import { GitBranch, XCircle, AlertTriangle, Settings, Radio } from 'lucide-react';
 import { useTabsStore } from '../stores/tabsStore';
 import { useEditorStore } from '../stores/editorStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useUiStore } from '../stores/uiStore';
+import { useBackendStore } from '../stores/backendStore';
+import { useAgentStore } from '../stores/agentStore';
 
 export const StatusBar: React.FC = () => {
   const { tabs, activeTabId } = useTabsStore();
   const { cursorPosition } = useEditorStore();
   const { rootName } = useWorkspaceStore();
   const { setActiveSidebarTab } = useUiStore();
+  const { isHealthy, wsStatus, httpUrl, reconnect, checkHealth } = useBackendStore();
+  const { selectedModel, tokenUsage } = useAgentStore();
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
+
+  // Backend connection state mapping
+  const isConnected = isHealthy || wsStatus === 'connected';
+  const isConnecting = !isConnected && (wsStatus === 'connecting' || wsStatus === 'reconnecting');
+
+  const statusColor = isConnected ? '#10B981' : isConnecting ? '#F59E0B' : '#EF4444';
+  const statusLabel = isConnected
+    ? 'CoreMind: Connected'
+    : isConnecting
+    ? 'CoreMind: Connecting...'
+    : 'CoreMind: Offline';
 
   return (
     <div
@@ -30,7 +45,7 @@ export const StatusBar: React.FC = () => {
         flexShrink: 0,
       }}
     >
-      {/* Left: Branch & Errors / Warnings */}
+      {/* Left: Branch & Errors / Warnings & Backend Status */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}>
           <GitBranch size={11} color="#9ca3af" />
@@ -51,10 +66,63 @@ export const StatusBar: React.FC = () => {
         {rootName && (
           <span style={{ color: '#71717a' }}>• {rootName}</span>
         )}
+
+        {/* Backend Connectivity Indicator */}
+        <div
+          onClick={() => {
+            if (!isConnected) {
+              reconnect();
+              checkHealth();
+            } else {
+              setActiveSidebarTab('settings');
+            }
+          }}
+          title={`Backend: ${httpUrl} | WebSocket: ${wsStatus} (Click to ${isConnected ? 'view settings' : 'reconnect'})`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            cursor: 'pointer',
+            padding: '1px 6px',
+            borderRadius: '4px',
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+          }}
+        >
+          <span
+            style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              backgroundColor: statusColor,
+              display: 'inline-block',
+              boxShadow: isConnected ? '0 0 6px rgba(16, 185, 129, 0.6)' : undefined,
+            }}
+          />
+          <span style={{ color: isConnected ? '#e5e7eb' : statusColor, fontSize: '10.5px', fontWeight: 500 }}>
+            {statusLabel}
+          </span>
+        </div>
       </div>
 
-      {/* Right: Language, Line/Col, Encoding, Settings */}
+      {/* Right: Language, Line/Col, Encoding, Model, Settings */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+        {tokenUsage && (
+          <span style={{ color: '#71717a', fontSize: '10px' }} title={`Prompt: ${tokenUsage.prompt_tokens} | Completion: ${tokenUsage.completion_tokens}`}>
+            {tokenUsage.total_tokens.toLocaleString()} tokens
+          </span>
+        )}
+
+        <div
+          onClick={() => setActiveSidebarTab('settings')}
+          style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#9ca3af' }}
+          title={`Active AI Model: ${selectedModel}`}
+        >
+          <Radio size={10} color="#10B981" />
+          <span style={{ fontSize: '10.5px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {selectedModel.split('/').pop()}
+          </span>
+        </div>
+
         {activeTab ? (
           <>
             <span>
@@ -87,10 +155,9 @@ export const StatusBar: React.FC = () => {
           onMouseLeave={(e) => (e.currentTarget.style.color = '#9ca3af')}
         >
           <Settings size={11} />
-          <span>CoreMind - Settings</span>
+          <span>Settings</span>
         </button>
       </div>
     </div>
   );
 };
-
