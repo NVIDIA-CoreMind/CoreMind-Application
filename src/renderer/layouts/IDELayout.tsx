@@ -3,6 +3,7 @@ import { TitleBar } from '../components/TitleBar';
 import { ResizableSplitter } from '../components/ResizableSplitter';
 import { AgentPanel } from '../agent/AgentPanel';
 import { CoreMindWorkbench } from '../components/CoreMindWorkbench';
+import { PtyTerminal } from '../terminal/PtyTerminal';
 import { useUiStore } from '../stores/uiStore';
 
 export const IDELayout: React.FC = () => {
@@ -10,6 +11,9 @@ export const IDELayout: React.FC = () => {
     isRightPanelOpen,
     rightPanelWidth,
     setRightPanelWidth,
+    isTerminalOpen,
+    terminalHeight,
+    setTerminalHeight,
   } = useUiStore();
 
   return (
@@ -46,7 +50,24 @@ export const IDELayout: React.FC = () => {
             position: 'relative',
           }}
         >
-          <CoreMindWorkbench />
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
+              <div style={{ position: 'absolute', inset: 0 }}>
+                <CoreMindWorkbench />
+              </div>
+            </div>
+            {isTerminalOpen && (
+              <>
+                <ResizableSplitter
+                  direction="vertical"
+                  onResize={(delta) => setTerminalHeight(terminalHeight + delta)}
+                />
+                <div style={{ height: `${terminalHeight}px`, flexShrink: 0 }}>
+                  <PtyTerminal />
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Right: AI Agent Panel (CoreMind Specific Feature) */}
