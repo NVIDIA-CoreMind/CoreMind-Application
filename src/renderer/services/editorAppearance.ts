@@ -1,11 +1,48 @@
-// Antigravity-style editor look: one continuous dark surface shared with the agent panel (#181818),
-// quiet chrome, comfortable code typography.
-const SURFACE = '#181818';
-const SURFACE_RAISED = '#1f1f1f';
-const BORDER = '#2a2a2a';
+import type { ThemeMode } from '../stores/themeStore';
 
-export const EDITOR_USER_CONFIGURATION: Record<string, unknown> = {
-  'workbench.colorTheme': 'Default Dark Modern',
+interface Palette {
+  colorTheme: string;
+  surface: string;
+  raised: string;
+  chrome: string;
+  border: string;
+  overlay: (alpha: string) => string;
+  activeText: string;
+  inactiveText: string;
+  statusText: string;
+}
+
+const PALETTES: Record<ThemeMode, Palette> = {
+  dark: {
+    colorTheme: 'Default Dark Modern',
+    surface: '#181818',
+    raised: '#1f1f1f',
+    chrome: '#141414',
+    border: '#2a2a2a',
+    overlay: (alpha) => `#ffffff${alpha}`,
+    activeText: '#f3f4f6',
+    inactiveText: '#9ca3af',
+    statusText: '#9ca3af',
+  },
+  light: {
+    colorTheme: 'Default Light Modern',
+    surface: '#ffffff',
+    raised: '#f3f3f3',
+    chrome: '#f3f3f3',
+    border: '#d8d8d8',
+    overlay: (alpha) => `#000000${alpha}`,
+    activeText: '#1f2328',
+    inactiveText: '#57606a',
+    statusText: '#57606a',
+  },
+};
+
+// Antigravity-style editor look: one continuous surface shared with the agent panel, quiet chrome,
+// comfortable code typography. Built per theme so Dark/Light switch the whole Workbench.
+export function buildEditorConfiguration(theme: ThemeMode): Record<string, unknown> {
+  const p = PALETTES[theme];
+  return {
+  'workbench.colorTheme': p.colorTheme,
   'workbench.tree.indent': 14,
   'workbench.tree.renderIndentGuides': 'onHover',
   'workbench.editor.tabActionLocation': 'right',
@@ -27,41 +64,42 @@ export const EDITOR_USER_CONFIGURATION: Record<string, unknown> = {
   'editor.stickyScroll.enabled': false,
   'breadcrumbs.enabled': true,
   'workbench.colorCustomizations': {
-    'editor.background': SURFACE,
-    'editorGutter.background': SURFACE,
-    'editor.lineHighlightBackground': '#ffffff08',
+    'editor.background': p.surface,
+    'editorGutter.background': p.surface,
+    'editor.lineHighlightBackground': p.overlay('08'),
     'editor.selectionBackground': '#264f7855',
-    'editorIndentGuide.background1': '#ffffff10',
-    'editorIndentGuide.activeBackground1': '#ffffff30',
-    'editorWidget.background': SURFACE_RAISED,
-    'breadcrumb.background': SURFACE,
-    'sideBar.background': SURFACE,
-    'sideBar.border': BORDER,
-    'sideBarSectionHeader.background': SURFACE,
-    'sideBarSectionHeader.border': BORDER,
-    'list.activeSelectionBackground': '#ffffff12',
-    'list.inactiveSelectionBackground': '#ffffff0c',
-    'list.hoverBackground': '#ffffff08',
-    'activityBar.background': '#141414',
-    'activityBar.border': BORDER,
+    'editorIndentGuide.background1': p.overlay('10'),
+    'editorIndentGuide.activeBackground1': p.overlay('30'),
+    'editorWidget.background': p.raised,
+    'breadcrumb.background': p.surface,
+    'sideBar.background': p.surface,
+    'sideBar.border': p.border,
+    'sideBarSectionHeader.background': p.surface,
+    'sideBarSectionHeader.border': p.border,
+    'list.activeSelectionBackground': p.overlay('12'),
+    'list.inactiveSelectionBackground': p.overlay('0c'),
+    'list.hoverBackground': p.overlay('08'),
+    'activityBar.background': p.chrome,
+    'activityBar.border': p.border,
     'activityBar.activeBorder': '#10b981',
-    'activityBar.foreground': '#e5e7eb',
-    'activityBar.inactiveForeground': '#6b7280',
-    'editorGroupHeader.tabsBackground': SURFACE,
-    'editorGroupHeader.tabsBorder': BORDER,
-    'tab.activeBackground': SURFACE,
-    'tab.inactiveBackground': '#141414',
+    'activityBar.foreground': p.activeText,
+    'activityBar.inactiveForeground': p.inactiveText,
+    'editorGroupHeader.tabsBackground': p.surface,
+    'editorGroupHeader.tabsBorder': p.border,
+    'tab.activeBackground': p.surface,
+    'tab.inactiveBackground': p.chrome,
     'tab.activeBorderTop': '#10b981',
-    'tab.border': BORDER,
-    'tab.activeForeground': '#f3f4f6',
-    'tab.inactiveForeground': '#9ca3af',
-    'panel.background': SURFACE,
-    'panel.border': BORDER,
-    'statusBar.background': '#141414',
-    'statusBar.foreground': '#9ca3af',
-    'statusBar.border': BORDER,
-    'titleBar.activeBackground': '#141414',
-    'scrollbarSlider.background': '#ffffff14',
-    'scrollbarSlider.hoverBackground': '#ffffff24',
+    'tab.border': p.border,
+    'tab.activeForeground': p.activeText,
+    'tab.inactiveForeground': p.inactiveText,
+    'panel.background': p.surface,
+    'panel.border': p.border,
+    'statusBar.background': p.chrome,
+    'statusBar.foreground': p.statusText,
+    'statusBar.border': p.border,
+    'titleBar.activeBackground': p.chrome,
+    'scrollbarSlider.background': p.overlay('14'),
+    'scrollbarSlider.hoverBackground': p.overlay('24'),
   },
-};
+  };
+}

@@ -43,7 +43,7 @@ const STAGE_LABEL: Record<string, string> = {
 
 const sectionLabel: React.CSSProperties = {
   fontSize: '10.5px',
-  color: '#6b7280',
+  color: 'var(--text-muted)',
   textTransform: 'uppercase',
   letterSpacing: '0.4px',
   margin: '8px 0 4px',
@@ -62,7 +62,7 @@ function useNow(active: boolean): number {
 const StepIcon: React.FC<{ item: TimelineItem }> = ({ item }) => {
   if (item.state === 'running') return <Loader2 size={12} color="#10B981" className="animate-spin" />;
   if (item.state === 'failed') return <AlertTriangle size={12} color="#EF4444" />;
-  return <span style={{ color: '#6b7280', display: 'flex' }}>{KIND_ICON[item.kind]}</span>;
+  return <span style={{ color: 'var(--text-muted)', display: 'flex' }}>{KIND_ICON[item.kind]}</span>;
 };
 
 export const AgentTimeline: React.FC = () => {
@@ -100,7 +100,7 @@ export const AgentTimeline: React.FC = () => {
   };
 
   return (
-    <div style={{ borderLeft: '2px solid rgba(255,255,255,0.08)', paddingLeft: '10px' }}>
+    <div style={{ borderLeft: '2px solid var(--ov-8)', paddingLeft: '10px' }}>
       <div
         role="button"
         tabIndex={0}
@@ -112,23 +112,23 @@ export const AgentTimeline: React.FC = () => {
           gap: '6px',
           cursor: 'pointer',
           fontSize: '12px',
-          color: isLoading ? '#10B981' : '#9ca3af',
+          color: isLoading ? '#10B981' : 'var(--text-secondary)',
         }}
       >
         {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
         {isLoading && <Loader2 size={12} className="animate-spin" />}
         <span>{title}</span>
         {steps && isLoading && (
-          <span style={{ fontSize: '10.5px', color: '#6b7280' }}>
+          <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>
             step {steps.current}/{steps.max}
           </span>
         )}
       </div>
 
       {!isCollapsed && (
-        <div style={{ marginTop: '6px', fontSize: '12px', color: '#d1d5db' }}>
+        <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-body)' }}>
           {isLoading && (
-            <div style={{ color: '#9ca3af', marginBottom: '6px' }}>
+            <div style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
               {STAGE_LABEL[lifecycleStage] ?? 'Thinking'}…
             </div>
           )}
@@ -151,10 +151,10 @@ export const AgentTimeline: React.FC = () => {
                       ) : task.status === 'failed' ? (
                         <AlertTriangle size={12} color="#EF4444" />
                       ) : (
-                        <span style={{ width: 10, height: 10, border: '1px solid #52525b', borderRadius: '50%', margin: '1px' }} />
+                        <span style={{ width: 10, height: 10, border: '1px solid var(--text-faint)', borderRadius: '50%', margin: '1px' }} />
                       )}
                     </span>
-                    <span style={{ color: done ? '#9ca3af' : running ? '#fff' : '#d1d5db' }}>{task.title}</span>
+                    <span style={{ color: done ? 'var(--text-secondary)' : running ? 'var(--text-primary)' : 'var(--text-body)' }}>{task.title}</span>
                   </div>
                 );
               })}
@@ -178,7 +178,7 @@ export const AgentTimeline: React.FC = () => {
                 }}
               >
                 <StepIcon item={item} />
-                <span style={{ color: '#9ca3af', flexShrink: 0 }}>{item.verb}</span>
+                <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>{item.verb}</span>
                 {item.target && (
                   <span
                     style={{
@@ -188,10 +188,10 @@ export const AgentTimeline: React.FC = () => {
                       minWidth: 0,
                       padding: '1px 6px',
                       borderRadius: '4px',
-                      backgroundColor: 'rgba(255,255,255,0.05)',
+                      backgroundColor: 'var(--ov-5)',
                       fontFamily: 'var(--font-mono)',
                       fontSize: '11px',
-                      color: '#e5e7eb',
+                      color: 'var(--text-primary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -202,7 +202,7 @@ export const AgentTimeline: React.FC = () => {
                     {item.filePath ? baseName(item.target) : item.target}
                   </span>
                 )}
-                {item.detail && <span style={{ fontSize: '10.5px', color: '#6b7280' }}>{item.detail}</span>}
+                {item.detail && <span style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>{item.detail}</span>}
               </div>
             );
           })}

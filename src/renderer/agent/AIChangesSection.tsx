@@ -16,9 +16,9 @@ const buttonBase: React.CSSProperties = {
   fontSize: '11.5px',
   fontWeight: 600,
   cursor: 'pointer',
-  border: '1px solid rgba(255,255,255,0.12)',
+  border: '1px solid var(--ov-12)',
   backgroundColor: 'transparent',
-  color: '#d1d5db',
+  color: 'var(--text-body)',
 };
 
 export const AIChangesSection: React.FC = () => {
@@ -62,8 +62,8 @@ export const AIChangesSection: React.FC = () => {
       style={{
         margin: '10px 14px',
         padding: '10px 12px',
-        backgroundColor: 'rgba(255,255,255,0.03)',
-        border: '1px solid rgba(255,255,255,0.08)',
+        backgroundColor: 'var(--ov-3)',
+        border: '1px solid var(--ov-8)',
         borderRadius: '8px',
         flexShrink: 0,
         maxHeight: '40%',
@@ -74,15 +74,15 @@ export const AIChangesSection: React.FC = () => {
         <>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
             <GitPullRequest size={14} color="#10B981" />
-            <span style={{ fontSize: '12px', fontWeight: 600, color: '#f3f4f6' }}>AI Changes</span>
-            <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>AI Changes</span>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
               {changes.length} {changes.length === 1 ? 'file' : 'files'} changed
             </span>
           </div>
 
           {groups.map((group) => (
             <div key={group.label} style={{ marginBottom: '6px' }}>
-              <div style={{ fontSize: '10.5px', color: '#6b7280', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+              <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                 {group.label}
               </div>
               {group.files.map((file) => {
@@ -114,7 +114,7 @@ export const AIChangesSection: React.FC = () => {
                         flex: 1,
                         minWidth: 0,
                         fontSize: '11.5px',
-                        color: '#e5e7eb',
+                        color: 'var(--text-primary)',
                         fontFamily: 'var(--font-mono)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -135,7 +135,7 @@ export const AIChangesSection: React.FC = () => {
               <button style={buttonBase} disabled={busy} onClick={() => void reviewStep(-1)} title="Previous file">
                 <ChevronLeft size={12} />
               </button>
-              <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                 Reviewing {(reviewIndex ?? 0) + 1} of {changes.length}
               </span>
               <button style={buttonBase} disabled={busy} onClick={() => void reviewStep(1)} title="Next file">

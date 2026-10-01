@@ -8,12 +8,13 @@ import getTextmateServiceOverride from '@codingame/monaco-vscode-textmate-servic
 import getExplorerServiceOverride from '@codingame/monaco-vscode-explorer-service-override';
 import getDialogsServiceOverride from '@codingame/monaco-vscode-dialogs-service-override';
 import getLifecycleServiceOverride from '@codingame/monaco-vscode-lifecycle-service-override';
-import getConfigurationServiceOverride from '@codingame/monaco-vscode-configuration-service-override';
+import getConfigurationServiceOverride, { updateUserConfiguration } from '@codingame/monaco-vscode-configuration-service-override';
 import * as monaco from 'monaco-editor';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
 import '../workers';
 import { MATERIAL_ICON_THEME_ID, registerMaterialIconTheme } from '../services/materialIcons';
-import { EDITOR_USER_CONFIGURATION } from '../services/editorAppearance';
+import { buildEditorConfiguration } from '../services/editorAppearance';
+import { useThemeStore } from '../stores/themeStore';
 
 registerMaterialIconTheme();
 import { useWorkspaceStore } from '../stores/workspaceStore';
@@ -23,6 +24,10 @@ import { initWorkbenchBridge, notifyExternalChanges, syncDecorations } from '../
 import { sortedChanges } from '../services/aiChanges';
 
 const FILE_SCHEME = 'coremind';
+
+function userConfigurationJson(theme: 'dark' | 'light'): string {
+  return JSON.stringify({ ...buildEditorConfiguration(theme), 'workbench.iconTheme': MATERIAL_ICON_THEME_ID });
+}
 
 let startPromise: Promise<void> | null = null;
 
@@ -81,7 +86,7 @@ async function startWorkbench(container: HTMLElement, rootPath: string): Promise
       },
     },
     userConfiguration: {
-      json: JSON.stringify({ ...EDITOR_USER_CONFIGURATION, 'workbench.iconTheme': MATERIAL_ICON_THEME_ID }),
+      json: userConfigurationJson(useThemeStore.getState().theme),
     },
   });
   await apiWrapper.start();
@@ -94,6 +99,13 @@ async function startWorkbench(container: HTMLElement, rootPath: string): Promise
     isReadonly: false,
   });
   initWorkbenchBridge(vscode, fileProvider);
+
+  // Dark/Light switching re-themes the whole Workbench.
+  useThemeStore.subscribe((state, prev) => {
+    if (state.theme !== prev.theme) {
+      void updateUserConfiguration(userConfigurationJson(state.theme));
+    }
+  });
 
   // Keep Explorer decorations in sync with the AI change tracker.
   syncDecorations(sortedChanges(useAgentStore.getState().trackedChanges));
@@ -171,7 +183,7 @@ export const CoreMindWorkbench: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#1e1e1e', position: 'relative' }}>
+    <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: 'var(--bg-app)', position: 'relative' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
       {!rootPath && (
         <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
