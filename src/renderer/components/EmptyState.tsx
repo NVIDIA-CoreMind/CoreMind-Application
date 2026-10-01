@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   FolderOpen,
-  GitBranch,
+  FolderPlus,
   Cpu,
 } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspaceStore';
@@ -24,18 +24,8 @@ function parseWorkspaceInfo(workspacePath: string) {
 export const EmptyState: React.FC = () => {
   const { openFolderDialog, openWorkspacePath, recentWorkspaces, isLoading } = useWorkspaceStore();
   const [showAllRecents, setShowAllRecents] = useState(false);
-  const [isCloning, setIsCloning] = useState(false);
-  const [repoUrl, setRepoUrl] = useState('');
 
   const displayRecents = showAllRecents ? recentWorkspaces : recentWorkspaces.slice(0, 3);
-
-  const handleCloneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!repoUrl.trim()) return;
-    setIsCloning(false);
-    // Open folder dialog to choose destination for cloning
-    await openFolderDialog();
-  };
 
   return (
     <div
@@ -95,8 +85,11 @@ export const EmptyState: React.FC = () => {
               margin: 0,
             }}
           >
-            CoreMind IDE
+            Welcome to CoreMind
           </h1>
+          <p style={{ margin: 0, fontSize: '12.5px', color: '#9ca3af' }}>
+            Open a folder to start working.
+          </p>
         </div>
 
         {/* Action Buttons */}
@@ -137,7 +130,7 @@ export const EmptyState: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setIsCloning(!isCloning)}
+            onClick={() => openFolderDialog('create')}
             style={{
               width: '100%',
               height: '36px',
@@ -163,30 +156,10 @@ export const EmptyState: React.FC = () => {
               e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
             }}
           >
-            <GitBranch size={15} />
-            <span>Clone Repository</span>
+            <FolderPlus size={15} />
+            <span>Create Project</span>
           </button>
 
-          {isCloning && (
-            <form onSubmit={handleCloneSubmit} style={{ marginTop: '4px', width: '100%' }}>
-              <input
-                type="text"
-                placeholder="Enter repository URL (https://... or git@...)"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
-                autoFocus
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  backgroundColor: '#1f1f22',
-                  border: '1px solid #3b82f6',
-                  color: '#ffffff',
-                }}
-              />
-            </form>
-          )}
         </div>
 
         {/* Workspaces Section */}

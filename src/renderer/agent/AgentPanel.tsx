@@ -18,7 +18,6 @@ import {
   Square,
   HelpCircle,
   ShieldAlert,
-  GitPullRequest,
   CheckCircle2,
   Clock,
   Loader2,
@@ -29,6 +28,7 @@ import { useTabsStore } from '../stores/tabsStore';
 import { useUiStore } from '../stores/uiStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useBackendStore } from '../stores/backendStore';
+import { AIChangesSection } from './AIChangesSection';
 
 function formatRelativeTime(timestamp: number): string {
   const diffSec = Math.floor((Date.now() - timestamp) / 1000);
@@ -63,8 +63,6 @@ export const AgentPanel: React.FC = () => {
     activityLogs,
     pendingQuestion,
     pendingApproval,
-    activeChangeId,
-    changeSet,
     steps,
     tokenUsage,
     initWsListeners,
@@ -73,7 +71,6 @@ export const AgentPanel: React.FC = () => {
     answerQuestion,
     approveAction,
     denyAction,
-    setIsReviewingChanges,
     newSession,
     loadSession,
     deleteSession,
@@ -1167,50 +1164,7 @@ export const AgentPanel: React.FC = () => {
             </div>
           )}
 
-          {/* Change Review Notice Banner */}
-          {activeChangeId && (
-            <div
-              style={{
-                margin: '10px 14px',
-                padding: '10px 12px',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <GitPullRequest size={15} color="#10B981" />
-                <span style={{ fontSize: '12px', color: '#f3f4f6', fontWeight: 500 }}>
-                  Proposed changes ready for review
-                </span>
-                {changeSet?.files && (
-                  <span style={{ fontSize: '10.5px', color: '#10B981' }}>
-                    ({changeSet.files.length} files)
-                  </span>
-                )}
-              </div>
-
-              <button
-                onClick={() => setIsReviewingChanges(true)}
-                style={{
-                  padding: '4px 10px',
-                  backgroundColor: '#10B981',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  fontSize: '11.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Review Diffs
-              </button>
-            </div>
-          )}
+          <AIChangesSection />
 
           {/* Active File Context Pill */}
           {activeTab && (
