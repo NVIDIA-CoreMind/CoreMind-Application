@@ -1,3 +1,4 @@
+import { Markdown } from './Markdown';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Plus,
@@ -1062,11 +1063,11 @@ export const AgentPanel: React.FC = () => {
                     color: 'var(--text-primary)',
                     fontSize: '12.5px',
                     lineHeight: '1.55',
-                    whiteSpace: 'pre-wrap',
+                    whiteSpace: msg.role === 'user' ? 'pre-wrap' : 'normal',
                     wordBreak: 'break-word',
                   }}
                 >
-                  {msg.content}
+                  {msg.role === 'user' ? msg.content : <Markdown content={msg.content} />}
                 </div>
               </div>
               {msg.id === timelineAnchorId && <AgentTimeline />}

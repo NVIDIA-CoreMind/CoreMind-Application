@@ -178,6 +178,7 @@ interface AgentStore {
   steps: { current: number; max: number } | null;
   liveOutput: string;
   runStartedAt: number | null;
+  streamMessageId: string | null;
   runEndedAt: number | null;
 
   // Methods
@@ -291,6 +292,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   steps: null,
   liveOutput: '',
   runStartedAt: null,
+  streamMessageId: null,
   runEndedAt: null,
 
   initWsListeners: () => {
@@ -422,6 +424,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           set({
             steps: { current: event.data?.step, max: event.data?.max_steps },
             lifecycleStage: 'executing',
+            streamMessageId: null,
           });
           break;
         }
@@ -429,21 +432,19 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         case 'agent.ai.token': {
           const chunk = event.data?.token || '';
           if (chunk) {
+            // Each LLM step streams into its own message so consecutive answers are not glued together.
             set((s) => {
-              const msgs = [...s.messages];
-              const lastMsg = msgs[msgs.length - 1];
-              if (lastMsg && lastMsg.role === 'assistant') {
-                lastMsg.content += chunk;
-                return { messages: msgs };
-              } else {
-                msgs.push({
-                  id: `ai-stream-${Date.now()}`,
-                  role: 'assistant',
-                  content: chunk,
-                  timestamp: Date.now(),
-                });
-                return { messages: msgs };
+              const streamId = s.streamMessageId;
+              if (streamId && s.messages.some((m) => m.id === streamId)) {
+                return {
+                  messages: s.messages.map((m) => (m.id === streamId ? { ...m, content: m.content + chunk } : m)),
+                };
               }
+              const id = `ai-stream-${Date.now()}-${s.messages.length}`;
+              return {
+                streamMessageId: id,
+                messages: [...s.messages, { id, role: 'assistant', content: chunk, timestamp: Date.now() }],
+              };
             });
           }
           break;
@@ -654,6 +655,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             lifecycleStage: 'completed',
             isLoading: false,
             runEndedAt: Date.now(),
+            streamMessageId: null,
             activeChangeId: changeId || null,
           });
 
@@ -788,6 +790,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       steps: null,
       liveOutput: '',
       runStartedAt: null,
+      streamMessageId: null,
       runEndedAt: null,
     });
   },
@@ -878,6 +881,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       error: null,
       lifecycleStage: 'analyzing',
       runStartedAt: Date.now(),
+      streamMessageId: null,
       runEndedAt: null,
       liveOutput: '',
       taskGraph: null,
