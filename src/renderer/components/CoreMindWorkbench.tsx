@@ -11,6 +11,24 @@ import getLifecycleServiceOverride from '@codingame/monaco-vscode-lifecycle-serv
 import getConfigurationServiceOverride, { updateUserConfiguration } from '@codingame/monaco-vscode-configuration-service-override';
 import * as monaco from 'monaco-editor';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
+import '@codingame/monaco-vscode-python-default-extension';
+import '@codingame/monaco-vscode-javascript-default-extension';
+import '@codingame/monaco-vscode-typescript-basics-default-extension';
+import '@codingame/monaco-vscode-json-default-extension';
+import '@codingame/monaco-vscode-html-default-extension';
+import '@codingame/monaco-vscode-css-default-extension';
+import '@codingame/monaco-vscode-markdown-basics-default-extension';
+import '@codingame/monaco-vscode-shellscript-default-extension';
+import '@codingame/monaco-vscode-yaml-default-extension';
+import '@codingame/monaco-vscode-java-default-extension';
+import '@codingame/monaco-vscode-cpp-default-extension';
+import '@codingame/monaco-vscode-go-default-extension';
+import '@codingame/monaco-vscode-rust-default-extension';
+import '@codingame/monaco-vscode-xml-default-extension';
+import '@codingame/monaco-vscode-sql-default-extension';
+import '@codingame/monaco-vscode-ruby-default-extension';
+import '@codingame/monaco-vscode-php-default-extension';
+import '@codingame/monaco-vscode-csharp-default-extension';
 import '../workers';
 import { MATERIAL_ICON_THEME_ID, registerMaterialIconTheme } from '../services/materialIcons';
 import { buildEditorConfiguration } from '../services/editorAppearance';
@@ -77,6 +95,10 @@ async function startWorkbench(container: HTMLElement, rootPath: string): Promise
       ...getConfigurationServiceOverride(),
     },
     workspaceConfig: {
+      configurationDefaults: {
+        ...buildEditorConfiguration(useThemeStore.getState().theme),
+        'workbench.iconTheme': MATERIAL_ICON_THEME_ID,
+      },
       workspaceProvider: {
         trusted: true,
         workspace: { folderUri: toWorkspaceUri(rootPath) },

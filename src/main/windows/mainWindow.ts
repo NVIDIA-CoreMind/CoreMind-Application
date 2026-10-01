@@ -110,9 +110,11 @@ export function createMainWindow(): BrowserWindow {
     }
   });
 
+  // webContents is already destroyed when 'closed' fires, so capture the id up front.
+  const webContentsId = mainWindow.webContents.id;
   mainWindow.on('closed', () => {
-    stopWorkspaceWatch(mainWindow?.webContents.id ?? -1);
-    clearAuthorizedWorkspace(mainWindow?.webContents.id ?? -1);
+    stopWorkspaceWatch(webContentsId);
+    clearAuthorizedWorkspace(webContentsId);
     mainWindow = null;
     logger.info('Main window closed');
   });
