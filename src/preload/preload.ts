@@ -9,12 +9,15 @@ import {
   AgentResponse,
   AgentStatus,
   AgentToolAction,
+  WorkspaceFileChange,
 } from '../shared/types/ipc';
 import { FileNode, FileSearchResult } from '../shared/types/file';
 
 export interface CoreMindAPI {
   // File System
-  openDirectoryDialog: () => Promise<IpcResult<string | null>>;
+  openDirectoryDialog: (mode?: 'open' | 'create') => Promise<IpcResult<string | null>>;
+  watchWorkspace: () => Promise<IpcResult<boolean>>;
+  onWorkspaceFilesChanged: (callback: (changes: WorkspaceFileChange[]) => void) => () => void;
   restoreWorkspace: (workspacePath: string) => Promise<IpcResult<string | null>>;
   stat: (filePath: string, rootPath: string) => Promise<IpcResult<import('../shared/types/file').FileStat>>;
   readDirectory: (dirPath: string, rootPath: string) => Promise<IpcResult<FileNode[]>>;
@@ -55,7 +58,13 @@ export interface CoreMindAPI {
 
 const api: CoreMindAPI = {
   // File System
-  openDirectoryDialog: () => ipcRenderer.invoke(IPC_CHANNELS.FILE_OPEN_DIRECTORY_DIALOG),
+  openDirectoryDialog: (mode) => ipcRenderer.invoke(IPC_CHANNELS.FILE_OPEN_DIRECTORY_DIALOG, mode),
+  watchWorkspace: () => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE_WATCH),
+  onWorkspaceFilesChanged: (callback) => {
+    const handler = (_event: unknown, changes: WorkspaceFileChange[]) => callback(changes);
+    ipcRenderer.on(IPC_CHANNELS.WORKSPACE_FILES_CHANGED, handler);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.WORKSPACE_FILES_CHANGED, handler);
+  },
   restoreWorkspace: (workspacePath) => ipcRenderer.invoke(IPC_CHANNELS.WORKSPACE_RESTORE, workspacePath),
   stat: (filePath, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.FILE_STAT, { filePath, rootPath }),

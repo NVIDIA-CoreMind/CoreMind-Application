@@ -16,7 +16,21 @@ import { changesService } from '../services/coremind/changes';
 import { coremindWs } from '../services/coremind/websocket';
 import { useWorkspaceStore } from './workspaceStore';
 import { useTabsStore } from './tabsStore';
-import { useFilesStore } from './filesStore';
+import {
+  ChangeMap,
+  TrackedChange,
+  ChangeStatus,
+  countDiff,
+  recordChange,
+  resolveWorkspacePath,
+  reverseApplyUnifiedDiff,
+  sortedChanges,
+} from '../services/aiChanges';
+import {
+  notifyExternalChanges,
+  openChangeDiff,
+  refreshExplorer,
+} from '../services/workbenchBridge';
 
 export interface AgentSession {
   id: string;
@@ -26,6 +40,7 @@ export interface AgentSession {
   updatedAt: number;
   agentId?: string;
   changeId?: string;
+  changes?: TrackedChange[];
 }
 
 export type AgentLifecycleStage =
@@ -46,6 +61,65 @@ export interface ActivityLogItem {
   type: string;
   summary: string;
   details?: any;
+}
+
+export interface TaskSummary {
+  total: number;
+  created: string[];
+  modified: string[];
+  deleted: string[];
+  outsideWorkspace: string[];
+  verification: { label: string; ok: boolean }[];
+}
+
+const READ_ONLY_TOOL = /read|list|search|grep|find|stat|view|glob|tree/i;
+const PATH_ARG_KEYS = ['path', 'file_path', 'filepath', 'file', 'filename', 'target_file'];
+
+// Pre-change content captured when a tool starts, used as the left side of the real VS Code diff.
+const baselines = new Map<string, string | null>();
+
+function formatSummary(summary: TaskSummary): string {
+  if (summary.total === 0) {
+    return 'Task completed.\n\nNo files were created or modified.';
+  }
+  const section = (title: string, files: string[]) =>
+    files.length > 0 ? `\n${title}\n${files.map((f) => `  ${f}`).join('\n')}\n` : '';
+  const verification = summary.verification.map((v) => `  ${v.ok ? '✓' : '✗'} ${v.label}`).join('\n');
+  return (
+    `Task completed successfully.\n\nFiles changed: ${summary.total}\n` +
+    section('Created', summary.created) +
+    section('Modified', summary.modified) +
+    section('Deleted', summary.deleted) +
+    section('Outside the open workspace', summary.outsideWorkspace) +
+    `\nVerification\n${verification}`
+  ).trimEnd();
+}
+
+function extractPathArg(args: Record<string, unknown> | undefined): string | null {
+  if (!args) return null;
+  for (const key of PATH_ARG_KEYS) {
+    const value = args[key];
+    if (typeof value === 'string' && value.trim()) return value;
+  }
+  return null;
+}
+
+async function readCurrent(absPath: string, rootPath: string): Promise<string | null | undefined> {
+  const api = window.coreMindAPI;
+  if (!api) return undefined;
+  const result = await api.readFile(absPath, rootPath);
+  if (result.success) return result.data;
+  return result.error.code === 'ENOENT' ? null : undefined;
+}
+
+async function captureBaseline(rawPath: string): Promise<void> {
+  const rootPath = useWorkspaceStore.getState().rootPath;
+  const resolved = resolveWorkspacePath(rawPath, rootPath);
+  if (!resolved || resolved.outsideWorkspace || !rootPath || baselines.has(resolved.absPath)) return;
+  const content = await readCurrent(resolved.absPath, rootPath);
+  if (content !== undefined && !baselines.has(resolved.absPath)) {
+    baselines.set(resolved.absPath, content);
+  }
 }
 
 const STORAGE_KEY_SESSIONS = 'coremind:agent-sessions';
@@ -96,10 +170,15 @@ interface AgentStore {
   pendingApproval: { approval_id: string; tool: string; args: Record<string, any>; description: string } | null;
   activeChangeId: string | null;
   changeSet: ChangeSet | null;
-  isReviewingChanges: boolean;
+  trackedChanges: ChangeMap;
+  taskSummary: TaskSummary | null;
+  reviewIndex: number | null;
+  changeNotice: string | null;
   tokenUsage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null;
   steps: { current: number; max: number } | null;
   liveOutput: string;
+  runStartedAt: number | null;
+  runEndedAt: number | null;
 
   // Methods
   initWsListeners: () => void;
@@ -109,11 +188,15 @@ interface AgentStore {
   approveAction: () => Promise<boolean>;
   denyAction: (reason?: string) => Promise<boolean>;
   loadChanges: (changeId: string) => Promise<void>;
-  setIsReviewingChanges: (open: boolean) => void;
+  openChange: (path: string) => Promise<void>;
+  reviewChanges: () => Promise<void>;
+  reviewStep: (delta: 1 | -1) => Promise<void>;
   acceptAllChanges: () => Promise<boolean>;
   rejectAllChanges: () => Promise<boolean>;
   acceptFileChange: (filePath: string) => Promise<boolean>;
   rejectFileChange: (filePath: string) => Promise<boolean>;
+  finalizeTask: (reportedFiles: string[]) => Promise<void>;
+  recordFileEvent: (type: ChangeStatus, rawPath: string, extra?: { diff?: string }) => void;
 
   clearMessages: () => void;
   newSession: () => void;
@@ -121,6 +204,55 @@ interface AgentStore {
   deleteSession: (sessionId: string) => void;
   setSelectedModel: (model: string) => void;
   buildCurrentContext: () => AgentContext;
+}
+
+type StoreSet = (partial: Partial<AgentStore> | ((s: AgentStore) => Partial<AgentStore>)) => void;
+type StoreGet = () => AgentStore;
+
+function persistChanges(get: StoreGet): void {
+  const { currentSessionId, sessions, trackedChanges } = get();
+  if (!currentSessionId) return;
+  const updated = sessions.map((sess) =>
+    sess.id === currentSessionId ? { ...sess, changes: sortedChanges(trackedChanges) } : sess
+  );
+  useAgentStore.setState({ sessions: updated });
+  saveSessions(updated);
+}
+
+function removeChange(set: StoreSet, get: StoreGet, path: string): void {
+  const { [path]: _removed, ...rest } = get().trackedChanges;
+  const remaining = Object.keys(rest).length;
+  set({
+    trackedChanges: rest,
+    reviewIndex: null,
+    ...(remaining === 0 ? { changeSet: null, activeChangeId: null, taskSummary: null } : {}),
+  });
+  persistChanges(get);
+}
+
+async function finishRejection(changes: TrackedChange[], set: StoreSet, get: StoreGet): Promise<void> {
+  notifyExternalChanges(changes.filter((c) => !c.outsideWorkspace).map((c) => ({ path: c.absPath, type: 'changed' as const })));
+  baselines.clear();
+  set({ changeSet: null, activeChangeId: null, trackedChanges: {}, taskSummary: null, reviewIndex: null, changeNotice: null });
+  persistChanges(get);
+  await refreshExplorer();
+}
+
+// Reverts a single file using the captured original content; refuses when the original is unknown.
+async function revertLocally(change: TrackedChange): Promise<void> {
+  const api = window.coreMindAPI;
+  const rootPath = useWorkspaceStore.getState().rootPath;
+  if (!api || !rootPath) throw new Error('No workspace is open.');
+  if (change.status === 'created') {
+    const result = await api.delete(change.absPath, rootPath);
+    if (!result.success) throw new Error(result.error.message);
+    return;
+  }
+  if (typeof change.baseline !== 'string') {
+    throw new Error(`Cannot reject ${change.path}: its original content was not captured.`);
+  }
+  const result = await api.writeFile(change.absPath, change.baseline, rootPath);
+  if (!result.success) throw new Error(result.error.message);
 }
 
 let wsInitialized = false;
@@ -151,10 +283,15 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   pendingApproval: null,
   activeChangeId: null,
   changeSet: null,
-  isReviewingChanges: false,
+  trackedChanges: {},
+  taskSummary: null,
+  reviewIndex: null,
+  changeNotice: null,
   tokenUsage: null,
   steps: null,
   liveOutput: '',
+  runStartedAt: null,
+  runEndedAt: null,
 
   initWsListeners: () => {
     if (wsInitialized) return;
@@ -319,12 +456,16 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
         case 'tool.started': {
           const toolName = event.data?.tool || 'tool';
+          const targetPath = extractPathArg(event.data?.args);
+          if (targetPath && !READ_ONLY_TOOL.test(toolName)) {
+            void captureBaseline(targetPath);
+          }
           const logItem: ActivityLogItem = {
             id: `log-${now}`,
             timestamp: now,
             type: 'tool.started',
             summary: `Executing tool: ${toolName}`,
-            details: event.data?.args,
+            details: { tool: toolName, args: event.data?.args },
           };
           set((s) => ({
             lifecycleStage: 'executing',
@@ -341,7 +482,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             timestamp: now,
             type: 'tool.completed',
             summary: `Completed tool: ${toolName} (${success ? 'Success' : 'Failed'})`,
-            details: event.data?.result,
+            details: { tool: toolName, success, result: event.data?.result },
           };
           set((s) => ({ activityLogs: [...s.activityLogs, logItem] }));
           break;
@@ -351,6 +492,11 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         case 'file.created':
         case 'file.deleted': {
           const path = event.data?.path || '';
+          if (path) {
+            const status: ChangeStatus =
+              event.type === 'file.created' ? 'created' : event.type === 'file.deleted' ? 'deleted' : 'modified';
+            get().recordFileEvent(status, path);
+          }
           const logItem: ActivityLogItem = {
             id: `log-${now}`,
             timestamp: now,
@@ -364,6 +510,9 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
         case 'diff.created': {
           const path = event.data?.path;
+          if (path) {
+            get().recordFileEvent('modified', path, { diff: event.data?.diff });
+          }
           const logItem: ActivityLogItem = {
             id: `log-${now}`,
             timestamp: now,
@@ -504,44 +653,44 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           set({
             lifecycleStage: 'completed',
             isLoading: false,
+            runEndedAt: Date.now(),
             activeChangeId: changeId || null,
           });
 
-          if (changeId) {
-            get().loadChanges(changeId);
-          }
+          const reported: string[] = Array.isArray(event.data?.files_changed) ? event.data.files_changed : [];
+          const sessionId = state.currentSessionId;
+          const finalize = async () => {
+            if (changeId) await get().loadChanges(changeId);
+            await get().finalizeTask(reported);
 
-          // If assistant message was not closed, append completion notice
-          set((s) => {
-            const msgs = [...s.messages];
-            const lastMsg = msgs[msgs.length - 1];
-            if (!lastMsg || lastMsg.role !== 'assistant') {
-              msgs.push({
-                id: `ai-${Date.now()}`,
-                role: 'assistant',
-                content: `Task completed successfully in ${event.data?.steps || 1} steps.`,
-                timestamp: Date.now(),
-              });
+            const summary = get().taskSummary;
+            const content = summary
+              ? formatSummary(summary)
+              : `Task completed successfully in ${event.data?.steps || 1} steps.`;
+            set((s) => ({
+              messages: [
+                ...s.messages,
+                { id: `ai-${Date.now()}`, role: 'assistant', content, timestamp: Date.now() },
+              ],
+            }));
+
+            if (sessionId) {
+              const updated = get().sessions.map((sess) =>
+                sess.id === sessionId
+                  ? {
+                      ...sess,
+                      messages: get().messages,
+                      updatedAt: Date.now(),
+                      changeId,
+                      changes: sortedChanges(get().trackedChanges),
+                    }
+                  : sess
+              );
+              set({ sessions: updated });
+              saveSessions(updated);
             }
-            return { messages: msgs };
-          });
-
-          // Sync session
-          const currentSessId = state.currentSessionId;
-          if (currentSessId) {
-            const updated = get().sessions.map((sess) =>
-              sess.id === currentSessId
-                ? {
-                    ...sess,
-                    messages: get().messages,
-                    updatedAt: Date.now(),
-                    changeId,
-                  }
-                : sess
-            );
-            set({ sessions: updated });
-            saveSessions(updated);
-          }
+          };
+          void finalize();
           break;
         }
 
@@ -550,6 +699,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           set({
             lifecycleStage: 'failed',
             isLoading: false,
+            runEndedAt: Date.now(),
             error: errMsg,
           });
           set((s) => ({
@@ -570,6 +720,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           set({
             lifecycleStage: 'stopped',
             isLoading: false,
+            runEndedAt: Date.now(),
           });
           set((s) => ({
             messages: [
@@ -629,10 +780,15 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       pendingApproval: null,
       activeChangeId: null,
       changeSet: null,
-      isReviewingChanges: false,
+      trackedChanges: {},
+      taskSummary: null,
+      reviewIndex: null,
+      changeNotice: null,
       tokenUsage: null,
       steps: null,
       liveOutput: '',
+      runStartedAt: null,
+      runEndedAt: null,
     });
   },
 
@@ -644,6 +800,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
         messages: session.messages,
         agentId: session.agentId || null,
         activeChangeId: session.changeId || null,
+        trackedChanges: Object.fromEntries((session.changes ?? []).map((c) => [c.path, c])),
+        taskSummary: null,
+        reviewIndex: null,
+        changeNotice: null,
         error: null,
         lifecycleStage: 'completed',
       });
@@ -668,6 +828,23 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
 
     // Ensure WebSocket listeners are initialized
     get().initWsListeners();
+
+    // The agent must never write into an unknown location.
+    if (!useWorkspaceStore.getState().rootPath) {
+      set((s) => ({
+        messages: [
+          ...s.messages,
+          { id: `user-${Date.now()}`, role: 'user', content: trimmed, timestamp: Date.now() },
+          {
+            id: `sys-${Date.now()}`,
+            role: 'assistant',
+            content: 'No workspace is open. Open a folder (or create a project) first so I know where to create files.',
+            timestamp: Date.now(),
+          },
+        ],
+      }));
+      return false;
+    }
 
     const userMessage: AgentMessage = {
       id: `user-${Date.now()}`,
@@ -700,6 +877,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       isLoading: true,
       error: null,
       lifecycleStage: 'analyzing',
+      runStartedAt: Date.now(),
+      runEndedAt: null,
+      liveOutput: '',
+      taskGraph: null,
       activityLogs: [
         {
           id: `log-${Date.now()}`,
@@ -712,7 +893,12 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       pendingApproval: null,
       activeChangeId: null,
       changeSet: null,
+      trackedChanges: {},
+      taskSummary: null,
+      reviewIndex: null,
+      changeNotice: null,
     });
+    baselines.clear();
 
     const rootPath = useWorkspaceStore.getState().rootPath || '';
 
@@ -853,92 +1039,223 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
     return false;
   },
 
-  loadChanges: async (changeId: string) => {
-    try {
-      const changeSet = await changesService.getChanges(changeId);
-      set({ changeSet, activeChangeId: changeId });
-    } catch (err: unknown) {
-      console.warn('Failed to load changes for review:', err);
+  recordFileEvent: (type, rawPath, extra) => {
+    const resolved = resolveWorkspacePath(rawPath, useWorkspaceStore.getState().rootPath);
+    if (!resolved) return;
+    const counts = extra?.diff ? countDiff(extra.diff) : {};
+    set((s) => ({ trackedChanges: recordChange(s.trackedChanges, resolved, type, { ...extra, ...counts }) }));
+    if (!resolved.outsideWorkspace) {
+      notifyExternalChanges([{ path: resolved.absPath, type: type === 'deleted' ? 'deleted' : 'changed' }]);
     }
   },
 
-  setIsReviewingChanges: (open: boolean) => {
-    set({ isReviewingChanges: open });
+  loadChanges: async (changeId: string) => {
+    try {
+      const changeSet = await changesService.getChanges(changeId);
+      const rootPath = useWorkspaceStore.getState().rootPath;
+      set((s) => {
+        let tracked = s.trackedChanges;
+        for (const file of changeSet.files || []) {
+          const resolved = resolveWorkspacePath(file.path, rootPath);
+          if (!resolved) continue;
+          const prev = tracked[resolved.path];
+          const counts = file.diff ? countDiff(file.diff) : { additions: file.additions, deletions: file.deletions };
+          // The backend change set is authoritative for status and diff of the files it reports.
+          tracked = {
+            ...tracked,
+            [resolved.path]: {
+              path: resolved.path,
+              absPath: resolved.absPath,
+              outsideWorkspace: resolved.outsideWorkspace,
+              status: file.status,
+              additions: counts.additions ?? 0,
+              deletions: counts.deletions ?? 0,
+              diff: file.diff || prev?.diff,
+              baseline: prev?.baseline,
+            },
+          };
+        }
+        return { changeSet, activeChangeId: changeId, trackedChanges: tracked };
+      });
+    } catch (err: unknown) {
+      console.warn('Failed to load changes for review:', err);
+      set({ activeChangeId: changeId });
+    }
+  },
+
+  // Reconciles everything reported by events, the backend change set and the completion payload
+  // against the real filesystem, then builds the task summary from what is actually on disk.
+  finalizeTask: async (reportedFiles) => {
+    const rootPath = useWorkspaceStore.getState().rootPath;
+    let tracked = get().trackedChanges;
+    for (const raw of reportedFiles) {
+      const resolved = resolveWorkspacePath(raw, rootPath);
+      if (resolved && !tracked[resolved.path]) {
+        tracked = recordChange(tracked, resolved, 'modified');
+      }
+    }
+
+    const failures: string[] = [];
+    const verified: ChangeMap = {};
+    for (const change of Object.values(tracked)) {
+      let next: TrackedChange = { ...change };
+      if (!change.outsideWorkspace && rootPath) {
+        const current = await readCurrent(change.absPath, rootPath);
+        if (current === undefined) {
+          failures.push(change.path);
+        } else {
+          const exists = current !== null;
+          if (!exists && next.status === 'created') continue; // created then removed again: no net change
+          if (!exists) next = { ...next, status: 'deleted' };
+          else if (next.status === 'deleted') next = { ...next, status: 'modified' };
+
+          if (next.status === 'created') {
+            next.baseline = null;
+          } else if (next.diff) {
+            const reconstructed = reverseApplyUnifiedDiff(current ?? '', next.diff);
+            if (reconstructed !== null) next.baseline = reconstructed;
+          }
+          if (next.baseline === undefined && baselines.has(next.absPath)) {
+            next.baseline = baselines.get(next.absPath);
+          }
+          if (next.baseline !== undefined && next.baseline !== null && current === next.baseline) {
+            continue; // content identical to the original: nothing changed
+          }
+        }
+      }
+      verified[next.path] = next;
+    }
+
+    const list = sortedChanges(verified);
+    const pathsOf = (status: ChangeStatus) => list.filter((c) => c.status === status).map((c) => c.path);
+    const outside = list.filter((c) => c.outsideWorkspace).map((c) => c.absPath);
+    const verification: TaskSummary['verification'] = [];
+    if (list.length > 0) {
+      if (list.some((c) => c.status === 'created')) {
+        verification.push({ label: 'Files created', ok: !failures.some((f) => verified[f]?.status === 'created') });
+      }
+      verification.push({ label: 'Changes applied on disk', ok: failures.length === 0 });
+      verification.push({ label: 'All changes inside the workspace', ok: outside.length === 0 });
+    }
+
+    set({
+      trackedChanges: verified,
+      reviewIndex: null,
+      changeNotice:
+        outside.length > 0
+          ? `${outside.length} file(s) were changed outside the open workspace and are not shown in the Explorer.`
+          : null,
+      taskSummary: {
+        total: list.length,
+        created: pathsOf('created'),
+        modified: pathsOf('modified'),
+        deleted: pathsOf('deleted'),
+        outsideWorkspace: outside,
+        verification,
+      },
+    });
+    notifyExternalChanges(
+      list.filter((c) => !c.outsideWorkspace).map((c) => ({
+        path: c.absPath,
+        type: c.status === 'deleted' ? ('deleted' as const) : ('changed' as const),
+      }))
+    );
+  },
+
+  openChange: async (path: string) => {
+    const list = sortedChanges(get().trackedChanges);
+    const index = list.findIndex((c) => c.path === path);
+    const change = list[index];
+    if (!change) return;
+    set({ reviewIndex: index, changeNotice: null });
+    try {
+      if (change.outsideWorkspace) {
+        set({ changeNotice: `${change.absPath} is outside the open workspace and cannot be opened in the editor.` });
+        return;
+      }
+      const outcome = await openChangeDiff(change);
+      if (outcome === 'file') {
+        set({ changeNotice: `Original content of ${change.path} is unavailable; showing the current file instead.` });
+      }
+    } catch (err: unknown) {
+      set({ changeNotice: (err as Error).message });
+    }
+  },
+
+  reviewChanges: async () => {
+    const first = sortedChanges(get().trackedChanges)[0];
+    if (first) await get().openChange(first.path);
+  },
+
+  reviewStep: async (delta) => {
+    const list = sortedChanges(get().trackedChanges);
+    if (list.length === 0) return;
+    const current = get().reviewIndex ?? (delta === 1 ? -1 : 0);
+    const next = (current + delta + list.length) % list.length;
+    await get().openChange(list[next].path);
   },
 
   acceptAllChanges: async (): Promise<boolean> => {
     const { activeChangeId } = get();
-    if (!activeChangeId) return false;
-
     try {
-      await changesService.acceptChanges(activeChangeId);
-      // Reload changes and reload workspace files
-      const rootPath = useWorkspaceStore.getState().rootPath;
-      if (rootPath) {
-        await useFilesStore.getState().loadWorkspaceTree(rootPath);
-      }
-      set({ isReviewingChanges: false, changeSet: null, activeChangeId: null });
+      if (activeChangeId) await changesService.acceptChanges(activeChangeId);
+      baselines.clear();
+      set({ changeSet: null, activeChangeId: null, trackedChanges: {}, taskSummary: null, reviewIndex: null, changeNotice: null });
+      persistChanges(get);
       return true;
     } catch (err: unknown) {
-      const error = err as Error;
-      set({ error: error.message });
+      set({ error: (err as Error).message });
       return false;
     }
   },
 
   rejectAllChanges: async (): Promise<boolean> => {
-    const { activeChangeId } = get();
-    if (!activeChangeId) return false;
-
+    const { activeChangeId, trackedChanges } = get();
     try {
-      await changesService.rejectChanges(activeChangeId);
-      const rootPath = useWorkspaceStore.getState().rootPath;
-      if (rootPath) {
-        await useFilesStore.getState().loadWorkspaceTree(rootPath);
+      if (activeChangeId) {
+        await changesService.rejectChanges(activeChangeId);
+        await finishRejection(Object.values(trackedChanges), set, get);
+        return true;
       }
-      set({ isReviewingChanges: false, changeSet: null, activeChangeId: null });
+      for (const change of sortedChanges(trackedChanges)) {
+        const ok = await get().rejectFileChange(change.path);
+        if (!ok) return false;
+      }
       return true;
     } catch (err: unknown) {
-      const error = err as Error;
-      set({ error: error.message });
+      set({ error: (err as Error).message });
       return false;
     }
   },
 
   acceptFileChange: async (filePath: string): Promise<boolean> => {
     const { activeChangeId } = get();
-    if (!activeChangeId) return false;
-
     try {
-      await changesService.acceptFile(activeChangeId, filePath);
-      await get().loadChanges(activeChangeId);
-      const rootPath = useWorkspaceStore.getState().rootPath;
-      if (rootPath) {
-        await useFilesStore.getState().loadWorkspaceTree(rootPath);
-      }
+      if (activeChangeId) await changesService.acceptFile(activeChangeId, filePath);
+      removeChange(set, get, filePath);
       return true;
     } catch (err: unknown) {
-      const error = err as Error;
-      set({ error: error.message });
+      set({ error: (err as Error).message });
       return false;
     }
   },
 
   rejectFileChange: async (filePath: string): Promise<boolean> => {
-    const { activeChangeId } = get();
-    if (!activeChangeId) return false;
-
+    const { activeChangeId, trackedChanges } = get();
+    const change = trackedChanges[filePath];
+    if (!change) return false;
     try {
-      await changesService.rejectFile(activeChangeId, filePath);
-      await get().loadChanges(activeChangeId);
-      const rootPath = useWorkspaceStore.getState().rootPath;
-      if (rootPath) {
-        await useFilesStore.getState().loadWorkspaceTree(rootPath);
+      if (activeChangeId) {
+        await changesService.rejectFile(activeChangeId, filePath);
+      } else {
+        await revertLocally(change);
       }
+      notifyExternalChanges([{ path: change.absPath, type: change.baseline === null ? 'deleted' : 'changed' }]);
+      removeChange(set, get, filePath);
+      await refreshExplorer();
       return true;
     } catch (err: unknown) {
-      const error = err as Error;
-      set({ error: error.message });
+      set({ changeNotice: (err as Error).message });
       return false;
     }
   },

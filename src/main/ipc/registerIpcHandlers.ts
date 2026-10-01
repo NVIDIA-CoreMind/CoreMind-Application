@@ -17,6 +17,7 @@ import { terminalService } from '../services/terminalService';
 import { agentService } from '../services/agentService';
 import { logger } from '../services/logger';
 import { getMainWindow } from '../windows/mainWindow';
+import { startWorkspaceWatch } from '../services/workspaceWatcher';
 import { authorizeWorkspace, getAuthorizedWorkspace, restoreWorkspace } from '../services/workspaceAuthorization';
 
 function getWorkspaceForSender(senderId: number): string | null {
@@ -58,14 +59,14 @@ export function registerIpcHandlers(): void {
   // 1. Directory Open Dialog
   ipcMain.handle(
     IPC_CHANNELS.FILE_OPEN_DIRECTORY_DIALOG,
-    async (event): Promise<IpcResult<string | null>> => {
+    async (event, mode?: unknown): Promise<IpcResult<string | null>> => {
       try {
         if (process.platform === 'darwin') {
           app.focus({ steal: true });
         }
         const result = await dialog.showOpenDialog({
-          title: 'Open Project Folder',
-          buttonLabel: 'Select Folder',
+          title: mode === 'create' ? 'Create Project (choose or create a folder)' : 'Open Project Folder',
+          buttonLabel: mode === 'create' ? 'Create Project' : 'Select Folder',
           properties: ['openDirectory', 'createDirectory'],
         });
 
@@ -101,6 +102,13 @@ export function registerIpcHandlers(): void {
       return { success: true, data: restoreWorkspace(event.sender.id, workspacePath) };
     }
   );
+
+  ipcMain.handle(IPC_CHANNELS.WORKSPACE_WATCH, async (event): Promise<IpcResult<boolean>> => {
+    const rootPath = getWorkspaceForSender(event.sender.id);
+    if (!rootPath) return noWorkspaceError();
+    startWorkspaceWatch(event.sender, rootPath);
+    return { success: true, data: true };
+  });
 
   // 1b. Stat File/Directory
   ipcMain.handle(

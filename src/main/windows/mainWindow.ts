@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { logger } from '../services/logger';
 import { clearAuthorizedWorkspace } from '../services/workspaceAuthorization';
+import { stopWorkspaceWatch } from '../services/workspaceWatcher';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -110,6 +111,7 @@ export function createMainWindow(): BrowserWindow {
   });
 
   mainWindow.on('closed', () => {
+    stopWorkspaceWatch(mainWindow?.webContents.id ?? -1);
     clearAuthorizedWorkspace(mainWindow?.webContents.id ?? -1);
     mainWindow = null;
     logger.info('Main window closed');

@@ -8,8 +8,6 @@ import {
   MicOff,
   ArrowRight,
   ChevronDown,
-  ChevronUp,
-  Sparkles,
   Check,
   FileCode,
   Trash2,
@@ -18,17 +16,14 @@ import {
   Square,
   HelpCircle,
   ShieldAlert,
-  GitPullRequest,
-  CheckCircle2,
-  Clock,
-  Loader2,
-  AlertTriangle,
 } from 'lucide-react';
-import { useAgentStore, AgentLifecycleStage } from '../stores/agentStore';
+import { useAgentStore } from '../stores/agentStore';
 import { useTabsStore } from '../stores/tabsStore';
 import { useUiStore } from '../stores/uiStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useBackendStore } from '../stores/backendStore';
+import { AIChangesSection } from './AIChangesSection';
+import { AgentTimeline } from './AgentTimeline';
 
 function formatRelativeTime(timestamp: number): string {
   const diffSec = Math.floor((Date.now() - timestamp) / 1000);
@@ -41,15 +36,6 @@ function formatRelativeTime(timestamp: number): string {
   return `${diffDay}d`;
 }
 
-const STAGES: { stage: AgentLifecycleStage; label: string }[] = [
-  { stage: 'analyzing', label: 'Analyze' },
-  { stage: 'planning', label: 'Plan' },
-  { stage: 'executing', label: 'Execute' },
-  { stage: 'observing', label: 'Observe' },
-  { stage: 'verifying', label: 'Verify' },
-  { stage: 'completed', label: 'Complete' },
-];
-
 export const AgentPanel: React.FC = () => {
   const {
     sessions,
@@ -59,13 +45,8 @@ export const AgentPanel: React.FC = () => {
     selectedModel,
     availableModels,
     lifecycleStage,
-    taskGraph,
-    activityLogs,
     pendingQuestion,
     pendingApproval,
-    activeChangeId,
-    changeSet,
-    steps,
     tokenUsage,
     initWsListeners,
     sendMessage,
@@ -73,7 +54,6 @@ export const AgentPanel: React.FC = () => {
     answerQuestion,
     approveAction,
     denyAction,
-    setIsReviewingChanges,
     newSession,
     loadSession,
     deleteSession,
@@ -91,8 +71,6 @@ export const AgentPanel: React.FC = () => {
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [showHistoryView, setShowHistoryView] = useState(false);
   const [showAllRecent, setShowAllRecent] = useState(false);
-  const [showTaskGraph, setShowTaskGraph] = useState(true);
-  const [showActivityLog, setShowActivityLog] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -200,7 +178,10 @@ export const AgentPanel: React.FC = () => {
 
   const isConnected = isHealthy && wsStatus === 'connected';
   const recentList = showAllRecent ? sessions : sessions.slice(0, 3);
-  const taskNodes = taskGraph?.tasks || taskGraph?.nodes || [];
+  // The run timeline sits under the prompt that started the current task (not under clarification answers).
+  const timelineAnchorId = [...messages]
+    .reverse()
+    .find((m) => m.role === 'user' && !m.content.startsWith('[Clarification Answer]'))?.id;
 
   return (
     <div
@@ -208,12 +189,12 @@ export const AgentPanel: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: '#181818',
-        borderLeft: '1px solid #282828',
+        backgroundColor: 'var(--bg-panel)',
+        borderLeft: '1px solid var(--border-color)',
         overflow: 'hidden',
         userSelect: 'none',
         position: 'relative',
-        color: '#e5e7eb',
+        color: 'var(--text-primary)',
         fontFamily: 'var(--font-sans)',
       }}
       onClick={() => {
@@ -229,8 +210,8 @@ export const AgentPanel: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-          backgroundColor: '#181818',
+          borderBottom: '1px solid var(--ov-6)',
+          backgroundColor: 'var(--bg-panel)',
           flexShrink: 0,
         }}
       >
@@ -244,7 +225,7 @@ export const AgentPanel: React.FC = () => {
                 gap: '4px',
                 padding: '3px 6px',
                 borderRadius: '4px',
-                color: '#9ca3af',
+                color: 'var(--text-secondary)',
                 fontSize: '12px',
                 background: 'transparent',
                 border: 'none',
@@ -260,7 +241,7 @@ export const AgentPanel: React.FC = () => {
                 style={{
                   fontSize: '13px',
                   fontWeight: 600,
-                  color: '#cccccc',
+                  color: 'var(--text-body)',
                   letterSpacing: '-0.1px',
                 }}
               >
@@ -290,7 +271,7 @@ export const AgentPanel: React.FC = () => {
             style={{
               padding: '5px',
               borderRadius: '5px',
-              color: '#9ca3af',
+              color: 'var(--text-secondary)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -305,8 +286,8 @@ export const AgentPanel: React.FC = () => {
             style={{
               padding: '5px',
               borderRadius: '5px',
-              color: showHistoryView ? '#ffffff' : '#9ca3af',
-              backgroundColor: showHistoryView ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: showHistoryView ? '#ffffff' : 'var(--text-secondary)',
+              backgroundColor: showHistoryView ? 'var(--ov-8)' : 'transparent',
               border: 'none',
               cursor: 'pointer',
             }}
@@ -324,8 +305,8 @@ export const AgentPanel: React.FC = () => {
             style={{
               padding: '5px',
               borderRadius: '5px',
-              color: showOptionsMenu ? '#ffffff' : '#9ca3af',
-              backgroundColor: showOptionsMenu ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              color: showOptionsMenu ? '#ffffff' : 'var(--text-secondary)',
+              backgroundColor: showOptionsMenu ? 'var(--ov-8)' : 'transparent',
               border: 'none',
               cursor: 'pointer',
             }}
@@ -339,7 +320,7 @@ export const AgentPanel: React.FC = () => {
             style={{
               padding: '5px',
               borderRadius: '5px',
-              color: '#9ca3af',
+              color: 'var(--text-secondary)',
               background: 'transparent',
               border: 'none',
               cursor: 'pointer',
@@ -355,8 +336,8 @@ export const AgentPanel: React.FC = () => {
                 position: 'absolute',
                 top: '32px',
                 right: '28px',
-                backgroundColor: '#202022',
-                border: '1px solid #333336',
+                backgroundColor: 'var(--bg-raised)',
+                border: '1px solid var(--bg-raised-hover)',
                 borderRadius: '8px',
                 padding: '4px',
                 width: '170px',
@@ -380,7 +361,7 @@ export const AgentPanel: React.FC = () => {
                   padding: '7px 10px',
                   borderRadius: '5px',
                   fontSize: '12px',
-                  color: '#e5e7eb',
+                  color: 'var(--text-primary)',
                   width: '100%',
                   background: 'transparent',
                   border: 'none',
@@ -434,11 +415,11 @@ export const AgentPanel: React.FC = () => {
             gap: '6px',
           }}
         >
-          <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '6px', fontWeight: 600 }}>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px', fontWeight: 600 }}>
             Recent Sessions
           </div>
           {sessions.length === 0 ? (
-            <div style={{ padding: '24px 0', textAlign: 'center', color: '#71717a', fontSize: '12px' }}>
+            <div style={{ padding: '24px 0', textAlign: 'center', color: 'var(--text-muted)', fontSize: '12px' }}>
               No previous chats recorded yet.
             </div>
           ) : (
@@ -453,8 +434,8 @@ export const AgentPanel: React.FC = () => {
                   padding: '8px 10px',
                   borderRadius: '6px',
                   backgroundColor:
-                    session.id === currentSessionId ? 'rgba(255, 255, 255, 0.08)' : '#1e1e20',
-                  border: '1px solid rgba(255, 255, 255, 0.04)',
+                    session.id === currentSessionId ? 'var(--ov-8)' : 'var(--bg-raised)',
+                  border: '1px solid var(--ov-4)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
@@ -465,7 +446,7 @@ export const AgentPanel: React.FC = () => {
                   <div
                     style={{
                       fontSize: '12px',
-                      color: '#e5e7eb',
+                      color: 'var(--text-primary)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -473,7 +454,7 @@ export const AgentPanel: React.FC = () => {
                   >
                     {session.title}
                   </div>
-                  <span style={{ fontSize: '10px', color: '#71717a' }}>
+                  <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
                     {session.messages.length} messages • {formatRelativeTime(session.updatedAt)}
                   </span>
                 </div>
@@ -485,14 +466,14 @@ export const AgentPanel: React.FC = () => {
                   title="Delete"
                   style={{
                     padding: '4px',
-                    color: '#6b7280',
+                    color: 'var(--text-muted)',
                     borderRadius: '4px',
                     background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = '#ef4444')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
                 >
                   <Trash2 size={13} />
                 </button>
@@ -516,7 +497,7 @@ export const AgentPanel: React.FC = () => {
             style={{
               fontSize: '15px',
               fontWeight: 600,
-              color: '#e4e4e7',
+              color: 'var(--text-primary)',
               marginBottom: '14px',
               letterSpacing: '-0.2px',
             }}
@@ -527,8 +508,8 @@ export const AgentPanel: React.FC = () => {
           {/* Central Modern Prompt Card */}
           <div
             style={{
-              backgroundColor: '#1e1e1e',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              backgroundColor: 'var(--bg-app)',
+              border: '1px solid var(--ov-8)',
               borderRadius: '12px',
               padding: '12px 14px 10px 14px',
               display: 'flex',
@@ -556,7 +537,7 @@ export const AgentPanel: React.FC = () => {
                 backgroundColor: 'transparent',
                 border: 'none',
                 outline: 'none',
-                color: '#ffffff',
+                color: 'var(--text-primary)',
                 fontFamily: 'inherit',
                 minHeight: '44px',
               }}
@@ -579,14 +560,14 @@ export const AgentPanel: React.FC = () => {
                   title={activeTab ? `Attach @${activeTab.fileName}` : 'Attach Context'}
                   style={{
                     padding: '2px',
-                    color: '#8e8e93',
+                    color: 'var(--text-secondary)',
                     borderRadius: '4px',
                     background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
                   }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = '#8e8e93')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
                 >
                   <Plus size={15} />
                 </button>
@@ -606,15 +587,15 @@ export const AgentPanel: React.FC = () => {
                       gap: '5px',
                       padding: '3px 10px',
                       borderRadius: '9999px',
-                      border: '1px solid rgba(255, 255, 255, 0.12)',
+                      border: '1px solid var(--ov-12)',
                       backgroundColor: 'transparent',
-                      color: '#d1d5db',
+                      color: 'var(--text-body)',
                       fontSize: '11px',
                       cursor: 'pointer',
                     }}
                   >
                     <span>{selectedModel.split('/').pop()}</span>
-                    <ChevronDown size={11} color="#9ca3af" />
+                    <ChevronDown size={11} color="var(--text-secondary)" />
                   </button>
 
                   {/* Model Menu */}
@@ -624,8 +605,8 @@ export const AgentPanel: React.FC = () => {
                         position: 'absolute',
                         top: '28px',
                         left: '0',
-                        backgroundColor: '#202022',
-                        border: '1px solid #333336',
+                        backgroundColor: 'var(--bg-raised)',
+                        border: '1px solid var(--bg-raised-hover)',
                         borderRadius: '8px',
                         padding: '4px',
                         width: '240px',
@@ -651,9 +632,9 @@ export const AgentPanel: React.FC = () => {
                             padding: '6px 10px',
                             borderRadius: '5px',
                             fontSize: '11px',
-                            color: m === selectedModel ? '#ffffff' : '#9ca3af',
+                            color: m === selectedModel ? '#ffffff' : 'var(--text-secondary)',
                             backgroundColor:
-                              m === selectedModel ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+                              m === selectedModel ? 'var(--ov-8)' : 'transparent',
                             width: '100%',
                             textAlign: 'left',
                             background: 'transparent',
@@ -678,7 +659,7 @@ export const AgentPanel: React.FC = () => {
                   title={isRecording ? 'Listening... click to stop' : 'Voice Input'}
                   style={{
                     padding: '4px',
-                    color: isRecording ? '#ef4444' : '#8e8e93',
+                    color: isRecording ? '#ef4444' : 'var(--text-secondary)',
                     borderRadius: '4px',
                     background: 'transparent',
                     border: 'none',
@@ -698,8 +679,8 @@ export const AgentPanel: React.FC = () => {
                     height: '28px',
                     borderRadius: '50%',
                     backgroundColor:
-                      input.trim() && !isLoading ? '#e4e4e7' : 'rgba(255, 255, 255, 0.06)',
-                    color: input.trim() && !isLoading ? '#09090b' : '#52525b',
+                      input.trim() && !isLoading ? 'var(--text-primary)' : 'var(--ov-6)',
+                    color: input.trim() && !isLoading ? 'var(--bg-deep)' : 'var(--text-faint)',
                     cursor: input.trim() && !isLoading ? 'pointer' : 'default',
                     display: 'flex',
                     alignItems: 'center',
@@ -738,7 +719,7 @@ export const AgentPanel: React.FC = () => {
                   <span
                     style={{
                       fontSize: '12.5px',
-                      color: '#d1d5db',
+                      color: 'var(--text-body)',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
@@ -747,7 +728,7 @@ export const AgentPanel: React.FC = () => {
                   >
                     {session.title}
                   </span>
-                  <span style={{ fontSize: '11px', color: '#71717a', flexShrink: 0 }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)', flexShrink: 0 }}>
                     {formatRelativeTime(session.updatedAt)}
                   </span>
                 </div>
@@ -759,7 +740,7 @@ export const AgentPanel: React.FC = () => {
                   onClick={() => setShowAllRecent(!showAllRecent)}
                   style={{
                     fontSize: '11.5px',
-                    color: '#71717a',
+                    color: 'var(--text-muted)',
                     cursor: 'pointer',
                     marginTop: '6px',
                     alignSelf: 'flex-start',
@@ -782,7 +763,7 @@ export const AgentPanel: React.FC = () => {
               paddingBottom: '8px',
               textAlign: 'center',
               fontSize: '10.5px',
-              color: '#71717a',
+              color: 'var(--text-muted)',
             }}
           >
             CoreMind AI powered by Nebius / NVIDIA Nemotron.
@@ -799,200 +780,6 @@ export const AgentPanel: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          {/* Real Agent Lifecycle Stages Bar */}
-          {lifecycleStage !== 'idle' && (
-            <div
-              style={{
-                padding: '6px 12px',
-                backgroundColor: '#1b1b1e',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto' }}>
-                {STAGES.map((s, idx) => {
-                  const isActive = lifecycleStage === s.stage;
-                  const isPast =
-                    STAGES.findIndex((st) => st.stage === lifecycleStage) > idx ||
-                    lifecycleStage === 'completed';
-
-                  return (
-                    <React.Fragment key={s.stage}>
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          fontWeight: isActive ? 600 : 400,
-                          backgroundColor: isActive
-                            ? 'rgba(16, 185, 129, 0.2)'
-                            : isPast
-                            ? 'rgba(255, 255, 255, 0.05)'
-                            : 'transparent',
-                          color: isActive ? '#10B981' : isPast ? '#9ca3af' : '#52525b',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                        }}
-                      >
-                        {isActive && <Loader2 size={9} className="animate-spin" />}
-                        {isPast && <Check size={9} color="#10B981" />}
-                        <span>{s.label}</span>
-                      </span>
-                      {idx < STAGES.length - 1 && (
-                        <span style={{ fontSize: '9px', color: '#3f3f46' }}>›</span>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-
-              {steps && (
-                <span style={{ fontSize: '9.5px', color: '#9ca3af' }}>
-                  step {steps.current}/{steps.max}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Task Graph Plan (Collapsible) */}
-          {taskNodes.length > 0 && (
-            <div
-              style={{
-                backgroundColor: '#1a1a1d',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                padding: '6px 12px',
-                flexShrink: 0,
-              }}
-            >
-              <div
-                onClick={() => setShowTaskGraph(!showTaskGraph)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: '#d1d5db',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <CheckCircle2 size={13} color="#10B981" />
-                  <span>
-                    Task Plan ({taskNodes.filter((t) => t.status === 'completed').length}/{taskNodes.length} done)
-                  </span>
-                </div>
-                {showTaskGraph ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-              </div>
-
-              {showTaskGraph && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
-                  {taskNodes.map((task) => {
-                    const isDone = task.status === 'completed';
-                    const isRunning = task.status === 'in_progress';
-                    const isFailed = task.status === 'failed';
-
-                    return (
-                      <div
-                        key={task.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '6px',
-                          fontSize: '11px',
-                          padding: '3px 6px',
-                          borderRadius: '4px',
-                          backgroundColor: isRunning ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
-                        }}
-                      >
-                        <div style={{ marginTop: '2px' }}>
-                          {isDone ? (
-                            <Check size={12} color="#10B981" />
-                          ) : isRunning ? (
-                            <Loader2 size={12} color="#10B981" className="animate-spin" />
-                          ) : isFailed ? (
-                            <AlertTriangle size={12} color="#EF4444" />
-                          ) : (
-                            <Clock size={12} color="#6b7280" />
-                          )}
-                        </div>
-                        <div style={{ overflow: 'hidden' }}>
-                          <div
-                            style={{
-                              color: isDone ? '#9ca3af' : isRunning ? '#ffffff' : '#d1d5db',
-                              textDecoration: isDone ? 'line-through' : 'none',
-                              fontWeight: isRunning ? 500 : 400,
-                            }}
-                          >
-                            {task.title}
-                          </div>
-                          {task.description && !isDone && (
-                            <div style={{ fontSize: '10px', color: '#71717a' }}>
-                              {task.description}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Activity Logs (Collapsible) */}
-          {activityLogs.length > 0 && (
-            <div
-              style={{
-                backgroundColor: '#161618',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                padding: '4px 12px',
-                flexShrink: 0,
-              }}
-            >
-              <div
-                onClick={() => setShowActivityLog(!showActivityLog)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  fontSize: '10.5px',
-                  color: '#9ca3af',
-                }}
-              >
-                <span>Activity & Tool Executions ({activityLogs.length})</span>
-                {showActivityLog ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              </div>
-
-              {showActivityLog && (
-                <div
-                  style={{
-                    maxHeight: '120px',
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '3px',
-                    marginTop: '4px',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '10px',
-                  }}
-                >
-                  {activityLogs.map((log) => (
-                    <div key={log.id} style={{ color: '#9ca3af', display: 'flex', gap: '4px' }}>
-                      <span style={{ color: '#52525b' }}>›</span>
-                      <span>{log.summary}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Human-in-the-Loop Clarification Card */}
           {pendingQuestion && (
             <div
@@ -1012,7 +799,7 @@ export const AgentPanel: React.FC = () => {
                 <HelpCircle size={15} />
                 <span>CoreMind needs your clarification:</span>
               </div>
-              <div style={{ fontSize: '12.5px', color: '#f3f4f6' }}>
+              <div style={{ fontSize: '12.5px', color: 'var(--text-primary)' }}>
                 {pendingQuestion.question}
               </div>
 
@@ -1065,7 +852,7 @@ export const AgentPanel: React.FC = () => {
                   style={{
                     padding: '2px 10px',
                     backgroundColor: 'rgba(59, 130, 246, 0.3)',
-                    color: '#ffffff',
+                    color: 'var(--text-primary)',
                     border: '1px solid rgba(59, 130, 246, 0.5)',
                     borderRadius: '4px',
                     fontSize: '11px',
@@ -1097,14 +884,14 @@ export const AgentPanel: React.FC = () => {
                 <ShieldAlert size={15} />
                 <span>Security Approval Requested</span>
               </div>
-              <div style={{ fontSize: '12px', color: '#f3f4f6' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
                 {pendingApproval.description}
               </div>
               <div
                 style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: '11px',
-                  color: '#9ca3af',
+                  color: 'var(--text-secondary)',
                   backgroundColor: 'rgba(0, 0, 0, 0.3)',
                   padding: '6px 8px',
                   borderRadius: '4px',
@@ -1167,63 +954,20 @@ export const AgentPanel: React.FC = () => {
             </div>
           )}
 
-          {/* Change Review Notice Banner */}
-          {activeChangeId && (
-            <div
-              style={{
-                margin: '10px 14px',
-                padding: '10px 12px',
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                border: '1px solid rgba(16, 185, 129, 0.3)',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <GitPullRequest size={15} color="#10B981" />
-                <span style={{ fontSize: '12px', color: '#f3f4f6', fontWeight: 500 }}>
-                  Proposed changes ready for review
-                </span>
-                {changeSet?.files && (
-                  <span style={{ fontSize: '10.5px', color: '#10B981' }}>
-                    ({changeSet.files.length} files)
-                  </span>
-                )}
-              </div>
-
-              <button
-                onClick={() => setIsReviewingChanges(true)}
-                style={{
-                  padding: '4px 10px',
-                  backgroundColor: '#10B981',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '5px',
-                  fontSize: '11.5px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Review Diffs
-              </button>
-            </div>
-          )}
+          <AIChangesSection />
 
           {/* Active File Context Pill */}
           {activeTab && (
             <div
               style={{
                 padding: '4px 14px',
-                backgroundColor: 'rgba(255, 255, 255, 0.02)',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.04)',
+                backgroundColor: 'var(--ov-2)',
+                borderBottom: '1px solid var(--ov-4)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
                 fontSize: '11px',
-                color: '#9ca3af',
+                color: 'var(--text-secondary)',
                 flexShrink: 0,
               }}
             >
@@ -1231,7 +975,7 @@ export const AgentPanel: React.FC = () => {
               <span>Context:</span>
               <span
                 style={{
-                  color: '#e5e7eb',
+                  color: 'var(--text-primary)',
                   fontFamily: 'var(--font-mono)',
                   fontSize: '10.5px',
                 }}
@@ -1254,8 +998,8 @@ export const AgentPanel: React.FC = () => {
             }}
           >
             {messages.map((msg) => (
+              <React.Fragment key={msg.id}>
               <div
-                key={msg.id}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -1269,7 +1013,7 @@ export const AgentPanel: React.FC = () => {
                   style={{
                     fontSize: '10.5px',
                     fontWeight: 600,
-                    color: msg.role === 'user' ? '#10B981' : '#9ca3af',
+                    color: msg.role === 'user' ? '#10B981' : 'var(--text-secondary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
@@ -1282,7 +1026,7 @@ export const AgentPanel: React.FC = () => {
                       title="Copy Response"
                       style={{
                         padding: '2px 4px',
-                        color: '#6b7280',
+                        color: 'var(--text-muted)',
                         fontSize: '10px',
                         display: 'flex',
                         alignItems: 'center',
@@ -1291,8 +1035,8 @@ export const AgentPanel: React.FC = () => {
                         border: 'none',
                         cursor: 'pointer',
                       }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = '#d1d5db')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = '#6b7280')}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-body)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
                     >
                       {copiedId === msg.id ? (
                         <>
@@ -1312,10 +1056,10 @@ export const AgentPanel: React.FC = () => {
                 {/* Content Bubble */}
                 <div
                   style={{
-                    backgroundColor: msg.role === 'user' ? '#27272a' : 'transparent',
+                    backgroundColor: msg.role === 'user' ? 'var(--bg-raised)' : 'transparent',
                     padding: msg.role === 'user' ? '10px 12px' : '4px 0',
                     borderRadius: msg.role === 'user' ? '10px' : '0',
-                    color: '#e5e7eb',
+                    color: 'var(--text-primary)',
                     fontSize: '12.5px',
                     lineHeight: '1.55',
                     whiteSpace: 'pre-wrap',
@@ -1325,35 +1069,9 @@ export const AgentPanel: React.FC = () => {
                   {msg.content}
                 </div>
               </div>
+              {msg.id === timelineAnchorId && <AgentTimeline />}
+              </React.Fragment>
             ))}
-
-            {isLoading && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '11.5px',
-                  color: '#10B981',
-                  padding: '8px 0',
-                }}
-              >
-                <Sparkles size={13} className="animate-spin" />
-                <span>
-                  {lifecycleStage === 'analyzing'
-                    ? 'Analyzing project context...'
-                    : lifecycleStage === 'planning'
-                    ? 'Creating execution plan...'
-                    : lifecycleStage === 'executing'
-                    ? 'Executing code modifications...'
-                    : lifecycleStage === 'verifying'
-                    ? 'Verifying unit tests & compilation...'
-                    : lifecycleStage === 'fixing'
-                    ? 'Self-healing & fixing errors...'
-                    : 'CoreMind is thinking...'}
-                </span>
-              </div>
-            )}
 
             <div ref={messagesEndRef} />
           </div>
@@ -1362,14 +1080,14 @@ export const AgentPanel: React.FC = () => {
           <div
             style={{
               padding: '12px 14px 10px 14px',
-              backgroundColor: '#181818',
-              borderTop: '1px solid rgba(255, 255, 255, 0.05)',
+              backgroundColor: 'var(--bg-panel)',
+              borderTop: '1px solid var(--ov-5)',
             }}
           >
             <div
               style={{
-                backgroundColor: '#1e1e1e',
-                border: '1px solid rgba(255, 255, 255, 0.08)',
+                backgroundColor: 'var(--bg-app)',
+                border: '1px solid var(--ov-8)',
                 borderRadius: '12px',
                 padding: '10px 12px 8px 12px',
                 display: 'flex',
@@ -1396,7 +1114,7 @@ export const AgentPanel: React.FC = () => {
                   backgroundColor: 'transparent',
                   border: 'none',
                   outline: 'none',
-                  color: '#ffffff',
+                  color: 'var(--text-primary)',
                   fontFamily: 'inherit',
                   minHeight: '32px',
                 }}
@@ -1417,7 +1135,7 @@ export const AgentPanel: React.FC = () => {
                     title={activeTab ? `Attach @${activeTab.fileName}` : 'Attach Context'}
                     style={{
                       padding: '2px',
-                      color: '#8e8e93',
+                      color: 'var(--text-secondary)',
                       borderRadius: '4px',
                       background: 'transparent',
                       border: 'none',
@@ -1427,7 +1145,7 @@ export const AgentPanel: React.FC = () => {
                     <Plus size={15} />
                   </button>
 
-                  <span style={{ fontSize: '11px', color: '#9ca3af' }}>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                     {selectedModel.split('/').pop()}
                   </span>
                 </div>
@@ -1462,7 +1180,7 @@ export const AgentPanel: React.FC = () => {
                         title={isRecording ? 'Listening... click to stop' : 'Voice Input'}
                         style={{
                           padding: '4px',
-                          color: isRecording ? '#ef4444' : '#8e8e93',
+                          color: isRecording ? '#ef4444' : 'var(--text-secondary)',
                           borderRadius: '4px',
                           background: 'transparent',
                           border: 'none',
@@ -1481,8 +1199,8 @@ export const AgentPanel: React.FC = () => {
                           width: '28px',
                           height: '28px',
                           borderRadius: '50%',
-                          backgroundColor: input.trim() ? '#e4e4e7' : 'rgba(255, 255, 255, 0.06)',
-                          color: input.trim() ? '#09090b' : '#52525b',
+                          backgroundColor: input.trim() ? 'var(--text-primary)' : 'var(--ov-6)',
+                          color: input.trim() ? 'var(--bg-deep)' : 'var(--text-faint)',
                           cursor: input.trim() ? 'pointer' : 'default',
                           display: 'flex',
                           alignItems: 'center',
@@ -1502,7 +1220,7 @@ export const AgentPanel: React.FC = () => {
               <div
                 style={{
                   fontSize: '10px',
-                  color: '#71717a',
+                  color: 'var(--text-muted)',
                   display: 'flex',
                   justifyContent: 'space-between',
                   paddingTop: '6px',

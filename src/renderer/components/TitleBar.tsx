@@ -1,15 +1,19 @@
 import React from 'react';
 import {
   FolderOpen,
+  Sun,
+  Moon,
   PanelLeft,
   Terminal,
   Bot,
 } from 'lucide-react';
+import { useThemeStore } from '../stores/themeStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useUiStore } from '../stores/uiStore';
 
 export const TitleBar: React.FC = () => {
   const { rootName, openFolderDialog } = useWorkspaceStore();
+  const { theme, toggleTheme } = useThemeStore();
   const {
     isSidebarOpen,
     toggleSidebar,
@@ -145,6 +149,14 @@ export const TitleBar: React.FC = () => {
           }}
         >
           <Terminal size={14} />
+        </button>
+
+        <button
+          onClick={toggleTheme}
+          title={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
+          style={{ padding: '5px', borderRadius: '4px', color: 'var(--text-secondary)' }}
+        >
+          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
         </button>
 
         <button
