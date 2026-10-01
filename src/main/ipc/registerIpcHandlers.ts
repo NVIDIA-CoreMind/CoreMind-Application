@@ -57,6 +57,17 @@ export function registerIpcHandlers(): void {
     }
   );
 
+  // 1b. Stat File/Directory
+  ipcMain.handle(
+    IPC_CHANNELS.FILE_STAT,
+    async (
+      _event,
+      { filePath, rootPath }: { filePath: string; rootPath: string }
+    ) => {
+      return await fileSystemService.stat(filePath, rootPath);
+    }
+  );
+
   // 2. Read Directory Tree
   ipcMain.handle(
     IPC_CHANNELS.FILE_READ_DIRECTORY,

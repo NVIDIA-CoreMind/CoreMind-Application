@@ -15,6 +15,7 @@ import { FileNode, FileSearchResult } from '../shared/types/file';
 export interface CoreMindAPI {
   // File System
   openDirectoryDialog: () => Promise<IpcResult<string | null>>;
+  stat: (filePath: string, rootPath: string) => Promise<IpcResult<import('../shared/types/file').FileStat>>;
   readDirectory: (dirPath: string, rootPath: string) => Promise<IpcResult<FileNode[]>>;
   readFile: (filePath: string, rootPath: string) => Promise<IpcResult<string>>;
   writeFile: (filePath: string, content: string, rootPath: string) => Promise<IpcResult<void>>;
@@ -54,6 +55,8 @@ export interface CoreMindAPI {
 const api: CoreMindAPI = {
   // File System
   openDirectoryDialog: () => ipcRenderer.invoke(IPC_CHANNELS.FILE_OPEN_DIRECTORY_DIALOG),
+  stat: (filePath, rootPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.FILE_STAT, { filePath, rootPath }),
   readDirectory: (dirPath, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.FILE_READ_DIRECTORY, { dirPath, rootPath }),
   readFile: (filePath, rootPath) =>

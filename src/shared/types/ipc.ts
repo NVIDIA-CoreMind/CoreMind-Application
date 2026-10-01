@@ -69,6 +69,7 @@ export const IPC_CHANNELS = {
   FILE_RENAME: 'file:rename',
   FILE_DELETE: 'file:delete',
   FILE_SEARCH: 'file:search',
+  FILE_STAT: 'file:stat',
 
   // Terminal
   TERMINAL_CREATE: 'terminal:create',

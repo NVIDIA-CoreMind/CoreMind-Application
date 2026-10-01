@@ -37,6 +37,54 @@ export class FileSystemService {
   }
 
   /**
+   * Stat a file or directory
+   */
+  public async stat(filePath: string, rootPath: string): Promise<IpcResult<import('../../shared/types/file').FileStat>> {
+    try {
+      if (!this.validateWorkspacePath(filePath, rootPath)) {
+        return {
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Cannot stat file outside of workspace.',
+          },
+        };
+      }
+      
+      const stats = await fs.stat(filePath);
+      return {
+        success: true,
+        data: {
+          name: path.basename(filePath),
+          path: filePath,
+          isDirectory: stats.isDirectory(),
+          size: stats.size,
+          lastModified: stats.mtimeMs,
+        }
+      };
+    } catch (err: unknown) {
+      const error = err as Error;
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
+        return {
+          success: false,
+          error: {
+            code: 'ENOENT',
+            message: 'File not found.',
+          },
+        };
+      }
+      logger.error('Error stating file', { filePath, message: error.message });
+      return {
+        success: false,
+        error: {
+          code: 'FILE_STAT_FAILED',
+          message: error.message || 'Failed to stat file.',
+        },
+      };
+    }
+  }
+
+  /**
    * Read directory children for a given path.
    */
   public async readDirectory(dirPath: string, rootPath: string): Promise<IpcResult<FileNode[]>> {

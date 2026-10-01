@@ -45,6 +45,28 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
+  optimizeDeps: {
+    exclude: [
+      '@codingame/monaco-vscode-theme-defaults-default-extension',
+      '@codingame/monaco-vscode-theme-seti-default-extension'
+    ],
+    include: [
+      '@codingame/monaco-vscode-workbench-service-override',
+      '@codingame/monaco-vscode-files-service-override',
+      '@codingame/monaco-vscode-theme-service-override',
+      '@codingame/monaco-vscode-textmate-service-override',
+      '@codingame/monaco-vscode-layout-service-override',
+      '@codingame/monaco-vscode-views-service-override',
+      '@codingame/monaco-vscode-editor-service-override',
+      '@codingame/monaco-vscode-quickaccess-service-override',
+      '@codingame/monaco-vscode-explorer-service-override',
+      '@codingame/monaco-vscode-environment-service-override',
+      '@codingame/monaco-vscode-keybindings-service-override',
+      '@codingame/monaco-vscode-dialogs-service-override',
+      '@codingame/monaco-vscode-lifecycle-service-override',
+      '@codingame/monaco-vscode-configuration-service-override'
+    ]
+  },
   server: {
     port: 5173,
   },
