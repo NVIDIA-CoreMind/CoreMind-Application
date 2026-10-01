@@ -147,7 +147,6 @@ export function buildEditorConfiguration(
     "workbench.editor.showTabs": "multiple",
     "workbench.list.smoothScrolling": true,
     "editor.fontFamily": "Menlo, Monaco, 'SF Mono', 'Courier New', monospace",
-      "'JetBrains Mono', 'SF Mono', Menlo, Monaco, 'Courier New', monospace",
     "editor.fontSize": 14,
     "editor.lineHeight": 24,
     "editor.fontLigatures": false,
