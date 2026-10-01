@@ -14,7 +14,7 @@ interface Palette {
 
 const PALETTES: Record<ThemeMode, Palette> = {
   dark: {
-    colorTheme: "Default Dark Modern",
+    colorTheme: "Dark Modern",
     surface: "#181818",
     raised: "#1f1f1f",
     chrome: "#141414",
@@ -25,7 +25,7 @@ const PALETTES: Record<ThemeMode, Palette> = {
     statusText: "#9ca3af",
   },
   light: {
-    colorTheme: "Default Light Modern",
+    colorTheme: "Light Modern",
     surface: "#ffffff",
     raised: "#f3f3f3",
     chrome: "#f3f3f3",
