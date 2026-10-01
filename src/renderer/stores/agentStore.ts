@@ -177,6 +177,8 @@ interface AgentStore {
   tokenUsage: { prompt_tokens: number; completion_tokens: number; total_tokens: number } | null;
   steps: { current: number; max: number } | null;
   liveOutput: string;
+  runStartedAt: number | null;
+  runEndedAt: number | null;
 
   // Methods
   initWsListeners: () => void;
@@ -288,6 +290,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   tokenUsage: null,
   steps: null,
   liveOutput: '',
+  runStartedAt: null,
+  runEndedAt: null,
 
   initWsListeners: () => {
     if (wsInitialized) return;
@@ -461,7 +465,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             timestamp: now,
             type: 'tool.started',
             summary: `Executing tool: ${toolName}`,
-            details: event.data?.args,
+            details: { tool: toolName, args: event.data?.args },
           };
           set((s) => ({
             lifecycleStage: 'executing',
@@ -478,7 +482,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             timestamp: now,
             type: 'tool.completed',
             summary: `Completed tool: ${toolName} (${success ? 'Success' : 'Failed'})`,
-            details: event.data?.result,
+            details: { tool: toolName, success, result: event.data?.result },
           };
           set((s) => ({ activityLogs: [...s.activityLogs, logItem] }));
           break;
@@ -649,6 +653,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           set({
             lifecycleStage: 'completed',
             isLoading: false,
+            runEndedAt: Date.now(),
             activeChangeId: changeId || null,
           });
 
@@ -694,6 +699,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           set({
             lifecycleStage: 'failed',
             isLoading: false,
+            runEndedAt: Date.now(),
             error: errMsg,
           });
           set((s) => ({
@@ -714,6 +720,7 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
           set({
             lifecycleStage: 'stopped',
             isLoading: false,
+            runEndedAt: Date.now(),
           });
           set((s) => ({
             messages: [
@@ -780,6 +787,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       tokenUsage: null,
       steps: null,
       liveOutput: '',
+      runStartedAt: null,
+      runEndedAt: null,
     });
   },
 
@@ -868,6 +877,10 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       isLoading: true,
       error: null,
       lifecycleStage: 'analyzing',
+      runStartedAt: Date.now(),
+      runEndedAt: null,
+      liveOutput: '',
+      taskGraph: null,
       activityLogs: [
         {
           id: `log-${Date.now()}`,

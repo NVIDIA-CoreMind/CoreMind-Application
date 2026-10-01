@@ -8,8 +8,6 @@ import {
   MicOff,
   ArrowRight,
   ChevronDown,
-  ChevronUp,
-  Sparkles,
   Check,
   FileCode,
   Trash2,
@@ -18,17 +16,14 @@ import {
   Square,
   HelpCircle,
   ShieldAlert,
-  CheckCircle2,
-  Clock,
-  Loader2,
-  AlertTriangle,
 } from 'lucide-react';
-import { useAgentStore, AgentLifecycleStage } from '../stores/agentStore';
+import { useAgentStore } from '../stores/agentStore';
 import { useTabsStore } from '../stores/tabsStore';
 import { useUiStore } from '../stores/uiStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useBackendStore } from '../stores/backendStore';
 import { AIChangesSection } from './AIChangesSection';
+import { AgentTimeline } from './AgentTimeline';
 
 function formatRelativeTime(timestamp: number): string {
   const diffSec = Math.floor((Date.now() - timestamp) / 1000);
@@ -41,15 +36,6 @@ function formatRelativeTime(timestamp: number): string {
   return `${diffDay}d`;
 }
 
-const STAGES: { stage: AgentLifecycleStage; label: string }[] = [
-  { stage: 'analyzing', label: 'Analyze' },
-  { stage: 'planning', label: 'Plan' },
-  { stage: 'executing', label: 'Execute' },
-  { stage: 'observing', label: 'Observe' },
-  { stage: 'verifying', label: 'Verify' },
-  { stage: 'completed', label: 'Complete' },
-];
-
 export const AgentPanel: React.FC = () => {
   const {
     sessions,
@@ -59,11 +45,8 @@ export const AgentPanel: React.FC = () => {
     selectedModel,
     availableModels,
     lifecycleStage,
-    taskGraph,
-    activityLogs,
     pendingQuestion,
     pendingApproval,
-    steps,
     tokenUsage,
     initWsListeners,
     sendMessage,
@@ -88,8 +71,6 @@ export const AgentPanel: React.FC = () => {
   const [showOptionsMenu, setShowOptionsMenu] = useState(false);
   const [showHistoryView, setShowHistoryView] = useState(false);
   const [showAllRecent, setShowAllRecent] = useState(false);
-  const [showTaskGraph, setShowTaskGraph] = useState(true);
-  const [showActivityLog, setShowActivityLog] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -197,7 +178,10 @@ export const AgentPanel: React.FC = () => {
 
   const isConnected = isHealthy && wsStatus === 'connected';
   const recentList = showAllRecent ? sessions : sessions.slice(0, 3);
-  const taskNodes = taskGraph?.tasks || taskGraph?.nodes || [];
+  // The run timeline sits under the prompt that started the current task (not under clarification answers).
+  const timelineAnchorId = [...messages]
+    .reverse()
+    .find((m) => m.role === 'user' && !m.content.startsWith('[Clarification Answer]'))?.id;
 
   return (
     <div
@@ -796,200 +780,6 @@ export const AgentPanel: React.FC = () => {
             overflow: 'hidden',
           }}
         >
-          {/* Real Agent Lifecycle Stages Bar */}
-          {lifecycleStage !== 'idle' && (
-            <div
-              style={{
-                padding: '6px 12px',
-                backgroundColor: '#1b1b1e',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexShrink: 0,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto' }}>
-                {STAGES.map((s, idx) => {
-                  const isActive = lifecycleStage === s.stage;
-                  const isPast =
-                    STAGES.findIndex((st) => st.stage === lifecycleStage) > idx ||
-                    lifecycleStage === 'completed';
-
-                  return (
-                    <React.Fragment key={s.stage}>
-                      <span
-                        style={{
-                          fontSize: '10px',
-                          padding: '2px 6px',
-                          borderRadius: '4px',
-                          fontWeight: isActive ? 600 : 400,
-                          backgroundColor: isActive
-                            ? 'rgba(16, 185, 129, 0.2)'
-                            : isPast
-                            ? 'rgba(255, 255, 255, 0.05)'
-                            : 'transparent',
-                          color: isActive ? '#10B981' : isPast ? '#9ca3af' : '#52525b',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                        }}
-                      >
-                        {isActive && <Loader2 size={9} className="animate-spin" />}
-                        {isPast && <Check size={9} color="#10B981" />}
-                        <span>{s.label}</span>
-                      </span>
-                      {idx < STAGES.length - 1 && (
-                        <span style={{ fontSize: '9px', color: '#3f3f46' }}>›</span>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-
-              {steps && (
-                <span style={{ fontSize: '9.5px', color: '#9ca3af' }}>
-                  step {steps.current}/{steps.max}
-                </span>
-              )}
-            </div>
-          )}
-
-          {/* Task Graph Plan (Collapsible) */}
-          {taskNodes.length > 0 && (
-            <div
-              style={{
-                backgroundColor: '#1a1a1d',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                padding: '6px 12px',
-                flexShrink: 0,
-              }}
-            >
-              <div
-                onClick={() => setShowTaskGraph(!showTaskGraph)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  fontWeight: 600,
-                  color: '#d1d5db',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <CheckCircle2 size={13} color="#10B981" />
-                  <span>
-                    Task Plan ({taskNodes.filter((t) => t.status === 'completed').length}/{taskNodes.length} done)
-                  </span>
-                </div>
-                {showTaskGraph ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-              </div>
-
-              {showTaskGraph && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
-                  {taskNodes.map((task) => {
-                    const isDone = task.status === 'completed';
-                    const isRunning = task.status === 'in_progress';
-                    const isFailed = task.status === 'failed';
-
-                    return (
-                      <div
-                        key={task.id}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: '6px',
-                          fontSize: '11px',
-                          padding: '3px 6px',
-                          borderRadius: '4px',
-                          backgroundColor: isRunning ? 'rgba(16, 185, 129, 0.08)' : 'transparent',
-                        }}
-                      >
-                        <div style={{ marginTop: '2px' }}>
-                          {isDone ? (
-                            <Check size={12} color="#10B981" />
-                          ) : isRunning ? (
-                            <Loader2 size={12} color="#10B981" className="animate-spin" />
-                          ) : isFailed ? (
-                            <AlertTriangle size={12} color="#EF4444" />
-                          ) : (
-                            <Clock size={12} color="#6b7280" />
-                          )}
-                        </div>
-                        <div style={{ overflow: 'hidden' }}>
-                          <div
-                            style={{
-                              color: isDone ? '#9ca3af' : isRunning ? '#ffffff' : '#d1d5db',
-                              textDecoration: isDone ? 'line-through' : 'none',
-                              fontWeight: isRunning ? 500 : 400,
-                            }}
-                          >
-                            {task.title}
-                          </div>
-                          {task.description && !isDone && (
-                            <div style={{ fontSize: '10px', color: '#71717a' }}>
-                              {task.description}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Activity Logs (Collapsible) */}
-          {activityLogs.length > 0 && (
-            <div
-              style={{
-                backgroundColor: '#161618',
-                borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                padding: '4px 12px',
-                flexShrink: 0,
-              }}
-            >
-              <div
-                onClick={() => setShowActivityLog(!showActivityLog)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  fontSize: '10.5px',
-                  color: '#9ca3af',
-                }}
-              >
-                <span>Activity & Tool Executions ({activityLogs.length})</span>
-                {showActivityLog ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-              </div>
-
-              {showActivityLog && (
-                <div
-                  style={{
-                    maxHeight: '120px',
-                    overflowY: 'auto',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '3px',
-                    marginTop: '4px',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: '10px',
-                  }}
-                >
-                  {activityLogs.map((log) => (
-                    <div key={log.id} style={{ color: '#9ca3af', display: 'flex', gap: '4px' }}>
-                      <span style={{ color: '#52525b' }}>›</span>
-                      <span>{log.summary}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Human-in-the-Loop Clarification Card */}
           {pendingQuestion && (
             <div
@@ -1208,8 +998,8 @@ export const AgentPanel: React.FC = () => {
             }}
           >
             {messages.map((msg) => (
+              <React.Fragment key={msg.id}>
               <div
-                key={msg.id}
                 style={{
                   display: 'flex',
                   flexDirection: 'column',
@@ -1279,35 +1069,9 @@ export const AgentPanel: React.FC = () => {
                   {msg.content}
                 </div>
               </div>
+              {msg.id === timelineAnchorId && <AgentTimeline />}
+              </React.Fragment>
             ))}
-
-            {isLoading && (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  fontSize: '11.5px',
-                  color: '#10B981',
-                  padding: '8px 0',
-                }}
-              >
-                <Sparkles size={13} className="animate-spin" />
-                <span>
-                  {lifecycleStage === 'analyzing'
-                    ? 'Analyzing project context...'
-                    : lifecycleStage === 'planning'
-                    ? 'Creating execution plan...'
-                    : lifecycleStage === 'executing'
-                    ? 'Executing code modifications...'
-                    : lifecycleStage === 'verifying'
-                    ? 'Verifying unit tests & compilation...'
-                    : lifecycleStage === 'fixing'
-                    ? 'Self-healing & fixing errors...'
-                    : 'CoreMind is thinking...'}
-                </span>
-              </div>
-            )}
 
             <div ref={messagesEndRef} />
           </div>
