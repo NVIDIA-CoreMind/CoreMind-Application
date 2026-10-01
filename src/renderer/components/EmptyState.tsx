@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   FolderOpen,
-  GitBranch,
+  FolderPlus,
   Cpu,
 } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspaceStore';
@@ -24,18 +24,8 @@ function parseWorkspaceInfo(workspacePath: string) {
 export const EmptyState: React.FC = () => {
   const { openFolderDialog, openWorkspacePath, recentWorkspaces, isLoading } = useWorkspaceStore();
   const [showAllRecents, setShowAllRecents] = useState(false);
-  const [isCloning, setIsCloning] = useState(false);
-  const [repoUrl, setRepoUrl] = useState('');
 
   const displayRecents = showAllRecents ? recentWorkspaces : recentWorkspaces.slice(0, 3);
-
-  const handleCloneSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!repoUrl.trim()) return;
-    setIsCloning(false);
-    // Open folder dialog to choose destination for cloning
-    await openFolderDialog();
-  };
 
   return (
     <div
@@ -47,8 +37,8 @@ export const EmptyState: React.FC = () => {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        backgroundColor: '#181818',
-        color: '#d1d5db',
+        backgroundColor: 'var(--bg-panel)',
+        color: 'var(--text-body)',
         padding: '36px 20px',
         overflowY: 'auto',
         userSelect: 'none',
@@ -90,13 +80,16 @@ export const EmptyState: React.FC = () => {
             style={{
               fontSize: '17px',
               fontWeight: 600,
-              color: '#e5e7eb',
+              color: 'var(--text-primary)',
               letterSpacing: '-0.2px',
               margin: 0,
             }}
           >
-            CoreMind IDE
+            Welcome to CoreMind
           </h1>
+          <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+            Open a folder to start working.
+          </p>
         </div>
 
         {/* Action Buttons */}
@@ -137,14 +130,14 @@ export const EmptyState: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setIsCloning(!isCloning)}
+            onClick={() => openFolderDialog('create')}
             style={{
               width: '100%',
               height: '36px',
               borderRadius: '6px',
-              backgroundColor: '#27272a',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
-              color: '#d1d5db',
+              backgroundColor: 'var(--bg-raised)',
+              border: '1px solid var(--ov-8)',
+              color: 'var(--text-body)',
               fontSize: '13px',
               fontWeight: 500,
               display: 'flex',
@@ -155,38 +148,18 @@ export const EmptyState: React.FC = () => {
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#323236';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+              e.currentTarget.style.backgroundColor = 'var(--bg-raised-hover)';
+              e.currentTarget.style.borderColor = 'var(--ov-15)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#27272a';
-              e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+              e.currentTarget.style.backgroundColor = 'var(--bg-raised)';
+              e.currentTarget.style.borderColor = 'var(--ov-8)';
             }}
           >
-            <GitBranch size={15} />
-            <span>Clone Repository</span>
+            <FolderPlus size={15} />
+            <span>Create Project</span>
           </button>
 
-          {isCloning && (
-            <form onSubmit={handleCloneSubmit} style={{ marginTop: '4px', width: '100%' }}>
-              <input
-                type="text"
-                placeholder="Enter repository URL (https://... or git@...)"
-                value={repoUrl}
-                onChange={(e) => setRepoUrl(e.target.value)}
-                autoFocus
-                style={{
-                  width: '100%',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  fontSize: '12px',
-                  backgroundColor: '#1f1f22',
-                  border: '1px solid #3b82f6',
-                  color: '#ffffff',
-                }}
-              />
-            </form>
-          )}
         </div>
 
         {/* Workspaces Section */}
@@ -204,7 +177,7 @@ export const EmptyState: React.FC = () => {
               style={{
                 fontSize: '12px',
                 fontWeight: 500,
-                color: '#9ca3af',
+                color: 'var(--text-secondary)',
                 letterSpacing: '0.1px',
                 marginBottom: '4px',
               }}
@@ -220,8 +193,8 @@ export const EmptyState: React.FC = () => {
                     key={itemPath}
                     onClick={() => openWorkspacePath(itemPath)}
                     style={{
-                      backgroundColor: '#1e1e1e',
-                      border: '1px solid rgba(255, 255, 255, 0.08)',
+                      backgroundColor: 'var(--bg-app)',
+                      border: '1px solid var(--ov-8)',
                       borderRadius: '6px',
                       padding: '10px 14px',
                       cursor: 'pointer',
@@ -231,19 +204,19 @@ export const EmptyState: React.FC = () => {
                       transition: 'all 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                      e.currentTarget.style.backgroundColor = '#232326';
+                      e.currentTarget.style.borderColor = 'var(--ov-20)';
+                      e.currentTarget.style.backgroundColor = 'var(--bg-raised-hover)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-                      e.currentTarget.style.backgroundColor = '#1e1e1e';
+                      e.currentTarget.style.borderColor = 'var(--ov-8)';
+                      e.currentTarget.style.backgroundColor = 'var(--bg-app)';
                     }}
                   >
                     <span
                       style={{
                         fontSize: '12.5px',
                         fontWeight: 500,
-                        color: '#f3f4f6',
+                        color: 'var(--text-primary)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -254,7 +227,7 @@ export const EmptyState: React.FC = () => {
                     <span
                       style={{
                         fontSize: '11px',
-                        color: '#71717a',
+                        color: 'var(--text-muted)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -275,14 +248,14 @@ export const EmptyState: React.FC = () => {
                   alignSelf: 'center',
                   marginTop: '6px',
                   fontSize: '11.5px',
-                  color: '#71717a',
+                  color: 'var(--text-muted)',
                   background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                   padding: '4px 8px',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.color = '#d1d5db')}
-                onMouseLeave={(e) => (e.currentTarget.style.color = '#71717a')}
+                onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-body)')}
+                onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
               >
                 {showAllRecents ? 'Show Less' : 'Show More...'}
               </button>
@@ -296,7 +269,7 @@ export const EmptyState: React.FC = () => {
             style={{
               fontSize: '12px',
               fontWeight: 500,
-              color: '#9ca3af',
+              color: 'var(--text-secondary)',
               letterSpacing: '0.1px',
               marginBottom: '4px',
             }}
@@ -306,8 +279,8 @@ export const EmptyState: React.FC = () => {
 
           <div
             style={{
-              backgroundColor: '#1e1e1e',
-              border: '1px solid rgba(255, 255, 255, 0.08)',
+              backgroundColor: 'var(--bg-app)',
+              border: '1px solid var(--ov-8)',
               borderRadius: '6px',
               padding: '12px 14px',
               display: 'flex',
@@ -322,21 +295,21 @@ export const EmptyState: React.FC = () => {
                   width: '32px',
                   height: '32px',
                   borderRadius: '6px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                  backgroundColor: 'var(--ov-5)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   flexShrink: 0,
                 }}
               >
-                <Cpu size={16} color="#d1d5db" />
+                <Cpu size={16} color="var(--text-body)" />
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', overflow: 'hidden' }}>
                 <span
                   style={{
                     fontSize: '12px',
                     fontWeight: 500,
-                    color: '#f3f4f6',
+                    color: 'var(--text-primary)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -347,7 +320,7 @@ export const EmptyState: React.FC = () => {
                 <span
                   style={{
                     fontSize: '10.5px',
-                    color: '#71717a',
+                    color: 'var(--text-muted)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -363,20 +336,20 @@ export const EmptyState: React.FC = () => {
               style={{
                 padding: '4px 10px',
                 borderRadius: '4px',
-                backgroundColor: '#27272a',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                color: '#d1d5db',
+                backgroundColor: 'var(--bg-raised)',
+                border: '1px solid var(--ov-10)',
+                color: 'var(--text-body)',
                 fontSize: '11px',
                 cursor: 'pointer',
                 flexShrink: 0,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = '#323236';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                e.currentTarget.style.backgroundColor = 'var(--bg-raised-hover)';
+                e.currentTarget.style.borderColor = 'var(--ov-20)';
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = '#27272a';
-                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                e.currentTarget.style.backgroundColor = 'var(--bg-raised)';
+                e.currentTarget.style.borderColor = 'var(--ov-10)';
               }}
             >
               Active

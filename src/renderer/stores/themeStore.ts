@@ -1,0 +1,39 @@
+import { create } from 'zustand';
+
+export type ThemeMode = 'dark' | 'light';
+
+const STORAGE_KEY = 'coremind:theme';
+
+function readStoredTheme(): ThemeMode {
+  try {
+    return localStorage.getItem(STORAGE_KEY) === 'light' ? 'light' : 'dark';
+  } catch {
+    return 'dark';
+  }
+}
+
+function applyTheme(theme: ThemeMode): void {
+  document.documentElement.dataset.theme = theme;
+}
+
+interface ThemeStore {
+  theme: ThemeMode;
+  setTheme: (theme: ThemeMode) => void;
+  toggleTheme: () => void;
+}
+
+export const useThemeStore = create<ThemeStore>((set, get) => ({
+  theme: readStoredTheme(),
+  setTheme: (theme) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, theme);
+    } catch {
+      // Preference is best-effort.
+    }
+    applyTheme(theme);
+    set({ theme });
+  },
+  toggleTheme: () => get().setTheme(get().theme === 'dark' ? 'light' : 'dark'),
+}));
+
+applyTheme(useThemeStore.getState().theme);

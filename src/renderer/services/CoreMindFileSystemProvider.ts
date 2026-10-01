@@ -1,6 +1,69 @@
 import * as vscode from 'vscode';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 
+export const WORKSPACE_SCHEME = 'coremind';
+export const ORIGINAL_SCHEME = 'coremind-original';
+
+// Original (pre-AI) content for diffs, keyed by absolute path. Fed by the AI change tracker.
+const originalContents = new Map<string, string>();
+
+export function setOriginalContent(absPath: string, content: string): void {
+  originalContents.set(absPath, content);
+}
+
+export function clearOriginalContents(): void {
+  originalContents.clear();
+}
+
+export function toWorkspaceUri(absPath: string): vscode.Uri {
+  return vscode.Uri.file(absPath).with({ scheme: WORKSPACE_SCHEME });
+}
+
+export function toOriginalUri(absPath: string): vscode.Uri {
+  return vscode.Uri.file(absPath).with({ scheme: ORIGINAL_SCHEME });
+}
+
+export class CoreMindOriginalContentProvider implements vscode.FileSystemProvider {
+  private emitter = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
+  readonly onDidChangeFile = this.emitter.event;
+
+  watch(): vscode.Disposable {
+    return new vscode.Disposable(() => {});
+  }
+
+  stat(uri: vscode.Uri): vscode.FileStat {
+    const content = originalContents.get(uri.fsPath);
+    if (content === undefined) throw vscode.FileSystemError.FileNotFound(uri);
+    return { type: vscode.FileType.File, ctime: 0, mtime: 0, size: content.length, permissions: vscode.FilePermission.Readonly };
+  }
+
+  readDirectory(): [string, vscode.FileType][] {
+    return [];
+  }
+
+  readFile(uri: vscode.Uri): Uint8Array {
+    const content = originalContents.get(uri.fsPath);
+    if (content === undefined) throw vscode.FileSystemError.FileNotFound(uri);
+    return new TextEncoder().encode(content);
+  }
+
+  writeFile(uri: vscode.Uri): void {
+    throw vscode.FileSystemError.NoPermissions(uri);
+  }
+
+  createDirectory(uri: vscode.Uri): void {
+    throw vscode.FileSystemError.NoPermissions(uri);
+  }
+
+  delete(uri: vscode.Uri): void {
+    throw vscode.FileSystemError.NoPermissions(uri);
+  }
+
+  rename(oldUri: vscode.Uri): void {
+    throw vscode.FileSystemError.NoPermissions(oldUri);
+  }
+}
+
 export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
   // --- EventEmitter for FileSystemProvider ---
   private _onDidChangeFile = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
@@ -10,6 +73,21 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
     // Phase 3 minimum: watch can just be a no-op that returns a disposable for now,
     // until we implement full chokidar watching via IPC
     return new vscode.Disposable(() => {});
+  }
+
+  // Called when files change on disk outside of VS Code (agent tools, terminal, other editors).
+  notifyExternalChanges(changes: { path: string; type: 'changed' | 'deleted' }[]): void {
+    const events: vscode.FileChangeEvent[] = [];
+    for (const change of changes) {
+      const uri = toWorkspaceUri(change.path);
+      if (change.type === 'deleted') {
+        events.push({ type: vscode.FileChangeType.Deleted, uri });
+      } else {
+        // Created makes the Explorer re-read the parent folder, Changed reloads open editors.
+        events.push({ type: vscode.FileChangeType.Created, uri }, { type: vscode.FileChangeType.Changed, uri });
+      }
+    }
+    if (events.length > 0) this._onDidChangeFile.fire(events);
   }
 
   private get rootPath(): string {
@@ -27,7 +105,7 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
       throw vscode.FileSystemError.Unavailable('No workspace is open.');
     }
 
-    if (uri.scheme !== 'coremind') {
+    if (uri.scheme !== WORKSPACE_SCHEME) {
       throw vscode.FileSystemError.NoPermissions(`Unsupported file system scheme: ${uri.scheme}`);
     }
 

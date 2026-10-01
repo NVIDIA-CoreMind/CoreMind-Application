@@ -42,7 +42,7 @@ interface WorkspaceStore extends WorkspaceState {
   projectMetadata: ProjectMetadata | null;
   repoMap: RepoMapResponse | null;
 
-  openFolderDialog: () => Promise<string | null>;
+  openFolderDialog: (mode?: 'open' | 'create') => Promise<string | null>;
   openWorkspacePath: (path: string) => Promise<boolean>;
   restoreLastWorkspace: () => Promise<boolean>;
   refreshRepoMap: () => Promise<void>;
@@ -120,14 +120,14 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     }
   },
 
-  openFolderDialog: async () => {
+  openFolderDialog: async (mode = 'open') => {
     try {
       set({ isLoading: true, error: null });
       if (!window.coreMindAPI) {
         set({ error: 'CoreMind system API is initializing. Please try again.', isLoading: false });
         return null;
       }
-      const result = await window.coreMindAPI.openDirectoryDialog();
+      const result = await window.coreMindAPI.openDirectoryDialog(mode);
       if (!result.success) {
         console.error('Directory dialog error:', result.error);
         set({ error: result.error.message, isLoading: false });

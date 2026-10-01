@@ -8,14 +8,26 @@ import getTextmateServiceOverride from '@codingame/monaco-vscode-textmate-servic
 import getExplorerServiceOverride from '@codingame/monaco-vscode-explorer-service-override';
 import getDialogsServiceOverride from '@codingame/monaco-vscode-dialogs-service-override';
 import getLifecycleServiceOverride from '@codingame/monaco-vscode-lifecycle-service-override';
-import getConfigurationServiceOverride from '@codingame/monaco-vscode-configuration-service-override';
+import getConfigurationServiceOverride, { updateUserConfiguration } from '@codingame/monaco-vscode-configuration-service-override';
 import * as monaco from 'monaco-editor';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
-import '@codingame/monaco-vscode-theme-seti-default-extension';
 import '../workers';
+import { MATERIAL_ICON_THEME_ID, registerMaterialIconTheme } from '../services/materialIcons';
+import { buildEditorConfiguration } from '../services/editorAppearance';
+import { useThemeStore } from '../stores/themeStore';
+
+registerMaterialIconTheme();
 import { useWorkspaceStore } from '../stores/workspaceStore';
+import { useAgentStore } from '../stores/agentStore';
+import { EmptyState } from './EmptyState';
+import { initWorkbenchBridge, notifyExternalChanges, syncDecorations } from '../services/workbenchBridge';
+import { sortedChanges } from '../services/aiChanges';
 
 const FILE_SCHEME = 'coremind';
+
+function userConfigurationJson(theme: 'dark' | 'light'): string {
+  return JSON.stringify({ ...buildEditorConfiguration(theme), 'workbench.iconTheme': MATERIAL_ICON_THEME_ID });
+}
 
 let startPromise: Promise<void> | null = null;
 
@@ -24,6 +36,7 @@ function toWorkspaceUri(rootPath: string): monaco.Uri {
 }
 
 async function syncWorkspaceFolder(rootPath: string): Promise<void> {
+  void window.coreMindAPI?.watchWorkspace();
   const vscode = await import('vscode');
   const folders = vscode.workspace.workspaceFolders ?? [];
   const workspaceUri = toWorkspaceUri(rootPath);
@@ -73,17 +86,37 @@ async function startWorkbench(container: HTMLElement, rootPath: string): Promise
       },
     },
     userConfiguration: {
-      json: JSON.stringify({ 'workbench.colorTheme': 'Default Dark Modern' }),
+      json: userConfigurationJson(useThemeStore.getState().theme),
     },
   });
   await apiWrapper.start();
 
   const vscode = await import('vscode');
   const { CoreMindFileSystemProvider } = await import('../services/CoreMindFileSystemProvider');
-  vscode.workspace.registerFileSystemProvider(FILE_SCHEME, new CoreMindFileSystemProvider(), {
+  const fileProvider = new CoreMindFileSystemProvider();
+  vscode.workspace.registerFileSystemProvider(FILE_SCHEME, fileProvider, {
     isCaseSensitive: true,
     isReadonly: false,
   });
+  initWorkbenchBridge(vscode, fileProvider);
+
+  // Dark/Light switching re-themes the whole Workbench.
+  useThemeStore.subscribe((state, prev) => {
+    if (state.theme !== prev.theme) {
+      void updateUserConfiguration(userConfigurationJson(state.theme));
+    }
+  });
+
+  // Keep Explorer decorations in sync with the AI change tracker.
+  syncDecorations(sortedChanges(useAgentStore.getState().trackedChanges));
+  useAgentStore.subscribe((state, prev) => {
+    if (state.trackedChanges !== prev.trackedChanges) {
+      syncDecorations(sortedChanges(state.trackedChanges));
+    }
+  });
+
+  // Reflect real on-disk changes (agent tools, terminal, external editors) in the Explorer and open editors.
+  window.coreMindAPI?.onWorkspaceFilesChanged((changes) => notifyExternalChanges(changes));
 
   const currentRoot = useWorkspaceStore.getState().rootPath;
   if (currentRoot) {
@@ -98,7 +131,21 @@ export const CoreMindWorkbench: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rootPath = useWorkspaceStore((state) => state.rootPath);
 
+  const previousRoot = useRef<string | null>(null);
   useEffect(() => {
+    // Review state belongs to a workspace; drop it when the user switches folders.
+    if (previousRoot.current && previousRoot.current !== rootPath) {
+      useAgentStore.setState({
+        trackedChanges: {},
+        taskSummary: null,
+        reviewIndex: null,
+        changeNotice: null,
+        changeSet: null,
+        activeChangeId: null,
+      });
+    }
+    previousRoot.current = rootPath;
+
     if (!rootPath) {
       return;
     }
@@ -136,8 +183,13 @@ export const CoreMindWorkbench: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#1e1e1e' }}>
+    <div style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: 'var(--bg-app)', position: 'relative' }}>
       <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+      {!rootPath && (
+        <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+          <EmptyState />
+        </div>
+      )}
     </div>
   );
 };

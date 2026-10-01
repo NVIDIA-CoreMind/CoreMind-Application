@@ -9,6 +9,11 @@ export type IpcResult<T> =
   | { success: false; error: IpcError };
 
 
+export interface WorkspaceFileChange {
+  path: string;
+  type: 'changed' | 'deleted';
+}
+
 export interface TerminalSpawnOptions {
   cols?: number;
   rows?: number;
@@ -62,6 +67,8 @@ export const IPC_CHANNELS = {
   // File System
   FILE_OPEN_DIRECTORY_DIALOG: 'file:open-directory-dialog',
   WORKSPACE_RESTORE: 'workspace:restore',
+  WORKSPACE_WATCH: 'workspace:watch',
+  WORKSPACE_FILES_CHANGED: 'workspace:files-changed',
   FILE_READ_DIRECTORY: 'file:read-directory',
   FILE_READ: 'file:read',
   FILE_WRITE: 'file:write',
