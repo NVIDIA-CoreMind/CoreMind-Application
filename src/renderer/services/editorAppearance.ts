@@ -39,6 +39,100 @@ const PALETTES: Record<ThemeMode, Palette> = {
 
 // Antigravity-style editor look: one continuous surface shared with the agent panel, quiet chrome,
 // comfortable code typography. Built per theme so Dark/Light switch the whole Workbench.
+const TOKEN_COLORS: Record<ThemeMode, Record<string, string>> = {
+  dark: {
+    comment: "#6a9955",
+    keyword: "#c586c0",
+    storage: "#569cd6",
+    string: "#ce9178",
+    number: "#b5cea8",
+    function: "#dcdcaa",
+    type: "#4ec9b0",
+    variable: "#9cdcfe",
+    constant: "#4fc1ff",
+    operator: "#d4d4d4",
+    decorator: "#dcdcaa",
+    tag: "#569cd6",
+    attribute: "#9cdcfe",
+    regexp: "#d16969",
+  },
+  light: {
+    comment: "#008000",
+    keyword: "#af00db",
+    storage: "#0000ff",
+    string: "#a31515",
+    number: "#098658",
+    function: "#795e26",
+    type: "#267f99",
+    variable: "#001080",
+    constant: "#0070c1",
+    operator: "#000000",
+    decorator: "#795e26",
+    tag: "#800000",
+    attribute: "#e50000",
+    regexp: "#811f3f",
+  },
+};
+
+function tokenColorRules(theme: ThemeMode) {
+  const c = TOKEN_COLORS[theme];
+  const rule = (scope: string[], foreground: string, fontStyle?: string) => ({
+    scope,
+    settings: fontStyle ? { foreground, fontStyle } : { foreground },
+  });
+  return [
+    rule(["comment", "punctuation.definition.comment"], c.comment, "italic"),
+    rule(
+      [
+        "keyword",
+        "keyword.control",
+        "keyword.operator.new",
+        "keyword.operator.expression",
+        "keyword.operator.logical.python",
+      ],
+      c.keyword,
+    ),
+    rule(["storage", "storage.type", "storage.modifier"], c.storage),
+    rule(["string", "string.quoted", "string.template"], c.string),
+    rule(["constant.numeric"], c.number),
+    rule(
+      [
+        "entity.name.function",
+        "support.function",
+        "meta.function-call",
+        "support.function.builtin",
+      ],
+      c.function,
+    ),
+    rule(
+      [
+        "entity.name.type",
+        "entity.name.class",
+        "support.class",
+        "support.type",
+        "entity.other.inherited-class",
+      ],
+      c.type,
+    ),
+    rule(
+      ["variable", "variable.parameter", "meta.definition.variable"],
+      c.variable,
+    ),
+    rule(
+      ["constant.language", "variable.other.constant", "support.constant"],
+      c.constant,
+    ),
+    rule(["keyword.operator"], c.operator),
+    rule(["meta.decorator", "entity.name.function.decorator"], c.decorator),
+    rule(["entity.name.tag", "meta.tag"], c.tag),
+    rule(
+      ["entity.other.attribute-name", "support.type.property-name"],
+      c.attribute,
+    ),
+    rule(["string.regexp"], c.regexp),
+  ];
+}
+
 export function buildEditorConfiguration(
   theme: ThemeMode,
 ): Record<string, unknown> {
@@ -68,6 +162,10 @@ export function buildEditorConfiguration(
     "editor.scrollBeyondLastLine": false,
     "editor.stickyScroll.enabled": false,
     "breadcrumbs.enabled": true,
+    "editor.semanticHighlighting.enabled": true,
+    "editor.tokenColorCustomizations": {
+      textMateRules: tokenColorRules(theme),
+    },
     "workbench.colorCustomizations": {
       "editor.background": p.surface,
       "editorGutter.background": p.surface,
