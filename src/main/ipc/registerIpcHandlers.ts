@@ -17,6 +17,40 @@ import { terminalService } from '../services/terminalService';
 import { agentService } from '../services/agentService';
 import { logger } from '../services/logger';
 import { getMainWindow } from '../windows/mainWindow';
+import { authorizeWorkspace, getAuthorizedWorkspace, restoreWorkspace } from '../services/workspaceAuthorization';
+
+function getWorkspaceForSender(senderId: number): string | null {
+  const mainWindow = getMainWindow();
+  if (!mainWindow || mainWindow.webContents.id !== senderId) {
+    return null;
+  }
+  return getAuthorizedWorkspace(senderId) ?? null;
+}
+
+function noWorkspaceError(): IpcResult<never> {
+  return {
+    success: false,
+    error: {
+      code: 'NO_AUTHORIZED_WORKSPACE',
+      message: 'Open a workspace before performing file operations.',
+    },
+  };
+}
+
+function isAllowedAuthUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    if (url.protocol === 'https:' && url.hostname === 'accounts.google.com') return true;
+    const configuredOrigin = process.env.COREMIND_AUTH_ORIGIN;
+    if (configuredOrigin && url.origin === new URL(configuredOrigin).origin) return true;
+    return (
+      (url.protocol === 'http:' || url.protocol === 'https:') &&
+      (url.hostname === 'localhost' || url.hostname === '127.0.0.1')
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function registerIpcHandlers(): void {
   logger.info('Registering IPC Handlers');
@@ -24,7 +58,7 @@ export function registerIpcHandlers(): void {
   // 1. Directory Open Dialog
   ipcMain.handle(
     IPC_CHANNELS.FILE_OPEN_DIRECTORY_DIALOG,
-    async (): Promise<IpcResult<string | null>> => {
+    async (event): Promise<IpcResult<string | null>> => {
       try {
         if (process.platform === 'darwin') {
           app.focus({ steal: true });
@@ -40,7 +74,7 @@ export function registerIpcHandlers(): void {
           return { success: true, data: null };
         }
 
-        const selectedPath = result.filePaths[0];
+        const selectedPath = authorizeWorkspace(event.sender.id, result.filePaths[0]);
         logger.info('User selected directory', { selectedPath });
         return { success: true, data: selectedPath };
       } catch (err: unknown) {
@@ -57,14 +91,26 @@ export function registerIpcHandlers(): void {
     }
   );
 
+  ipcMain.handle(
+    IPC_CHANNELS.WORKSPACE_RESTORE,
+    async (event, workspacePath: unknown): Promise<IpcResult<string | null>> => {
+      const mainWindow = getMainWindow();
+      if (!mainWindow || mainWindow.webContents.id !== event.sender.id || typeof workspacePath !== 'string') {
+        return { success: true, data: null };
+      }
+      return { success: true, data: restoreWorkspace(event.sender.id, workspacePath) };
+    }
+  );
+
   // 1b. Stat File/Directory
   ipcMain.handle(
     IPC_CHANNELS.FILE_STAT,
     async (
-      _event,
-      { filePath, rootPath }: { filePath: string; rootPath: string }
+      event,
+      { filePath }: { filePath: string; rootPath: string }
     ) => {
-      return await fileSystemService.stat(filePath, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.stat(filePath, rootPath) : noWorkspaceError();
     }
   );
 
@@ -72,10 +118,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.FILE_READ_DIRECTORY,
     async (
-      _event,
-      { dirPath, rootPath }: { dirPath: string; rootPath: string }
+      event,
+      { dirPath }: { dirPath: string; rootPath: string }
     ): Promise<IpcResult<FileNode[]>> => {
-      return fileSystemService.readDirectory(dirPath, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.readDirectory(dirPath, rootPath) : noWorkspaceError();
     }
   );
 
@@ -83,10 +130,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.FILE_READ,
     async (
-      _event,
-      { filePath, rootPath }: { filePath: string; rootPath: string }
+      event,
+      { filePath }: { filePath: string; rootPath: string }
     ): Promise<IpcResult<string>> => {
-      return fileSystemService.readFile(filePath, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.readFile(filePath, rootPath) : noWorkspaceError();
     }
   );
 
@@ -94,18 +142,18 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.FILE_WRITE,
     async (
-      _event,
+      event,
       {
         filePath,
         content,
-        rootPath,
       }: {
         filePath: string;
         content: string;
         rootPath: string;
       }
     ): Promise<IpcResult<void>> => {
-      return fileSystemService.writeFile(filePath, content, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.writeFile(filePath, content, rootPath) : noWorkspaceError();
     }
   );
 
@@ -113,10 +161,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.FILE_CREATE_FILE,
     async (
-      _event,
-      { filePath, rootPath }: { filePath: string; rootPath: string }
+      event,
+      { filePath }: { filePath: string; rootPath: string }
     ): Promise<IpcResult<void>> => {
-      return fileSystemService.createFile(filePath, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.createFile(filePath, rootPath) : noWorkspaceError();
     }
   );
 
@@ -124,10 +173,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.FILE_CREATE_DIRECTORY,
     async (
-      _event,
-      { dirPath, rootPath }: { dirPath: string; rootPath: string }
+      event,
+      { dirPath }: { dirPath: string; rootPath: string }
     ): Promise<IpcResult<void>> => {
-      return fileSystemService.createDirectory(dirPath, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.createDirectory(dirPath, rootPath) : noWorkspaceError();
     }
   );
 
@@ -135,18 +185,18 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.FILE_RENAME,
     async (
-      _event,
+      event,
       {
         oldPath,
         newPath,
-        rootPath,
       }: {
         oldPath: string;
         newPath: string;
         rootPath: string;
       }
     ): Promise<IpcResult<void>> => {
-      return fileSystemService.rename(oldPath, newPath, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.rename(oldPath, newPath, rootPath) : noWorkspaceError();
     }
   );
 
@@ -154,10 +204,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.FILE_DELETE,
     async (
-      _event,
-      { targetPath, rootPath }: { targetPath: string; rootPath: string }
+      event,
+      { targetPath }: { targetPath: string; rootPath: string }
     ): Promise<IpcResult<void>> => {
-      return fileSystemService.delete(targetPath, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.delete(targetPath, rootPath) : noWorkspaceError();
     }
   );
 
@@ -165,10 +216,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.FILE_SEARCH,
     async (
-      _event,
-      { query, rootPath }: { query: string; rootPath: string }
+      event,
+      { query }: { query: string; rootPath: string }
     ): Promise<IpcResult<FileSearchResult[]>> => {
-      return fileSystemService.searchFiles(query, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.searchFiles(query, rootPath) : noWorkspaceError();
     }
   );
 
@@ -180,9 +232,11 @@ export function registerIpcHandlers(): void {
       { id, options }: { id: string; options?: TerminalSpawnOptions }
     ): Promise<IpcResult<boolean>> => {
       const sender = event.sender;
+      const workspacePath = getWorkspaceForSender(sender.id);
+      if (!workspacePath) return noWorkspaceError();
       const success = terminalService.createSession(
         id,
-        options,
+        { ...options, cwd: workspacePath },
         (data: string) => {
           if (!sender.isDestroyed()) {
             sender.send(IPC_CHANNELS.TERMINAL_DATA, { id, data });
@@ -282,10 +336,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle(
     IPC_CHANNELS.AGENT_EXECUTE_TOOL,
     async (
-      _event,
-      { action, rootPath }: { action: AgentToolAction; rootPath: string }
+      event,
+      { action }: { action: AgentToolAction; rootPath: string }
     ): Promise<IpcResult<unknown>> => {
-      return agentService.executeTool(action, rootPath);
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? agentService.executeTool(action, rootPath) : noWorkspaceError();
     }
   );
 
@@ -312,8 +367,16 @@ export function registerIpcHandlers(): void {
   // External & Auth Handlers
   ipcMain.handle(
     IPC_CHANNELS.AUTH_OPEN_WINDOW,
-    async (_event, { authUrl }: { authUrl: string }): Promise<IpcResult<any>> => {
-      logger.info('Opening Google Auth Window', { authUrl });
+    async (_event, { authUrl }: { authUrl: string }): Promise<IpcResult<Record<string, string>>> => {
+      if (!isAllowedAuthUrl(authUrl)) {
+        return {
+          success: false,
+          error: { code: 'AUTH_URL_NOT_ALLOWED', message: 'Authentication URL is not allowed.' },
+        };
+      }
+
+      const initialUrl = new URL(authUrl);
+      logger.info('Opening Google Auth Window', { origin: initialUrl.origin });
       return new Promise((resolve) => {
         let resolved = false;
         const parentWin = getMainWindow();
@@ -337,46 +400,18 @@ export function registerIpcHandlers(): void {
           authWin.show();
         });
 
-        const checkAuthSuccess = async () => {
-          if (resolved || authWin.isDestroyed()) return;
+        authWin.webContents.on('will-navigate', (event, navUrl) => {
           try {
-            const rawTokens = await authWin.webContents.executeJavaScript(`
-              (() => {
-                try {
-                  const stored = localStorage.getItem('coremind_auth');
-                  if (stored) return stored;
-                  const bodyText = document.body ? document.body.innerText : '';
-                  if (bodyText.includes('"access_token"')) return bodyText;
-                } catch(e) {}
-                return null;
-              })()
-            `);
-            if (rawTokens) {
-              try {
-                const parsed = JSON.parse(rawTokens);
-                if (parsed.access_token) {
-                  resolved = true;
-                  authWin.close();
-                  resolve({ success: true, data: parsed });
-                }
-              } catch {
-                // Not valid JSON yet
-              }
+            const callbackUrl = new URL(navUrl);
+            if (callbackUrl.origin === initialUrl.origin && callbackUrl.pathname === '/v1/auth/google/callback') {
+              event.preventDefault();
+              resolved = true;
+              authWin.close();
+              resolve({ success: true, data: Object.fromEntries(callbackUrl.searchParams) });
             }
           } catch {
-            // Script evaluation skipped
+            event.preventDefault();
           }
-        };
-
-        authWin.webContents.on('did-navigate', async (_e, navUrl) => {
-          logger.info('Auth window navigated', { navUrl });
-          if (navUrl.includes('/v1/auth/google/callback') || navUrl.includes('/auth')) {
-            await checkAuthSuccess();
-          }
-        });
-
-        authWin.webContents.on('did-finish-load', async () => {
-          await checkAuthSuccess();
         });
 
         authWin.on('closed', () => {
@@ -391,7 +426,16 @@ export function registerIpcHandlers(): void {
           }
         });
 
-        authWin.loadURL(authUrl);
+        void authWin.loadURL(authUrl).catch(() => {
+          if (!resolved) {
+            resolved = true;
+            authWin.close();
+            resolve({
+              success: false,
+              error: { code: 'AUTH_LOAD_FAILED', message: 'Unable to load authentication page.' },
+            });
+          }
+        });
       });
     }
   );

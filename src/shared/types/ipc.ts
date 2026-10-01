@@ -61,6 +61,7 @@ export interface AgentStatus {
 export const IPC_CHANNELS = {
   // File System
   FILE_OPEN_DIRECTORY_DIALOG: 'file:open-directory-dialog',
+  WORKSPACE_RESTORE: 'workspace:restore',
   FILE_READ_DIRECTORY: 'file:read-directory',
   FILE_READ: 'file:read',
   FILE_WRITE: 'file:write',

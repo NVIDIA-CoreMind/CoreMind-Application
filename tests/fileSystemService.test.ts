@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import os from 'node:os';
 import { FileSystemService } from '../src/main/services/fileSystemService';
 
 describe('FileSystemService & Workspace Security', () => {
@@ -10,7 +9,7 @@ describe('FileSystemService & Workspace Security', () => {
 
   beforeEach(async () => {
     service = new FileSystemService();
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'coremind-test-'));
+    tempDir = await fs.mkdtemp(path.join(process.cwd(), '.coremind-test-'));
   });
 
   afterEach(async () => {
@@ -37,6 +36,17 @@ describe('FileSystemService & Workspace Security', () => {
     it('rejects arbitrary system directories outside workspace', () => {
       expect(service.validateWorkspacePath('/System/Library', tempDir)).toBe(false);
       expect(service.validateWorkspacePath('/etc/passwd', tempDir)).toBe(false);
+    });
+
+    it('rejects paths through symlinks that point outside the workspace', async () => {
+      const outsideDir = await fs.mkdtemp(path.join(process.cwd(), '.coremind-outside-'));
+      const linkPath = path.join(tempDir, 'outside-link');
+      try {
+        await fs.symlink(outsideDir, linkPath);
+        expect(service.validateWorkspacePath(path.join(linkPath, 'secret.txt'), tempDir)).toBe(false);
+      } finally {
+        await fs.rm(outsideDir, { recursive: true, force: true });
+      }
     });
   });
 
@@ -107,6 +117,15 @@ describe('FileSystemService & Workspace Security', () => {
         expect(deleteRes.error.code).toBe('CANNOT_DELETE_ROOT');
       }
     });
+
+    it('prevents deleting or renaming normalized equivalents of the workspace root', async () => {
+      const equivalentRoot = path.join(tempDir, '.');
+      const deleteRes = await service.delete(equivalentRoot, tempDir);
+      const renameRes = await service.rename(equivalentRoot, `${tempDir}-renamed`, tempDir);
+
+      expect(deleteRes.success).toBe(false);
+      expect(renameRes.success).toBe(false);
+    });
   });
 
   describe('Search functionality', () => {
@@ -125,6 +144,21 @@ describe('FileSystemService & Workspace Security', () => {
       if (searchRes.success) {
         expect(searchRes.data.length).toBeGreaterThanOrEqual(1);
         expect(searchRes.data.some((r) => r.fileName === 'app.ts')).toBe(true);
+      }
+    });
+
+    it('does not follow symlinks during search', async () => {
+      const outsideDir = await fs.mkdtemp(path.join(process.cwd(), '.coremind-outside-'));
+      const outsideFile = path.join(outsideDir, 'secret.txt');
+      const linkPath = path.join(tempDir, 'outside-link');
+      try {
+        await fs.writeFile(outsideFile, 'searchable-secret');
+        await fs.symlink(outsideFile, linkPath);
+        const searchRes = await service.searchFiles('searchable-secret', tempDir);
+        expect(searchRes.success).toBe(true);
+        if (searchRes.success) expect(searchRes.data).toHaveLength(0);
+      } finally {
+        await fs.rm(outsideDir, { recursive: true, force: true });
       }
     });
   });

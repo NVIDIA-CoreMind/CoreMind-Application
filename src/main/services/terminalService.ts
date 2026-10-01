@@ -97,8 +97,10 @@ export class TerminalService {
 
       const exitDisposable = ptyProcess.onExit(({ exitCode }) => {
         logger.info('Terminal process exited', { id, exitCode });
-        this.sessions.delete(id);
-        onExit(exitCode);
+        if (this.sessions.get(id)?.ptyProcess === ptyProcess) {
+          this.sessions.delete(id);
+          onExit(exitCode);
+        }
       });
 
       this.sessions.set(id, {

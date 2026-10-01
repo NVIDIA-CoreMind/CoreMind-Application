@@ -1,12 +1,36 @@
-import { app, BrowserWindow, nativeImage } from 'electron';
+import { app, BrowserWindow, nativeImage, shell } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { logger } from '../services/logger';
+import { clearAuthorizedWorkspace } from '../services/workspaceAuthorization';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let mainWindow: BrowserWindow | null = null;
+
+function isSafeExternalUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' || url.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+function isAllowedMainNavigation(value: string, devServerUrl?: string): boolean {
+  try {
+    const url = new URL(value);
+    if (devServerUrl) return url.origin === new URL(devServerUrl).origin;
+    if (url.protocol !== 'file:') return false;
+    const distDirectory = path.resolve(__dirname, '../dist');
+    const targetPath = fileURLToPath(url);
+    const relative = path.relative(distDirectory, targetPath);
+    return !relative.startsWith('..') && !path.isAbsolute(relative);
+  } catch {
+    return false;
+  }
+}
 
 export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
@@ -58,7 +82,7 @@ export function createMainWindow(): BrowserWindow {
       preload: preloadPath,
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: false,
+      sandbox: true,
       webSecurity: true,
     },
   });
@@ -71,16 +95,30 @@ export function createMainWindow(): BrowserWindow {
   mainWindow.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
     logger.info(`[Renderer] ${message}`, { sourceId, line });
   });
+  const devServerUrl = process.env.VITE_DEV_SERVER_URL;
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (isSafeExternalUrl(url)) {
+      void shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!isAllowedMainNavigation(url, devServerUrl)) {
+      event.preventDefault();
+      logger.warn('Blocked untrusted main window navigation');
+    }
+  });
 
   mainWindow.on('closed', () => {
+    clearAuthorizedWorkspace(mainWindow?.webContents.id ?? -1);
     mainWindow = null;
     logger.info('Main window closed');
   });
 
   // Load URL or file depending on environment
-  if (process.env.VITE_DEV_SERVER_URL) {
-    logger.info('Loading Dev Server URL', { url: process.env.VITE_DEV_SERVER_URL });
-    mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
+  if (devServerUrl) {
+    logger.info('Loading Dev Server URL', { url: devServerUrl });
+    mainWindow.loadURL(devServerUrl);
   } else {
     const indexPath = path.join(__dirname, '../dist/index.html');
     logger.info('Loading production index.html', { indexPath });

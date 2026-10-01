@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import os from 'node:os';
 import {
   AgentService,
   StandardAIProvider,
@@ -17,7 +16,7 @@ describe('AgentService & AI Provider Architecture', () => {
   let tempWorkspace: string;
 
   beforeEach(async () => {
-    tempWorkspace = await fs.mkdtemp(path.join(os.tmpdir(), 'coremind-agent-test-'));
+    tempWorkspace = await fs.mkdtemp(path.join(process.cwd(), '.coremind-agent-test-'));
   });
 
   afterEach(async () => {
@@ -113,6 +112,7 @@ describe('AgentService & AI Provider Architecture', () => {
       {
         tool: 'createFile',
         params: { filePath: '/etc/evil.txt' },
+        status: 'approved',
       },
       ''
     );
@@ -123,6 +123,7 @@ describe('AgentService & AI Provider Architecture', () => {
       {
         tool: 'createFile',
         params: { filePath: path.join(tempWorkspace, '../../evil.txt') },
+        status: 'approved',
       },
       tempWorkspace
     );
@@ -134,10 +135,26 @@ describe('AgentService & AI Provider Architecture', () => {
       {
         tool: 'createFile',
         params: { filePath: safeFilePath },
+        status: 'approved',
       },
       tempWorkspace
     );
     expect(safeResult.success).toBe(true);
     expect(await fs.stat(safeFilePath)).toBeDefined();
+  });
+
+  it('rejects unapproved agent actions', async () => {
+    const agentService = new AgentService();
+    const result = await agentService.executeTool(
+      {
+        tool: 'createFile',
+        params: { filePath: path.join(tempWorkspace, 'unapproved.ts') },
+        status: 'pending',
+      },
+      tempWorkspace
+    );
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.code).toBe('ACTION_NOT_APPROVED');
   });
 });

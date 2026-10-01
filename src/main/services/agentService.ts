@@ -247,6 +247,16 @@ export class AgentService {
       };
     }
 
+    if (action.status !== 'approved') {
+      return {
+        success: false,
+        error: {
+          code: 'ACTION_NOT_APPROVED',
+          message: 'Agent action must be explicitly approved before execution.',
+        },
+      };
+    }
+
     logger.info('Executing controlled agent tool', { tool: action.tool });
 
     switch (action.tool) {

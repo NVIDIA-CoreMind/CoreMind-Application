@@ -87,7 +87,7 @@ export class CoreMindVSCodeService {
    */
   public async openFile(uriString: string): Promise<void> {
     try {
-      const uri = vscode.Uri.parse(uriString);
+      const uri = this.parseUri(uriString);
       const document = await vscode.workspace.openTextDocument(uri);
       await vscode.window.showTextDocument(document);
     } catch (err) {
@@ -101,10 +101,16 @@ export class CoreMindVSCodeService {
    */
   public async applyEdit(uriString: string, edits: TextEditPayload[]): Promise<boolean> {
     try {
-      const uri = vscode.Uri.parse(uriString);
+      const uri = this.parseUri(uriString);
+      if (edits.length === 0) {
+        return true;
+      }
+
       const workspaceEdit = new vscode.WorkspaceEdit();
 
       for (const edit of edits) {
+        this.validateEdit(edit);
+
         // Convert back to 0-indexed for VS Code APIs
         const range = new vscode.Range(
           new vscode.Position(edit.range.startLine - 1, edit.range.startColumn - 1),
@@ -125,8 +131,8 @@ export class CoreMindVSCodeService {
    */
   public async showDiff(originalUriStr: string, modifiedUriStr: string, title?: string): Promise<void> {
     try {
-      const originalUri = vscode.Uri.parse(originalUriStr);
-      const modifiedUri = vscode.Uri.parse(modifiedUriStr);
+      const originalUri = this.parseUri(originalUriStr);
+      const modifiedUri = this.parseUri(modifiedUriStr);
       await vscode.commands.executeCommand('vscode.diff', originalUri, modifiedUri, title || 'Diff');
     } catch (err) {
       console.error(`Failed to show diff for ${originalUriStr} and ${modifiedUriStr}`, err);
@@ -138,7 +144,7 @@ export class CoreMindVSCodeService {
    * Retrieves diagnostics (errors, warnings) for the specified URI.
    */
   public getDiagnostics(uriString: string): DiagnosticItem[] {
-    const uri = vscode.Uri.parse(uriString);
+    const uri = this.parseUri(uriString);
     const diagnostics = vscode.languages.getDiagnostics(uri);
     
     return diagnostics.map(d => ({
@@ -179,65 +185,28 @@ export class CoreMindVSCodeService {
     };
   }
 
-  /**
-   * Temporary automated test to verify methods are functioning.
-   */
-  public async __runTests(): Promise<Record<string, string>> {
-    const results: Record<string, string> = {};
-    try {
-      // 1. getWorkspace
-      const ws = this.getWorkspace();
-      results.getWorkspace = `OK: Found ${ws.folders.length} folders`;
-
-      // 2. getActiveEditor & getSelection (might be null initially)
-      const editor = this.getActiveEditor();
-      results.getActiveEditor = `OK: ${editor ? editor.uri : 'null'}`;
-      
-      const selection = this.getSelection();
-      results.getSelection = `OK: ${selection ? 'has selection' : 'null'}`;
-
-      // 3. executeCommand (test a simple workbench command)
-      await this.executeCommand('workbench.action.toggleSidebarVisibility');
-      results.executeCommand = 'OK';
-
-      // 4. openFile (create a virtual in-memory file for testing)
-      // We will now test physical file instead of inmemory to verify Phase 3 works
-      const testUri = 'file:///package.json';
-      
-      // We will try opening the virtual file but if it fails (no provider), we catch it
-      try {
-         await this.openFile(testUri);
-         results.openFile = 'OK';
-         
-         // 5. applyEdit
-         const success = await this.applyEdit(testUri, [{
-           range: { startLine: 1, startColumn: 1, endLine: 1, endColumn: 1 },
-           newText: 'Hello World'
-         }]);
-         results.applyEdit = `OK: ${success}`;
-
-         // 6. getDiagnostics
-         const diags = this.getDiagnostics(testUri);
-         results.getDiagnostics = `OK: ${diags.length} diagnostics`;
-         
-      } catch (e: any) {
-         results.openFile = `REQUIRES FILE SYSTEM: ${e.message}`;
-         results.applyEdit = 'REQUIRES FILE SYSTEM';
-         results.getDiagnostics = 'REQUIRES FILE SYSTEM';
-      }
-
-      // 7. showDiff (doesn't strictly require files to exist to just open the diff tab)
-      try {
-         await this.showDiff('inmemory://test1.txt', 'inmemory://test2.txt', 'Test Diff');
-         results.showDiff = 'OK';
-      } catch (e: any) {
-         results.showDiff = `FAILED: ${e.message}`;
-      }
-
-    } catch (e: any) {
-      results.unexpectedError = e.message;
+  private parseUri(uriString: string): vscode.Uri {
+    if (!uriString.trim()) {
+      throw new Error('A file URI is required.');
     }
-    return results;
+
+    try {
+      return vscode.Uri.parse(uriString, true);
+    } catch {
+      throw new Error(`Invalid file URI: ${uriString}`);
+    }
+  }
+
+  private validateEdit(edit: TextEditPayload): void {
+    const { startLine, startColumn, endLine, endColumn } = edit.range;
+    const positions = [startLine, startColumn, endLine, endColumn];
+    if (!positions.every(Number.isInteger) || positions.some((position) => position < 1)) {
+      throw new Error('Edit positions must be positive integers.');
+    }
+
+    if (endLine < startLine || (endLine === startLine && endColumn < startColumn)) {
+      throw new Error('Edit end position must not precede its start position.');
+    }
   }
 }
 

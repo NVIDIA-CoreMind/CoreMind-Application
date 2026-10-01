@@ -6,31 +6,42 @@ import { IpcResult } from '../../shared/types/ipc';
 import { logger } from './logger';
 
 export class FileSystemService {
+  private isWithinRoot(targetPath: string, rootPath: string): boolean {
+    const relative = path.relative(rootPath, targetPath);
+    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
+  }
+
+  private resolveNearestExistingPath(targetPath: string): string | null {
+    let candidate = targetPath;
+    const missingSegments: string[] = [];
+
+    while (!fsSync.existsSync(candidate)) {
+      const parent = path.dirname(candidate);
+      if (parent === candidate) return null;
+      missingSegments.unshift(path.basename(candidate));
+      candidate = parent;
+    }
+
+    try {
+      return path.resolve(fsSync.realpathSync(candidate), ...missingSegments);
+    } catch {
+      return null;
+    }
+  }
+
   /**
    * Validate that targetPath resides inside rootPath and does not escape via traversal.
    */
   public validateWorkspacePath(targetPath: string, rootPath: string): boolean {
     if (!rootPath || !targetPath) return false;
-    const resolvedRoot = path.normalize(path.resolve(rootPath));
-    const resolvedTarget = path.normalize(path.resolve(targetPath));
+    const resolvedRoot = path.resolve(rootPath);
+    const resolvedTarget = path.resolve(targetPath);
+    if (!this.isWithinRoot(resolvedTarget, resolvedRoot)) return false;
 
-    // Ensure target path starts with root path
-    if (resolvedTarget === resolvedRoot) {
-      return true;
-    }
-
-    const relative = path.relative(resolvedRoot, resolvedTarget);
-    if (!relative.startsWith('..') && !path.isAbsolute(relative)) {
-      return true;
-    }
-
-    // Fallback for macOS symlinks (e.g. /var vs /private/var, /tmp vs /private/tmp)
     try {
       const realRoot = fsSync.realpathSync(resolvedRoot);
-      const realTarget = fsSync.realpathSync(resolvedTarget);
-      if (realRoot === realTarget) return true;
-      const realRel = path.relative(realRoot, realTarget);
-      return !realRel.startsWith('..') && !path.isAbsolute(realRel);
+      const canonicalTarget = this.resolveNearestExistingPath(resolvedTarget);
+      return canonicalTarget !== null && this.isWithinRoot(canonicalTarget, realRoot);
     } catch {
       return false;
     }
@@ -104,8 +115,8 @@ export class FileSystemService {
       const nodes: FileNode[] = [];
 
       for (const entry of entries) {
-        // Skip hidden system/git metadata files
-        if (entry.name === '.git' || entry.name === '.DS_Store') {
+        // Do not expose metadata or follow workspace symlinks.
+        if (entry.name === '.git' || entry.name === '.DS_Store' || entry.isSymbolicLink()) {
           continue;
         }
 
@@ -116,9 +127,6 @@ export class FileSystemService {
 
         try {
           const stat = await fs.stat(fullPath);
-          if (entry.isSymbolicLink()) {
-            isDirectory = stat.isDirectory();
-          }
           size = stat.size;
           lastModified = stat.mtimeMs;
         } catch {
@@ -328,7 +336,7 @@ export class FileSystemService {
         };
       }
 
-      if (oldPath === rootPath) {
+      if (path.resolve(oldPath) === path.resolve(rootPath)) {
         return {
           success: false,
           error: {
@@ -369,7 +377,7 @@ export class FileSystemService {
         };
       }
 
-      if (targetPath === rootPath) {
+      if (path.resolve(targetPath) === path.resolve(rootPath)) {
         return {
           success: false,
           error: {
@@ -404,6 +412,16 @@ export class FileSystemService {
     maxResults = 50
   ): Promise<IpcResult<FileSearchResult[]>> {
     try {
+      if (!this.validateWorkspacePath(rootPath, rootPath)) {
+        return {
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Cannot search outside of the active workspace.',
+          },
+        };
+      }
+
       if (!query || query.trim() === '') {
         return { success: true, data: [] };
       }
@@ -420,7 +438,9 @@ export class FileSystemService {
           if (results.length >= maxResults) return;
           const fullPath = path.join(dir, entry.name);
 
-          if (entry.isDirectory()) {
+          if (entry.isSymbolicLink()) continue;
+
+          if (entry.isDirectory() && !entry.isSymbolicLink()) {
             if (!ignoredFolders.has(entry.name)) {
               await searchDir(fullPath);
             }

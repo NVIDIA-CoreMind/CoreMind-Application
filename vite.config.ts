@@ -45,12 +45,17 @@ export default defineConfig({
     outDir: 'dist',
     emptyOutDir: true,
   },
+  worker: {
+    format: 'es',
+  },
   optimizeDeps: {
     exclude: [
       '@codingame/monaco-vscode-theme-defaults-default-extension',
       '@codingame/monaco-vscode-theme-seti-default-extension'
     ],
     include: [
+      '@codingame/monaco-vscode-api',
+      '@codingame/monaco-vscode-api/extensions',
       '@codingame/monaco-vscode-workbench-service-override',
       '@codingame/monaco-vscode-files-service-override',
       '@codingame/monaco-vscode-theme-service-override',

@@ -1,5 +1,6 @@
 import { Menu, MenuItemConstructorOptions, app, dialog, BrowserWindow } from 'electron';
 import { getMainWindow } from './windows/mainWindow';
+import { authorizeWorkspace } from './services/workspaceAuthorization';
 
 export function setupApplicationMenu(): void {
   const isMac = process.platform === 'darwin';
@@ -42,7 +43,7 @@ export function setupApplicationMenu(): void {
               const selectedPath = result.filePaths[0];
               const win = getMainWindow() || BrowserWindow.getFocusedWindow();
               if (win) {
-                win.webContents.send('workspace:open-path', selectedPath);
+                win.webContents.send('workspace:open-path', authorizeWorkspace(win.webContents.id, selectedPath));
               }
             }
           },

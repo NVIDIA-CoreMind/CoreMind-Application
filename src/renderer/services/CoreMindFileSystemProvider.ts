@@ -17,8 +17,29 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
     return rootPath || '';
   }
 
+  dispose(): void {
+    this._onDidChangeFile.dispose();
+  }
+
+  private assertWorkspaceUri(uri: vscode.Uri): void {
+    const rootPath = this.rootPath;
+    if (!rootPath) {
+      throw vscode.FileSystemError.Unavailable('No workspace is open.');
+    }
+
+    if (uri.scheme !== 'coremind') {
+      throw vscode.FileSystemError.NoPermissions(`Unsupported file system scheme: ${uri.scheme}`);
+    }
+
+    const rootUri = vscode.Uri.file(rootPath);
+    const isInWorkspace = uri.path === rootUri.path || uri.path.startsWith(`${rootUri.path}/`);
+    if (!isInWorkspace) {
+      throw vscode.FileSystemError.NoPermissions('File is outside the active workspace.');
+    }
+  }
+
   private getCoreMindAPI() {
-    const api = (window as any).coreMindAPI;
+    const api = window.coreMindAPI;
     if (!api) {
       throw vscode.FileSystemError.Unavailable('CoreMind IPC API is not available');
     }
@@ -26,6 +47,7 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
   }
 
   async stat(uri: vscode.Uri): Promise<vscode.FileStat> {
+    this.assertWorkspaceUri(uri);
     const api = this.getCoreMindAPI();
     const result = await api.stat(uri.fsPath, this.rootPath);
     
@@ -47,6 +69,7 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
   }
 
   async readDirectory(uri: vscode.Uri): Promise<[string, vscode.FileType][]> {
+    this.assertWorkspaceUri(uri);
     const api = this.getCoreMindAPI();
     const result = await api.readDirectory(uri.fsPath, this.rootPath);
 
@@ -61,6 +84,7 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
   }
 
   async readFile(uri: vscode.Uri): Promise<Uint8Array> {
+    this.assertWorkspaceUri(uri);
     const api = this.getCoreMindAPI();
     const result = await api.readFile(uri.fsPath, this.rootPath);
 
@@ -75,11 +99,21 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
   }
 
   async writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean; overwrite: boolean }): Promise<void> {
+    this.assertWorkspaceUri(uri);
     const api = this.getCoreMindAPI();
     const textContent = new TextDecoder().decode(content);
 
-    // If we need to create it and it doesn't exist, we can just try to write it.
-    // CoreMind's writeFile handles creating files natively if the path is valid.
+    const existingFile = await api.stat(uri.fsPath, this.rootPath);
+    if (existingFile.success && !options.overwrite) {
+      throw vscode.FileSystemError.FileExists(uri);
+    }
+    if (!existingFile.success && existingFile.error.code !== 'ENOENT') {
+      throw vscode.FileSystemError.Unavailable(existingFile.error.message);
+    }
+    if (!existingFile.success && !options.create) {
+      throw vscode.FileSystemError.FileNotFound(uri);
+    }
+
     const result = await api.writeFile(uri.fsPath, textContent, this.rootPath);
 
     if (!result.success) {
@@ -93,6 +127,7 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
   }
 
   async createDirectory(uri: vscode.Uri): Promise<void> {
+    this.assertWorkspaceUri(uri);
     const api = this.getCoreMindAPI();
     const result = await api.createDirectory(uri.fsPath, this.rootPath);
 
@@ -104,6 +139,7 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
   }
 
   async delete(uri: vscode.Uri, _options: { recursive: boolean }): Promise<void> {
+    this.assertWorkspaceUri(uri);
     const api = this.getCoreMindAPI();
     const result = await api.delete(uri.fsPath, this.rootPath);
 
@@ -115,6 +151,8 @@ export class CoreMindFileSystemProvider implements vscode.FileSystemProvider {
   }
 
   async rename(oldUri: vscode.Uri, newUri: vscode.Uri, _options: { overwrite: boolean }): Promise<void> {
+    this.assertWorkspaceUri(oldUri);
+    this.assertWorkspaceUri(newUri);
     const api = this.getCoreMindAPI();
     const result = await api.rename(oldUri.fsPath, newUri.fsPath, this.rootPath);
 

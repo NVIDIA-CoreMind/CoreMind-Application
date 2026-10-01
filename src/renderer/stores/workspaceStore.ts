@@ -63,6 +63,12 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
       const cleanPath = targetPath.replace(/\/+$/, '');
+      const restored = await window.coreMindAPI.restoreWorkspace(cleanPath);
+      if (!restored.success || !restored.data) {
+        localStorage.removeItem(STORAGE_KEY_LAST);
+        set({ isLoading: false, error: 'This folder is not an approved workspace. Please open it again.' });
+        return false;
+      }
       const rootName = cleanPath.split(/[/\\]/).filter(Boolean).pop() || 'Workspace';
 
       set({
