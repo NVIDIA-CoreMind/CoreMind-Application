@@ -11,8 +11,11 @@ import getLifecycleServiceOverride from '@codingame/monaco-vscode-lifecycle-serv
 import getConfigurationServiceOverride from '@codingame/monaco-vscode-configuration-service-override';
 import * as monaco from 'monaco-editor';
 import '@codingame/monaco-vscode-theme-defaults-default-extension';
-import '@codingame/monaco-vscode-theme-seti-default-extension';
 import '../workers';
+import { MATERIAL_ICON_THEME_ID, registerMaterialIconTheme } from '../services/materialIcons';
+import { EDITOR_USER_CONFIGURATION } from '../services/editorAppearance';
+
+registerMaterialIconTheme();
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useAgentStore } from '../stores/agentStore';
 import { EmptyState } from './EmptyState';
@@ -78,7 +81,7 @@ async function startWorkbench(container: HTMLElement, rootPath: string): Promise
       },
     },
     userConfiguration: {
-      json: JSON.stringify({ 'workbench.colorTheme': 'Default Dark Modern', 'workbench.iconTheme': 'vs-seti' }),
+      json: JSON.stringify({ ...EDITOR_USER_CONFIGURATION, 'workbench.iconTheme': MATERIAL_ICON_THEME_ID }),
     },
   });
   await apiWrapper.start();

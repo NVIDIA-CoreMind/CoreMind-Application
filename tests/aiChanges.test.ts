@@ -8,8 +8,8 @@ import {
   countDiff,
   sortedChanges,
 } from '../src/renderer/services/aiChanges';
-import { resolveSetiIcon, languageLabelFor, SetiIconTheme } from '../src/renderer/services/fileIcons';
-import setiTheme from '../node_modules/@codingame/monaco-vscode-theme-seti-default-extension/resources/vs-seti-icon-theme.json';
+import { resolveIconId, languageLabelFor, IconTheme } from '../src/renderer/services/fileIcons';
+import materialTheme from '../node_modules/material-icon-theme/dist/material-icons.json';
 
 const ROOT = '/Users/me/Projects/MyApp';
 
@@ -80,17 +80,16 @@ describe('reverseApplyUnifiedDiff', () => {
 });
 
 describe('file icons', () => {
-  const theme = setiTheme as unknown as SetiIconTheme;
+  const theme = materialTheme as unknown as IconTheme;
   const files = [
     'main.py', 'script.js', 'a.ts', 'App.tsx', 'App.jsx', 'index.html', 'styles.css', 'package.json', 'Main.java',
     'a.c', 'main.cpp', 'a.cs', 'main.go', 'main.rs', 'main.dart', 'a.kt', 'a.swift', 'a.php', 'a.rb', 'a.sh',
     'README.md', 'a.yaml', 'a.xml', 'a.sql', 'Dockerfile', '.gitignore',
   ];
   it.each(files)('resolves a specific icon for %s', (file) => {
-    const icon = resolveSetiIcon(theme, file);
-    const fallback = resolveSetiIcon(theme, 'unknown.zzzz');
-    expect(icon).not.toBeNull();
-    expect(icon!.character).not.toBe(fallback!.character);
+    const icon = resolveIconId(theme, file);
+    expect(icon).not.toBe(theme.file);
+    expect(theme.iconDefinitions[icon]).toBeDefined();
   });
   it('labels languages', () => {
     expect(languageLabelFor('x/App.tsx')).toBe('React');

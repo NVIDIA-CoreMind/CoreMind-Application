@@ -1,23 +1,13 @@
 // Single source of truth for file type -> language/icon resolution outside the VS Code Workbench.
-// The Workbench renders the same Seti icon theme natively (see `workbench.iconTheme` in CoreMindWorkbench),
+// The Workbench renders the same Material icon theme natively (see `workbench.iconTheme` in CoreMindWorkbench),
 // so Explorer, tabs, open editors and React surfaces all share one icon set.
 
-export interface SetiIconDefinition {
-  fontCharacter: string;
-  fontColor?: string;
-}
-
-export interface SetiIconTheme {
-  iconDefinitions: Record<string, SetiIconDefinition>;
+export interface IconTheme {
+  iconDefinitions: Record<string, { iconPath?: string }>;
   file: string;
   fileExtensions: Record<string, string>;
   fileNames: Record<string, string>;
   languageIds: Record<string, string>;
-}
-
-export interface ResolvedIcon {
-  character: string;
-  color?: string;
 }
 
 const EXTENSION_LANGUAGE: Record<string, string> = {
@@ -127,26 +117,25 @@ export function languageLabelFor(filePath: string): string {
   return (languageId && LANGUAGE_LABEL[languageId]) || 'Other';
 }
 
-export function resolveSetiIcon(theme: SetiIconTheme, filePath: string): ResolvedIcon | null {
+// Returns the icon definition id using the same precedence as the VS Code icon theme service:
+// file name, then extensions from longest to shortest ("test.ts" before "ts"), then language, then default.
+export function resolveIconId(theme: IconTheme, filePath: string): string {
   const name = baseName(filePath).toLowerCase();
-  const ext = extensionOf(filePath);
   const languageId = languageIdFor(filePath);
 
-  // Same precedence as the VS Code icon theme service: file name, extension, language, default.
+  const extensionKeys: string[] = [];
+  const segments = name.split('.');
+  for (let i = 1; i < segments.length; i++) {
+    extensionKeys.push(segments.slice(i).join('.'));
+  }
+
   const candidates = [
     theme.fileNames[name],
-    ext ? theme.fileExtensions[ext] : undefined,
+    ...extensionKeys.map((key) => theme.fileExtensions[key]),
     languageId ? theme.languageIds[languageId] : undefined,
-    theme.file,
   ];
   for (const key of candidates) {
-    const definition = key ? theme.iconDefinitions[key] : undefined;
-    if (definition) {
-      return {
-        character: String.fromCodePoint(parseInt(definition.fontCharacter.replace(/\\/g, ''), 16)),
-        color: definition.fontColor,
-      };
-    }
+    if (key && theme.iconDefinitions[key]) return key;
   }
-  return null;
+  return theme.file;
 }
