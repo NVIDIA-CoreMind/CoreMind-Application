@@ -955,8 +955,6 @@ export const AgentPanel: React.FC = () => {
             </div>
           )}
 
-          <AIChangesSection />
-
           {/* Active File Context Pill */}
           {activeTab && (
             <div
@@ -1085,6 +1083,8 @@ export const AgentPanel: React.FC = () => {
               borderTop: '1px solid var(--ov-5)',
             }}
           >
+            {/* Antigravity-style review bar, docked above the composer */}
+            <AIChangesSection />
             <div
               style={{
                 backgroundColor: 'var(--bg-app)',

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, GitPullRequest, Info } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Info, X } from 'lucide-react';
 import { useAgentStore } from '../stores/agentStore';
 import { FileIcon } from '../components/FileIcon';
-import { groupByLanguage, sortedChanges, STATUS_BADGE, STATUS_LABEL, ChangeStatus } from '../services/aiChanges';
+import { sortedChanges, STATUS_BADGE, ChangeStatus } from '../services/aiChanges';
 
 const STATUS_COLOR: Record<ChangeStatus, string> = {
   created: '#34d399',
@@ -10,36 +10,45 @@ const STATUS_COLOR: Record<ChangeStatus, string> = {
   deleted: '#f87171',
 };
 
-const buttonBase: React.CSSProperties = {
+const ACCEPT = '#10b981';
+const REJECT = '#f87171';
+
+const pillButton: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
   padding: '4px 10px',
-  borderRadius: '5px',
+  borderRadius: '6px',
   fontSize: '11.5px',
   fontWeight: 600,
   cursor: 'pointer',
-  border: '1px solid var(--ov-12)',
+  border: '1px solid transparent',
+};
+
+const iconButton: React.CSSProperties = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '22px',
+  height: '22px',
+  borderRadius: '5px',
+  cursor: 'pointer',
+  border: 'none',
   backgroundColor: 'transparent',
-  color: 'var(--text-body)',
 };
 
 export const AIChangesSection: React.FC = () => {
   const trackedChanges = useAgentStore((s) => s.trackedChanges);
   const reviewIndex = useAgentStore((s) => s.reviewIndex);
   const changeNotice = useAgentStore((s) => s.changeNotice);
-  const {
-    openChange,
-    reviewChanges,
-    reviewStep,
-    acceptAllChanges,
-    rejectAllChanges,
-    acceptFileChange,
-    rejectFileChange,
-  } = useAgentStore.getState();
+  const { openChange, acceptAllChanges, rejectAllChanges, acceptFileChange, rejectFileChange } =
+    useAgentStore.getState();
+  const [expanded, setExpanded] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const changes = sortedChanges(trackedChanges);
   if (changes.length === 0 && !changeNotice) return null;
 
-  const groups = groupByLanguage(changes);
   const reviewing = reviewIndex !== null ? changes[reviewIndex] : undefined;
 
   const run = async (action: () => Promise<unknown>) => {
@@ -60,32 +69,22 @@ export const AIChangesSection: React.FC = () => {
   return (
     <div
       style={{
-        margin: '10px 14px',
-        padding: '10px 12px',
-        backgroundColor: 'var(--ov-3)',
-        border: '1px solid var(--ov-8)',
-        borderRadius: '8px',
         flexShrink: 0,
-        maxHeight: '40%',
-        overflowY: 'auto',
+        margin: '0 10px',
+        backgroundColor: 'var(--bg-raised)',
+        border: '1px solid var(--ov-8)',
+        borderBottom: 'none',
+        borderRadius: '10px 10px 0 0',
+        marginBottom: '-1px',
+        position: 'relative',
+        zIndex: 1,
       }}
     >
       {changes.length > 0 && (
         <>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-            <GitPullRequest size={14} color="#10B981" />
-            <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)' }}>AI Changes</span>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-              {changes.length} {changes.length === 1 ? 'file' : 'files'} changed
-            </span>
-          </div>
-
-          {groups.map((group) => (
-            <div key={group.label} style={{ marginBottom: '6px' }}>
-              <div style={{ fontSize: '10.5px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                {group.label}
-              </div>
-              {group.files.map((file) => {
+          {expanded && (
+            <div style={{ maxHeight: '180px', overflowY: 'auto', padding: '6px 6px 2px' }}>
+              {changes.map((file) => {
                 const active = reviewing?.path === file.path;
                 return (
                   <div
@@ -100,22 +99,18 @@ export const AIChangesSection: React.FC = () => {
                       alignItems: 'center',
                       gap: '6px',
                       padding: '3px 6px',
-                      borderRadius: '4px',
+                      borderRadius: '5px',
                       cursor: 'pointer',
-                      backgroundColor: active ? 'rgba(16,185,129,0.12)' : 'transparent',
+                      backgroundColor: active ? 'var(--ov-8)' : 'transparent',
                     }}
                   >
-                    <span style={{ width: '12px', fontFamily: 'var(--font-mono)', fontSize: '11px', color: STATUS_COLOR[file.status] }}>
-                      {STATUS_BADGE[file.status]}
-                    </span>
                     <FileIcon path={file.path} />
                     <span
                       style={{
                         flex: 1,
                         minWidth: 0,
-                        fontSize: '11.5px',
+                        fontSize: '12px',
                         color: 'var(--text-primary)',
-                        fontFamily: 'var(--font-mono)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
@@ -123,54 +118,88 @@ export const AIChangesSection: React.FC = () => {
                     >
                       {file.path}
                     </span>
-                    <span style={{ fontSize: '10.5px', color: STATUS_COLOR[file.status] }}>{STATUS_LABEL[file.status]}</span>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: STATUS_COLOR[file.status] }}>
+                      {STATUS_BADGE[file.status]}
+                    </span>
+                    <button
+                      style={{ ...iconButton, color: ACCEPT }}
+                      disabled={busy}
+                      title="Accept"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void run(() => acceptFileChange(file.path));
+                      }}
+                    >
+                      <Check size={13} />
+                    </button>
+                    <button
+                      style={{ ...iconButton, color: REJECT }}
+                      disabled={busy}
+                      title="Reject"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        void run(() => rejectFileChange(file.path));
+                      }}
+                    >
+                      <X size={13} />
+                    </button>
                   </div>
                 );
               })}
             </div>
-          ))}
-
-          {reviewing && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: '8px 0 4px' }}>
-              <button style={buttonBase} disabled={busy} onClick={() => void reviewStep(-1)} title="Previous file">
-                <ChevronLeft size={12} />
-              </button>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                Reviewing {(reviewIndex ?? 0) + 1} of {changes.length}
-              </span>
-              <button style={buttonBase} disabled={busy} onClick={() => void reviewStep(1)} title="Next file">
-                <ChevronRight size={12} />
-              </button>
-              <span style={{ flex: 1 }} />
-              <button style={{ ...buttonBase, color: '#34d399' }} disabled={busy} onClick={() => void run(() => acceptFileChange(reviewing.path))}>
-                Accept
-              </button>
-              <button style={{ ...buttonBase, color: '#f87171' }} disabled={busy} onClick={() => void run(() => rejectFileChange(reviewing.path))}>
-                Reject
-              </button>
-            </div>
           )}
 
-          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 8px 7px 10px' }}>
             <button
-              style={{ ...buttonBase, backgroundColor: '#10B981', borderColor: '#10B981', color: '#fff' }}
-              disabled={busy}
-              onClick={() => void (reviewing ? reviewStep(1) : reviewChanges())}
+              onClick={() => setExpanded((v) => !v)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                flex: 1,
+                minWidth: 0,
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer',
+                padding: 0,
+                fontSize: '12px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                textAlign: 'left',
+              }}
             >
-              {reviewing ? 'Next Change' : 'Review Changes'}
+              {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              {changes.length} {changes.length === 1 ? 'File' : 'Files'} With Changes
             </button>
-            <button style={buttonBase} disabled={busy} onClick={() => void run(acceptAllChanges)}>
-              Accept All
+            <button
+              style={{ ...pillButton, backgroundColor: 'transparent', borderColor: 'var(--ov-12)', color: 'var(--text-body)' }}
+              disabled={busy}
+              onClick={handleRejectAll}
+            >
+              Reject all
             </button>
-            <button style={buttonBase} disabled={busy} onClick={handleRejectAll}>
-              Reject All
+            <button
+              style={{ ...pillButton, backgroundColor: ACCEPT, color: '#fff' }}
+              disabled={busy}
+              onClick={() => void run(acceptAllChanges)}
+            >
+              <Check size={12} />
+              Accept all
             </button>
           </div>
         </>
       )}
 
       {changeNotice && (
-        <div style={{ display: 'flex', gap: '6px', marginTop: changes.length ? '8px' : 0, fontSize: '11px', color: '#fbbf24' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '6px',
+            padding: changes.length ? '0 10px 8px' : '8px 10px',
+            fontSize: '11px',
+            color: '#fbbf24',
+          }}
+        >
           <Info size={12} style={{ flexShrink: 0, marginTop: '2px' }} />
           <span>{changeNotice}</span>
         </div>
