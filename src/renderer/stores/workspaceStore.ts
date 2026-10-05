@@ -41,7 +41,9 @@ interface WorkspaceStore extends WorkspaceState {
   recentWorkspaces: string[];
   projectMetadata: ProjectMetadata | null;
   repoMap: RepoMapResponse | null;
+  activeFileName: string | null;
 
+  setActiveFileName: (name: string | null) => void;
   openFolderDialog: (mode?: 'open' | 'create') => Promise<string | null>;
   openWorkspacePath: (path: string) => Promise<boolean>;
   restoreLastWorkspace: () => Promise<boolean>;
@@ -58,6 +60,9 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
   recentWorkspaces: getStoredRecents(),
   projectMetadata: null,
   repoMap: null,
+  activeFileName: null,
+
+  setActiveFileName: (name: string | null) => set({ activeFileName: name }),
 
   openWorkspacePath: async (targetPath: string) => {
     try {
@@ -171,6 +176,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
       rootName: null,
       isOpen: false,
       error: null,
+      activeFileName: null,
       projectMetadata: null,
       repoMap: null,
     });

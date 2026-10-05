@@ -4,8 +4,10 @@ import * as monaco from 'monaco-editor';
 import { useTabsStore } from '../stores/tabsStore';
 import { useEditorStore } from '../stores/editorStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
+import { useThemeStore } from '../stores/themeStore';
 import { editorModelManager } from './EditorModelManager';
 import { EditorTabs } from './EditorTabs';
+import { isMacClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
 
 // Configure Monaco to use local npm package instead of CDN
 loader.config({ monaco });
@@ -14,8 +16,12 @@ export const MonacoEditor: React.FC = () => {
   const { tabs, activeTabId, updateTabContent, saveActiveTab } = useTabsStore();
   const { settings, setCursorPosition } = useEditorStore();
   const { rootPath } = useWorkspaceStore();
+  const { theme } = useThemeStore();
+  const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const prevActiveTabIdRef = useRef<string | null>(null);
 
@@ -103,6 +109,46 @@ export const MonacoEditor: React.FC = () => {
     }
   }, [activeTab?.id]);
 
+  // Update theme when theme state changes
+  useEffect(() => {
+    if (editorRef.current) {
+      monaco.editor.setTheme(theme === 'dark' ? 'coremind-dark' : 'vs');
+    }
+  }, [theme]);
+
+  // Auto-layout Monaco on container size change or window resize
+  useEffect(() => {
+    const el = editorContainerRef.current;
+    if (!el) return;
+
+    let rafId: number;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (editorRef.current) {
+          editorRef.current.layout();
+        }
+      });
+    });
+    observer.observe(el);
+
+    const handleWindowResize = () => {
+      cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        if (editorRef.current) {
+          editorRef.current.layout();
+        }
+      });
+    };
+    window.addEventListener('resize', handleWindowResize);
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      observer.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  }, []);
+
   if (!activeTab) {
     return (
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-panel)' }}>
@@ -123,8 +169,9 @@ export const MonacoEditor: React.FC = () => {
             No File Open
           </div>
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            Select a file from the explorer or press <kbd style={{ padding: '1px 5px', borderRadius: '3px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>⌘P</kbd> to open
+            Select a file from the explorer or press <kbd style={{ padding: '1px 5px', borderRadius: '3px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>{getShortcutDisplay('quickOpen', isMac)}</kbd> to open
           </div>
+
         </div>
       </div>
     );
@@ -133,10 +180,10 @@ export const MonacoEditor: React.FC = () => {
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <EditorTabs />
-      <div style={{ flex: 1, position: 'relative' }}>
+      <div ref={editorContainerRef} style={{ flex: 1, position: 'relative', minHeight: 0 }}>
         <Editor
           height="100%"
-          theme="coremind-dark"
+          theme={theme === 'dark' ? 'coremind-dark' : 'vs'}
           language={activeTab.language}
           onMount={handleEditorDidMount}
           options={{
