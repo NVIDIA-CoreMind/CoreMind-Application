@@ -3,6 +3,7 @@ import { Sparkles, FolderOpen, Save, X, Terminal, Search, Settings, RefreshCw, E
 import { useUiStore } from '../stores/uiStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTabsStore } from '../stores/tabsStore';
+import { isMacClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
 
 interface CommandItem {
   id: string;
@@ -21,18 +22,20 @@ export const CommandPalette: React.FC = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
+
   const commands: CommandItem[] = [
     {
       id: 'open-folder',
       label: 'File: Open Folder...',
-      shortcut: '⌘O',
+      shortcut: getShortcutDisplay('openFolder', isMac),
       icon: <FolderOpen size={14} />,
       action: () => openFolderDialog(),
     },
     {
       id: 'save-file',
       label: 'File: Save',
-      shortcut: '⌘S',
+      shortcut: getShortcutDisplay('saveFile', isMac),
       icon: <Save size={14} />,
       action: () => {
         if (rootPath) saveActiveTab(rootPath);
@@ -41,7 +44,7 @@ export const CommandPalette: React.FC = () => {
     {
       id: 'close-tab',
       label: 'View: Close Active Tab',
-      shortcut: '⌘W',
+      shortcut: getShortcutDisplay('closeTab', isMac),
       icon: <X size={14} />,
       action: () => {
         if (activeTabId) closeTab(activeTabId);
@@ -50,21 +53,21 @@ export const CommandPalette: React.FC = () => {
     {
       id: 'toggle-explorer',
       label: 'View: Toggle Primary Sidebar',
-      shortcut: '⌘B',
+      shortcut: getShortcutDisplay('toggleSidebar', isMac),
       icon: <Eye size={14} />,
       action: () => toggleSidebar(),
     },
     {
       id: 'toggle-terminal',
       label: 'View: Toggle Terminal',
-      shortcut: '⌘J',
+      shortcut: getShortcutDisplay('toggleTerminal', isMac),
       icon: <Terminal size={14} />,
       action: () => toggleTerminal(),
     },
     {
       id: 'search-project',
       label: 'Search: Find in Files',
-      shortcut: '⌘⇧F',
+      shortcut: getShortcutDisplay('search', isMac),
       icon: <Search size={14} />,
       action: () => {
         setActiveSidebarTab('search');
@@ -73,7 +76,7 @@ export const CommandPalette: React.FC = () => {
     {
       id: 'open-settings',
       label: 'Preferences: Open Settings',
-      shortcut: '⌘,',
+      shortcut: getShortcutDisplay('settings', isMac),
       icon: <Settings size={14} />,
       action: () => {
         setActiveSidebarTab('settings');
@@ -86,6 +89,7 @@ export const CommandPalette: React.FC = () => {
       action: () => window.location.reload(),
     },
   ];
+
 
   const filteredCommands = commands.filter((cmd) =>
     cmd.label.toLowerCase().includes(query.toLowerCase())

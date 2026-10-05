@@ -15,10 +15,13 @@ import { FileNode, FileSearchResult } from '../../shared/types/file';
 import { fileSystemService } from '../services/fileSystemService';
 import { terminalService } from '../services/terminalService';
 import { agentService } from '../services/agentService';
+import { gitService } from '../services/gitService';
 import { logger } from '../services/logger';
 import { getMainWindow } from '../windows/mainWindow';
 import { startWorkspaceWatch } from '../services/workspaceWatcher';
 import { authorizeWorkspace, getAuthorizedWorkspace, restoreWorkspace } from '../services/workspaceAuthorization';
+import { isMac, getPlatform, getPlatformInfo } from '../platform/platform';
+import { platformWindow } from '../platform/window/platformWindow';
 
 function getWorkspaceForSender(senderId: number): string | null {
   const mainWindow = getMainWindow();
@@ -61,9 +64,10 @@ export function registerIpcHandlers(): void {
     IPC_CHANNELS.FILE_OPEN_DIRECTORY_DIALOG,
     async (event, mode?: unknown): Promise<IpcResult<string | null>> => {
       try {
-        if (process.platform === 'darwin') {
+        if (isMac()) {
           app.focus({ steal: true });
         }
+
         const result = await dialog.showOpenDialog({
           title: mode === 'create' ? 'Create Project (choose or create a folder)' : 'Open Project Folder',
           buttonLabel: mode === 'create' ? 'Create Project' : 'Select Folder',
@@ -303,20 +307,105 @@ export function registerIpcHandlers(): void {
     }
   );
 
+  // 13b. Terminal Get Available Shells
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_GET_SHELLS,
+    async (): Promise<IpcResult<import('../../shared/types/ipc').ShellInfo[]>> => {
+      return { success: true, data: terminalService.getAvailableShells() };
+    }
+  );
+
+  // Git Handlers
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_STATUS,
+    async (event): Promise<IpcResult<import('../../shared/types/git').GitStatusResult>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? gitService.getStatus(rootPath) : noWorkspaceError();
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_DIFF,
+    async (event, { filePath }: { filePath?: string } = {}): Promise<IpcResult<string>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? gitService.getDiff(rootPath, filePath) : noWorkspaceError();
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_ADD,
+    async (event, { files }: { files: string[] }): Promise<IpcResult<void>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? gitService.add(rootPath, files) : noWorkspaceError();
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_COMMIT,
+    async (event, { message }: { message: string }): Promise<IpcResult<string>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? gitService.commit(rootPath, message) : noWorkspaceError();
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_BRANCHES,
+    async (event): Promise<IpcResult<import('../../shared/types/git').GitBranchInfo>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? gitService.getBranches(rootPath) : noWorkspaceError();
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_CHECKOUT,
+    async (event, { branch }: { branch: string }): Promise<IpcResult<void>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? gitService.checkout(rootPath, branch) : noWorkspaceError();
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_PULL,
+    async (event): Promise<IpcResult<string>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? gitService.pull(rootPath) : noWorkspaceError();
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.GIT_PUSH,
+    async (event): Promise<IpcResult<string>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? gitService.push(rootPath) : noWorkspaceError();
+    }
+  );
+
   // 14. App & System Info
   ipcMain.handle(
     IPC_CHANNELS.APP_GET_SYSTEM_INFO,
     async (): Promise<IpcResult<SystemInfo>> => {
+      const plat = getPlatform();
+      const displayPlatform = plat === 'macos' ? 'macOS' : plat === 'windows' ? 'Windows' : 'Linux';
       return {
         success: true,
         data: {
-          platform: 'macOS',
+          platform: displayPlatform,
           arch: process.arch,
           osVersion: os.release(),
           appVersion: app.getVersion(),
           electronVersion: process.versions.electron,
           nodeVersion: process.versions.node,
         },
+      };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.APP_GET_PLATFORM,
+    async (): Promise<IpcResult<import('../../shared/types/platform').PlatformInfo>> => {
+      return {
+        success: true,
+        data: getPlatformInfo(),
       };
     }
   );
@@ -368,9 +457,20 @@ export function registerIpcHandlers(): void {
   });
 
   ipcMain.handle(IPC_CHANNELS.APP_WINDOW_CLOSE, () => {
-    const win = BrowserWindow.getFocusedWindow();
+    const win = BrowserWindow.getFocusedWindow() ?? getMainWindow();
     win?.close();
   });
+
+  ipcMain.handle(
+    IPC_CHANNELS.APP_WINDOW_SET_TITLE_BAR_OVERLAY,
+    (_event, overlay: { color: string; symbolColor: string; height?: number }) => {
+      const win = BrowserWindow.getFocusedWindow() ?? getMainWindow();
+      if (win) {
+        platformWindow.applyTitleBarOverlay(win, overlay);
+      }
+    }
+  );
+
 
   // External & Auth Handlers
   ipcMain.handle(

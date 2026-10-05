@@ -35,7 +35,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   },
   application: {
     version: '0.1.0',
-    platform: 'macOS',
-    arch: 'arm64',
+    platform: typeof process !== 'undefined' && process.platform === 'win32' ? 'Windows' : 'macOS',
+    arch: typeof process !== 'undefined' ? process.arch : 'x64',
   },
 };
+

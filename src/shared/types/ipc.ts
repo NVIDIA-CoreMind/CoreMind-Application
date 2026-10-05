@@ -18,6 +18,15 @@ export interface TerminalSpawnOptions {
   cols?: number;
   rows?: number;
   cwd?: string;
+  shell?: string;
+  shellArgs?: string[];
+}
+
+export interface ShellInfo {
+  name: string;
+  path: string;
+  args?: string[];
+  isDefault: boolean;
 }
 
 export interface SystemInfo {
@@ -79,6 +88,16 @@ export const IPC_CHANNELS = {
   FILE_SEARCH: 'file:search',
   FILE_STAT: 'file:stat',
 
+  // Git Operations
+  GIT_STATUS: 'git:status',
+  GIT_DIFF: 'git:diff',
+  GIT_ADD: 'git:add',
+  GIT_COMMIT: 'git:commit',
+  GIT_BRANCHES: 'git:branches',
+  GIT_CHECKOUT: 'git:checkout',
+  GIT_PULL: 'git:pull',
+  GIT_PUSH: 'git:push',
+
   // Terminal
   TERMINAL_CREATE: 'terminal:create',
   TERMINAL_WRITE: 'terminal:write',
@@ -86,6 +105,7 @@ export const IPC_CHANNELS = {
   TERMINAL_CLOSE: 'terminal:close',
   TERMINAL_DATA: 'terminal:data',
   TERMINAL_EXIT: 'terminal:exit',
+  TERMINAL_GET_SHELLS: 'terminal:get-shells',
 
   // AI Agent
   AGENT_SEND_MESSAGE: 'agent:send-message',
@@ -94,11 +114,14 @@ export const IPC_CHANNELS = {
 
   // App & Window
   APP_GET_SYSTEM_INFO: 'app:get-system-info',
+  APP_GET_PLATFORM: 'app:get-platform',
   APP_WINDOW_MINIMIZE: 'app:window-minimize',
   APP_WINDOW_MAXIMIZE: 'app:window-maximize',
   APP_WINDOW_CLOSE: 'app:window-close',
+  APP_WINDOW_SET_TITLE_BAR_OVERLAY: 'app:window-set-title-bar-overlay',
 
   // External & Auth
   AUTH_OPEN_WINDOW: 'auth:open-window',
   OPEN_EXTERNAL_URL: 'app:open-external-url',
 } as const;
+

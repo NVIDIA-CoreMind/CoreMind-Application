@@ -14,6 +14,16 @@ function readStoredTheme(): ThemeMode {
 
 function applyTheme(theme: ThemeMode): void {
   document.documentElement.dataset.theme = theme;
+  try {
+    const isDark = theme === 'dark';
+    window.coreMindAPI?.setTitleBarOverlay?.({
+      color: isDark ? '#1E1E1E' : '#ffffff',
+      symbolColor: isDark ? '#9A9A9A' : '#57606a',
+      height: 36,
+    });
+  } catch {
+    // ignore
+  }
 }
 
 interface ThemeStore {

@@ -3,10 +3,14 @@ import { X, Circle } from 'lucide-react';
 import { useTabsStore } from '../stores/tabsStore';
 import { editorModelManager } from './EditorModelManager';
 
+import { isMacClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
+
 export const EditorTabs: React.FC = () => {
   const { tabs, activeTabId, setActiveTab, closeTab } = useTabsStore();
+  const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
 
   if (tabs.length === 0) return null;
+
 
   const handleClose = (e: React.MouseEvent, tabId: string, isDirty: boolean, fileName: string) => {
     e.stopPropagation();
@@ -86,7 +90,7 @@ export const EditorTabs: React.FC = () => {
               ) : (
                 <button
                   onClick={(e) => handleClose(e, tab.id, tab.isDirty, tab.fileName)}
-                  title="Close tab (⌘W)"
+                  title={`Close tab (${getShortcutDisplay('closeTab', isMac)})`}
                   style={{
                     padding: '2px',
                     borderRadius: '3px',
@@ -95,6 +99,7 @@ export const EditorTabs: React.FC = () => {
                 >
                   <X size={12} />
                 </button>
+
               )}
             </div>
           </div>
