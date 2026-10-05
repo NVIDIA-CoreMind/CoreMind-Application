@@ -17,8 +17,10 @@ import { useUiStore } from '../stores/uiStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { terminalService } from '../services/coremind/terminal';
 import { BackgroundProcess, TerminalExecuteResponse, TerminalSession } from '../services/coremind/types';
+import { isMacClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
 
 type TerminalTab = 'pty' | 'persistent' | 'processes';
+
 
 interface ExecutedLog {
   id: string;
@@ -33,8 +35,10 @@ interface ExecutedLog {
 export const TerminalPanel: React.FC = () => {
   const { toggleTerminal } = useUiStore();
   const { rootPath, rootName } = useWorkspaceStore();
+  const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
 
   const [activeTab, setActiveTab] = useState<TerminalTab>('pty');
+
 
   // --- Local PTY State ---
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -516,11 +520,12 @@ export const TerminalPanel: React.FC = () => {
 
           <button
             onClick={toggleTerminal}
-            title="Close Panel (⌘J)"
+            title={`Close Panel (${getShortcutDisplay('toggleTerminal', isMac)})`}
             style={{ padding: '4px', color: 'var(--text-muted)', borderRadius: '4px' }}
           >
             <X size={13} />
           </button>
+
         </div>
       </div>
 

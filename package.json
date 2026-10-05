@@ -7,8 +7,8 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
-    "dev": "NODE_OPTIONS=\"--max-old-space-size=8192\" vite",
-    "build": "tsc --noEmit && NODE_OPTIONS=\"--max-old-space-size=8192\" vite build",
+    "dev": "cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" vite",
+    "build": "tsc --noEmit && cross-env NODE_OPTIONS=\"--max-old-space-size=8192\" vite build",
     "build:mac": "npm run build && electron-builder --mac --arm64",
     "build:win": "npm run build && electron-builder --win",
     "package": "npm run build && electron-builder --mac --arm64 --win",
@@ -16,8 +16,9 @@
     "lint": "eslint src/ --ext .ts,.tsx",
     "test": "vitest run",
     "test:watch": "vitest",
-    "postinstall": "node -e \"try { require('child_process').execSync('chmod +x node_modules/node-pty/prebuilds/*/*helper* 2>/dev/null'); } catch(e) {}\""
+    "postinstall": "node -e \"if (process.platform === 'darwin') { try { require('child_process').execSync('chmod +x node_modules/node-pty/prebuilds/*/*helper* 2>/dev/null'); } catch(e) {} }\""
   },
+
   "dependencies": {
     "@codingame/monaco-vscode-api": "^37.3.0",
     "@codingame/monaco-vscode-configuration-service-override": "^37.3.0",
@@ -77,6 +78,7 @@
     "@typescript-eslint/eslint-plugin": "^8.70.1",
     "@typescript-eslint/parser": "^8.70.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "cross-env": "^10.1.0",
     "electron": "^34.3.0",
     "electron-builder": "^25.1.8",
     "eslint": "^8.57.1",
@@ -89,6 +91,7 @@
   "build": {
     "appId": "com.coremind.ide",
     "productName": "CoreMind",
+    "npmRebuild": false,
     "directories": {
       "output": "release"
     },

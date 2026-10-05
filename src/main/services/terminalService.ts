@@ -38,8 +38,18 @@ export interface ActiveTerminalSession {
   exitDisposable?: { dispose(): void };
 }
 
+import { platformTerminal } from '../platform/terminal/platformTerminal';
+import { ShellInfo } from '../platform/terminal/types';
+
 export class TerminalService {
   private sessions: Map<string, ActiveTerminalSession> = new Map();
+
+  /**
+   * Get available shells for the current platform.
+   */
+  public getAvailableShells(): ShellInfo[] {
+    return platformTerminal.getAvailableShells();
+  }
 
   /**
    * Spawn a new real shell process attached to a pseudo-terminal.
@@ -60,9 +70,8 @@ export class TerminalService {
       this.closeSession(id);
     }
 
-    const defaultShell =
-      process.env.SHELL ||
-      (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash');
+    const shellToRun = options.shell || platformTerminal.getDefaultShell();
+    const shellArgs = options.shellArgs || (options.shell ? [] : platformTerminal.getDefaultShellArgs());
 
     // Resolve working directory: prefer provided cwd if exists, fallback to home directory
     let workingDir = options.cwd || os.homedir();
@@ -74,16 +83,13 @@ export class TerminalService {
     const rows = options.rows || 24;
 
     const env = {
-      ...process.env,
-      TERM: 'xterm-256color',
-      COLORTERM: 'truecolor',
-      LANG: 'en_US.UTF-8',
+      ...platformTerminal.getTerminalEnv(),
     };
 
     try {
-      logger.info('Spawning live terminal shell', { id, shell: defaultShell, cwd: workingDir, cols, rows });
+      logger.info('Spawning live terminal shell', { id, shell: shellToRun, args: shellArgs, cwd: workingDir, cols, rows });
 
-      const ptyProcess = ptyModule.spawn(defaultShell, [], {
+      const ptyProcess = ptyModule.spawn(shellToRun, shellArgs, {
         name: 'xterm-256color',
         cols,
         rows,
@@ -92,6 +98,7 @@ export class TerminalService {
       });
 
       const dataDisposable = ptyProcess.onData((data: string) => {
+
         onData(data);
       });
 

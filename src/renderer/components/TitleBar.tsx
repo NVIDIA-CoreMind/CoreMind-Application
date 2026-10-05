@@ -1,72 +1,46 @@
-import React from 'react';
-import {
-  FolderOpen,
-  Sun,
-  Moon,
-  PanelLeft,
-  Terminal,
-  Bot,
-} from 'lucide-react';
-import { useThemeStore } from '../stores/themeStore';
-import { useWorkspaceStore } from '../stores/workspaceStore';
-import { useUiStore } from '../stores/uiStore';
+import React, { useEffect } from 'react';
+import { isMacClient } from '../../shared/utils/shortcuts';
+import coreMindLogo from '../assets/icon.png';
 
 export const TitleBar: React.FC = () => {
-  const { rootName, openFolderDialog } = useWorkspaceStore();
-  const { theme, toggleTheme } = useThemeStore();
-  const {
-    isSidebarOpen,
-    toggleSidebar,
-    isTerminalOpen,
-    toggleTerminal,
-    isRightPanelOpen,
-    toggleRightPanel,
-  } = useUiStore();
+  const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
+  const isWindows = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isWindows : !isMac;
+
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.title = 'CoreMind';
+    }
+  }, []);
 
   return (
     <div
       className="app-drag"
       style={{
         position: 'relative',
-        height: 'var(--titlebar-height)',
+        height: 'var(--titlebar-height, 35px)',
         backgroundColor: 'var(--bg-app)',
         borderBottom: '1px solid var(--border-color)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingLeft: '78px', // Clearance for macOS traffic light buttons
-        paddingRight: '12px',
+        paddingLeft: isMac ? '78px' : '12px',
+        paddingRight: isWindows ? '142px' : '12px',
         zIndex: 50,
+        flexShrink: 0,
+        userSelect: 'none',
       }}
     >
-      {/* Left: Active Workspace Breadcrumb (if open) */}
+      {/* Left Area (Mac traffic light clearance spacer) */}
       <div
         className="app-no-drag"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          minWidth: 0,
-          overflow: 'hidden',
+          width: '1px',
+          height: '100%',
+          visibility: 'hidden',
         }}
-      >
-        {rootName && (
-          <span
-            style={{
-              fontSize: '11px',
-              color: 'var(--text-secondary)',
-              fontWeight: 500,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {rootName}
-          </span>
-        )}
-      </div>
+      />
 
-      {/* Center: Application Name CoreMind (Guaranteed absolute visual center) */}
+      {/* Center: Absolute Visual Center of the entire Window Title Bar */}
       <div
         style={{
           position: 'absolute',
@@ -76,15 +50,27 @@ export const TitleBar: React.FC = () => {
           pointerEvents: 'none',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
+          gap: '8px',
+          userSelect: 'none',
+          zIndex: 1,
         }}
       >
+        <img
+          src={coreMindLogo}
+          alt="CoreMind"
+          style={{
+            width: '16px',
+            height: '16px',
+            objectFit: 'contain',
+            flexShrink: 0,
+          }}
+        />
         <span
           style={{
             fontFamily: 'var(--font-sans)',
             fontWeight: 600,
             fontSize: '12px',
-            letterSpacing: '0.6px',
+            letterSpacing: '0.3px',
             color: 'var(--text-primary)',
           }}
         >
@@ -92,86 +78,15 @@ export const TitleBar: React.FC = () => {
         </span>
       </div>
 
-      {/* Right: Window Tools & Panel Toggles */}
+      {/* Right Area (Windows TitleBar Overlay Controls clearance spacer) */}
       <div
         className="app-no-drag"
         style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '4px',
+          width: '1px',
+          height: '100%',
+          visibility: 'hidden',
         }}
-      >
-        <button
-          onClick={() => openFolderDialog()}
-          title="Open Folder (⌘O)"
-          style={{
-            padding: '5px 7px',
-            borderRadius: '4px',
-            color: 'var(--text-secondary)',
-            fontSize: '11px',
-            gap: '5px',
-          }}
-        >
-          <FolderOpen size={13} />
-          <span>Open Folder</span>
-        </button>
-
-        <div
-          style={{
-            width: '1px',
-            height: '14px',
-            backgroundColor: 'var(--border-color)',
-            margin: '0 4px',
-          }}
-        />
-
-        <button
-          onClick={toggleSidebar}
-          title="Toggle Explorer (⌘B)"
-          style={{
-            padding: '5px',
-            borderRadius: '4px',
-            color: isSidebarOpen ? 'var(--text-primary)' : 'var(--text-muted)',
-            backgroundColor: isSidebarOpen ? 'var(--bg-active)' : 'transparent',
-          }}
-        >
-          <PanelLeft size={14} />
-        </button>
-
-        <button
-          onClick={toggleTerminal}
-          title="Toggle Terminal (⌘J)"
-          style={{
-            padding: '5px',
-            borderRadius: '4px',
-            color: isTerminalOpen ? 'var(--text-primary)' : 'var(--text-muted)',
-            backgroundColor: isTerminalOpen ? 'var(--bg-active)' : 'transparent',
-          }}
-        >
-          <Terminal size={14} />
-        </button>
-
-        <button
-          onClick={toggleTheme}
-          title={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
-          style={{ padding: '5px', borderRadius: '4px', color: 'var(--text-secondary)' }}
-        >
-          {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-        </button>
-
-        <button
-          onClick={toggleRightPanel}
-          title="Toggle Agent Panel"
-          style={{
-            padding: '5px',
-            borderRadius: '4px',
-            color: isRightPanelOpen ? 'var(--accent)' : 'var(--text-muted)',
-            backgroundColor: isRightPanelOpen ? 'var(--accent-bg)' : 'transparent',
-          }}
-        >
-          <Bot size={14} />
-        </button>
-      </div>
+      />
     </div>
   );
 };

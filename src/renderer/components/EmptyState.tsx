@@ -8,18 +8,25 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 import coreMindLogo from '../assets/icon.png';
 
 function parseWorkspaceInfo(workspacePath: string) {
-  const clean = workspacePath.replace(/\/+$/, '');
+  const clean = workspacePath.replace(/[/\\]+$/, '');
+  const isWinDrive = /^[a-zA-Z]:/.test(clean);
   const parts = clean.split(/[/\\]/).filter(Boolean);
   const name = parts[parts.length - 1] || 'Workspace';
   const parentParts = parts.slice(0, parts.length - 1);
-  const parentPath = clean.startsWith('/') ? '/' + parentParts.join('/') : parentParts.join('/');
-  const displayParent = parentPath.replace(/^\/Users\/[^/]+/, '~');
+  const sep = isWinDrive ? '\\' : '/';
+  const parentPath = clean.startsWith('/')
+    ? '/' + parentParts.join('/')
+    : parentParts.join(sep);
+  const displayParent = parentPath
+    .replace(/^[a-zA-Z]:[/\\]Users[/\\][^/\\]+/i, '~')
+    .replace(/^\/Users\/[^/]+/, '~');
   return {
     name,
-    displayParent: displayParent || '~',
+    displayParent: displayParent || (isWinDrive ? clean.slice(0, 3) : '/'),
     rawPath: clean,
   };
 }
+
 
 export const EmptyState: React.FC = () => {
   const { openFolderDialog, openWorkspacePath, recentWorkspaces, isLoading } = useWorkspaceStore();

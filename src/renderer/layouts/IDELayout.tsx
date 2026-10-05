@@ -1,13 +1,30 @@
 import React from 'react';
 import { TitleBar } from '../components/TitleBar';
+import { AppMenuBar } from '../components/AppMenuBar';
+import { ActivityBar } from '../components/ActivityBar';
 import { ResizableSplitter } from '../components/ResizableSplitter';
-import { AgentPanel } from '../agent/AgentPanel';
-import { CoreMindWorkbench } from '../components/CoreMindWorkbench';
+import { FileExplorer } from '../explorer/FileExplorer';
+import { SearchPanel } from '../search/SearchPanel';
+import { SettingsPanel } from '../settings/SettingsPanel';
+import { MonacoEditor } from '../editor/MonacoEditor';
 import { PtyTerminal } from '../terminal/PtyTerminal';
+import { AgentPanel } from '../agent/AgentPanel';
+import { EmptyState } from '../components/EmptyState';
+import { StatusBar } from '../components/StatusBar';
+import { CommandPalette } from '../components/CommandPalette';
+import { QuickOpen } from '../components/QuickOpen';
+import { useWorkspaceStore } from '../stores/workspaceStore';
+import { useTabsStore } from '../stores/tabsStore';
 import { useUiStore } from '../stores/uiStore';
 
 export const IDELayout: React.FC = () => {
+  const { rootPath } = useWorkspaceStore();
+  const tabs = useTabsStore((state) => state.tabs);
   const {
+    activeSidebarTab,
+    isSidebarOpen,
+    sidebarWidth,
+    setSidebarWidth,
     isRightPanelOpen,
     rightPanelWidth,
     setRightPanelWidth,
@@ -15,6 +32,18 @@ export const IDELayout: React.FC = () => {
     terminalHeight,
     setTerminalHeight,
   } = useUiStore();
+
+  const renderSidebarContent = () => {
+    switch (activeSidebarTab) {
+      case 'search':
+        return <SearchPanel />;
+      case 'settings':
+        return <SettingsPanel />;
+      case 'explorer':
+      default:
+        return <FileExplorer />;
+    }
+  };
 
   return (
     <div
@@ -27,10 +56,13 @@ export const IDELayout: React.FC = () => {
         overflow: 'hidden',
       }}
     >
-      {/* Top Title Bar (Native CoreMind macOS styling) */}
+      {/* 1. Top Title Bar (CoreMind Centered in Application Bar) */}
       <TitleBar />
 
-      {/* Main Work Area: Left (VS Code), Right (Agent Panel) */}
+      {/* 2. Application Menu / Command Bar (File, Edit, View, Window + Quick Tools) */}
+      <AppMenuBar />
+
+      {/* 3. Main Work Area: Row with ActivityBar, Left Sidebar, Center Editor/Terminal, Right Agent */}
       <div
         style={{
           display: 'flex',
@@ -40,37 +72,73 @@ export const IDELayout: React.FC = () => {
           position: 'relative',
         }}
       >
-        {/* Left/Center: VS Code Foundation */}
+        {/* Far Left: Activity Bar */}
+        <ActivityBar />
+
+        {/* Primary Left Sidebar (Collapsible & Resizable) */}
+        {isSidebarOpen && (
+          <>
+            <div
+              style={{
+                width: `${sidebarWidth}px`,
+                height: '100%',
+                flexShrink: 0,
+                overflow: 'hidden',
+                backgroundColor: 'var(--bg-panel)',
+                borderRight: '1px solid var(--border-color)',
+                display: 'flex',
+                flexDirection: 'column',
+              }}
+            >
+              {renderSidebarContent()}
+            </div>
+            <ResizableSplitter
+              direction="horizontal"
+              onResize={(delta) => setSidebarWidth(sidebarWidth + delta)}
+            />
+          </>
+        )}
+
+        {/* Center: Main Code Workspace (Editor Workspace on top, Terminal Workspace on bottom) */}
         <div
           style={{
             flex: 1,
             height: '100%',
+            minWidth: 0,
             overflow: 'hidden',
             backgroundColor: 'var(--bg-panel)',
             position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-            <div style={{ flex: 1, minHeight: 0, position: 'relative' }}>
-              <div style={{ position: 'absolute', inset: 0 }}>
-                <CoreMindWorkbench />
-              </div>
-            </div>
-            {isTerminalOpen && (
-              <>
-                <ResizableSplitter
-                  direction="vertical"
-                  onResize={(delta) => setTerminalHeight(terminalHeight + delta)}
-                />
-                <div style={{ height: `${terminalHeight}px`, flexShrink: 0 }}>
-                  <PtyTerminal />
-                </div>
-              </>
-            )}
+          {/* Main Editor Area */}
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+            {!rootPath && tabs.length === 0 ? <EmptyState /> : <MonacoEditor />}
           </div>
+
+          {/* Integrated Terminal (Child of Code/Editor Workspace ONLY) */}
+          {isTerminalOpen && (
+            <>
+              <ResizableSplitter
+                direction="vertical"
+                onResize={(delta) => setTerminalHeight(terminalHeight + delta)}
+              />
+              <div
+                style={{
+                  height: `${terminalHeight}px`,
+                  width: '100%',
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                }}
+              >
+                <PtyTerminal />
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Right: AI Agent Panel (CoreMind Specific Feature) */}
+        {/* Right: CoreMind AI Agent Panel (Collapsible & Resizable) */}
         {isRightPanelOpen && (
           <>
             <ResizableSplitter
@@ -84,6 +152,7 @@ export const IDELayout: React.FC = () => {
                 flexShrink: 0,
                 overflow: 'hidden',
                 borderLeft: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-panel)',
               }}
             >
               <AgentPanel />
@@ -91,6 +160,15 @@ export const IDELayout: React.FC = () => {
           </>
         )}
       </div>
+
+      {/* 4. Bottom Status Bar */}
+      <StatusBar />
+
+      {/* Global Quick Modals */}
+      <CommandPalette />
+      <QuickOpen />
     </div>
   );
 };
+
+export default IDELayout;

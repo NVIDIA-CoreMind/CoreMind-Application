@@ -1,51 +1,17 @@
 import fs from 'node:fs/promises';
-import fsSync from 'node:fs';
 import path from 'node:path';
+
 import { FileNode, FileSearchResult } from '../../shared/types/file';
 import { IpcResult } from '../../shared/types/ipc';
 import { logger } from './logger';
 
+import { platformFileSystem } from '../platform/filesystem/platformFileSystem';
+
 export class FileSystemService {
-  private isWithinRoot(targetPath: string, rootPath: string): boolean {
-    const relative = path.relative(rootPath, targetPath);
-    return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative));
-  }
-
-  private resolveNearestExistingPath(targetPath: string): string | null {
-    let candidate = targetPath;
-    const missingSegments: string[] = [];
-
-    while (!fsSync.existsSync(candidate)) {
-      const parent = path.dirname(candidate);
-      if (parent === candidate) return null;
-      missingSegments.unshift(path.basename(candidate));
-      candidate = parent;
-    }
-
-    try {
-      return path.resolve(fsSync.realpathSync(candidate), ...missingSegments);
-    } catch {
-      return null;
-    }
-  }
-
-  /**
-   * Validate that targetPath resides inside rootPath and does not escape via traversal.
-   */
   public validateWorkspacePath(targetPath: string, rootPath: string): boolean {
-    if (!rootPath || !targetPath) return false;
-    const resolvedRoot = path.resolve(rootPath);
-    const resolvedTarget = path.resolve(targetPath);
-    if (!this.isWithinRoot(resolvedTarget, resolvedRoot)) return false;
-
-    try {
-      const realRoot = fsSync.realpathSync(resolvedRoot);
-      const canonicalTarget = this.resolveNearestExistingPath(resolvedTarget);
-      return canonicalTarget !== null && this.isWithinRoot(canonicalTarget, realRoot);
-    } catch {
-      return false;
-    }
+    return platformFileSystem.validateWorkspacePath(targetPath, rootPath);
   }
+
 
   /**
    * Stat a file or directory

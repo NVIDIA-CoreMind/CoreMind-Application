@@ -37,8 +37,11 @@ export function getMainWindow(): BrowserWindow | null {
   return mainWindow;
 }
 
+import { isWindows } from '../platform/platform';
+import { platformWindow } from '../platform/window/platformWindow';
+
 function getAppIcon(): Electron.NativeImage | undefined {
-  const iconName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+  const iconName = isWindows() ? 'icon.ico' : 'icon.png';
   const candidates = [
     path.join(__dirname, '../assets', iconName),
     path.join(__dirname, '../assets/icon.png'),
@@ -67,6 +70,7 @@ export function createMainWindow(): BrowserWindow {
   logger.info('Preload path resolved', { preloadPath });
 
   const appIcon = getAppIcon();
+  const platformOptions = platformWindow.getWindowOptions(appIcon);
 
   mainWindow = new BrowserWindow({
     width: 1300,
@@ -74,11 +78,9 @@ export function createMainWindow(): BrowserWindow {
     minWidth: 1100,
     minHeight: 700,
     title: 'CoreMind',
-    icon: appIcon,
-    backgroundColor: '#0F1117',
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 16, y: 14 },
-    show: false,
+    backgroundColor: '#1E1E1E',
+    ...platformOptions,
+    show: true,
     webPreferences: {
       preload: preloadPath,
       nodeIntegration: false,
@@ -88,10 +90,35 @@ export function createMainWindow(): BrowserWindow {
     },
   });
 
+  mainWindow.setMenuBarVisibility(false);
+
+  const showWindow = () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (!mainWindow.isVisible()) {
+        logger.info('Showing CoreMind main window');
+        mainWindow.show();
+      }
+      mainWindow.focus();
+    }
+  };
+
   mainWindow.once('ready-to-show', () => {
-    logger.info('Main window ready to show');
-    mainWindow?.show();
+    logger.info('Main window ready-to-show event fired');
+    showWindow();
   });
+
+  mainWindow.webContents.once('did-finish-load', () => {
+    logger.info('Main window did-finish-load event fired');
+    showWindow();
+  });
+
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
+    logger.error('Failed to load page in main window', { errorCode, errorDescription, validatedURL });
+  });
+
+  setTimeout(() => {
+    showWindow();
+  }, 300);
 
   mainWindow.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
     logger.info(`[Renderer] ${message}`, { sourceId, line });
