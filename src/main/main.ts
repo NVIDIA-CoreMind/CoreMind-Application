@@ -9,10 +9,12 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { isMac, isWindows } from './platform/platform';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 function getAppIconPath(): string {
-  const iconName = process.platform === 'win32' ? 'icon.ico' : 'icon.png';
+  const iconName = isWindows() ? 'icon.ico' : 'icon.png';
   const candidates = [
     path.join(__dirname, '../assets', iconName),
     path.join(__dirname, '../assets/icon.png'),
@@ -29,9 +31,21 @@ function getAppIconPath(): string {
   return path.join(__dirname, '../assets/icon.png');
 }
 
-app.name = 'CoreMind';
+app.name = !app.isPackaged ? 'CoreMind Dev' : 'CoreMind';
 
-// macOS single instance lock
+if (isWindows()) {
+  app.setAppUserModelId('com.coremind.ide');
+}
+
+process.on('uncaughtException', (error) => {
+  logger.error('Uncaught exception in main process', { error: error?.stack || error });
+});
+
+process.on('unhandledRejection', (reason) => {
+  logger.error('Unhandled rejection in main process', { reason });
+});
+
+// Single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
 
 if (!gotTheLock) {
@@ -42,6 +56,7 @@ if (!gotTheLock) {
     const mainWindow = getMainWindow();
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.show();
       mainWindow.focus();
     }
   });
@@ -53,7 +68,7 @@ if (!gotTheLock) {
     // Dynamically calling app.dock.setIcon() in production causes a size/resolution discrepancy
     // between the closed/pinned dock state and the running state.
     // Therefore, only set dock icon dynamically during development mode.
-    if (!app.isPackaged && process.platform === 'darwin' && app.dock) {
+    if (!app.isPackaged && isMac() && app.dock) {
       const iconPath = getAppIconPath();
       if (fs.existsSync(iconPath)) {
         try {
@@ -81,7 +96,7 @@ if (!gotTheLock) {
 
   app.on('window-all-closed', () => {
     logger.info('All windows closed.');
-    if (process.platform !== 'darwin') {
+    if (!isMac()) {
       app.quit();
     }
   });
@@ -91,3 +106,4 @@ if (!gotTheLock) {
     terminalService.closeAllSessions();
   });
 }
+

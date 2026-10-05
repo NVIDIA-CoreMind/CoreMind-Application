@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { TabItem } from '@shared/types/tab';
+import { useWorkspaceStore } from './workspaceStore';
 
 interface TabsStore {
   tabs: TabItem[];
@@ -10,6 +11,7 @@ interface TabsStore {
   updateTabContent: (tabId: string, content: string) => void;
   saveActiveTab: (rootPath: string) => Promise<boolean>;
   saveTab: (tabId: string, rootPath: string) => Promise<boolean>;
+  createUntitledTab: () => void;
 }
 
 export function detectLanguage(fileName: string): string {
@@ -61,6 +63,7 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
     const existing = tabs.find((t) => t.filePath === filePath);
     if (existing) {
       set({ activeTabId: existing.id });
+      useWorkspaceStore.getState().setActiveFileName(existing.fileName);
       return;
     }
 
@@ -86,6 +89,7 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
       tabs: [...tabs, newTab],
       activeTabId: newTab.id,
     });
+    useWorkspaceStore.getState().setActiveFileName(fileName);
   },
 
   closeTab: (tabId: string) => {
@@ -96,24 +100,36 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
     const newTabs = tabs.filter((t) => t.id !== tabId);
 
     let nextActiveId: string | null = activeTabId;
+    let nextActiveFileName: string | null = null;
     if (activeTabId === tabId) {
       if (newTabs.length > 0) {
         // Activate neighbor tab
         const nextIndex = Math.min(index, newTabs.length - 1);
         nextActiveId = newTabs[nextIndex].id;
+        nextActiveFileName = newTabs[nextIndex].fileName;
       } else {
         nextActiveId = null;
+        nextActiveFileName = null;
       }
+    } else {
+      const current = newTabs.find((t) => t.id === activeTabId);
+      nextActiveFileName = current ? current.fileName : null;
     }
 
     set({
       tabs: newTabs,
       activeTabId: nextActiveId,
     });
+    useWorkspaceStore.getState().setActiveFileName(nextActiveFileName);
   },
 
   setActiveTab: (tabId: string) => {
+    const { tabs } = get();
+    const tab = tabs.find((t) => t.id === tabId);
     set({ activeTabId: tabId });
+    if (tab) {
+      useWorkspaceStore.getState().setActiveFileName(tab.fileName);
+    }
   },
 
   updateTabContent: (tabId: string, content: string) => {
@@ -160,5 +176,26 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
       console.error('Failed to save file:', result.error);
       return false;
     }
+  },
+
+  createUntitledTab: () => {
+    const { tabs } = get();
+    const untitledCount = tabs.filter((t) => t.fileName.startsWith('Untitled-')).length + 1;
+    const id = `untitled-${Date.now()}`;
+    const fileName = `Untitled-${untitledCount}`;
+    const newTab: TabItem = {
+      id,
+      filePath: id,
+      fileName,
+      language: 'plaintext',
+      content: '',
+      savedContent: '',
+      isDirty: false,
+    };
+    set({
+      tabs: [...tabs, newTab],
+      activeTabId: id,
+    });
+    useWorkspaceStore.getState().setActiveFileName(fileName);
   },
 }));

@@ -57,6 +57,7 @@ export const useUiStore = create<UiStore>((set) => ({
 
   toggleSidebar: () => {
     set((state) => ({ isSidebarOpen: !state.isSidebarOpen }));
+    if (typeof window !== 'undefined') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   },
 
   setSidebarWidth: (width) => {
@@ -65,10 +66,12 @@ export const useUiStore = create<UiStore>((set) => ({
       Math.min(UI_DIMENSIONS.MAX_SIDEBAR_WIDTH, width)
     );
     set({ sidebarWidth: clamped });
+    if (typeof window !== 'undefined') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   },
 
   toggleRightPanel: () => {
     set((state) => ({ isRightPanelOpen: !state.isRightPanelOpen }));
+    if (typeof window !== 'undefined') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   },
 
   setRightPanelWidth: (width) => {
@@ -77,10 +80,12 @@ export const useUiStore = create<UiStore>((set) => ({
       Math.min(UI_DIMENSIONS.MAX_RIGHT_PANEL_WIDTH, width)
     );
     set({ rightPanelWidth: clamped });
+    if (typeof window !== 'undefined') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   },
 
   toggleTerminal: () => {
     set((state) => ({ isTerminalOpen: !state.isTerminalOpen }));
+    if (typeof window !== 'undefined') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   },
 
   setTerminalHeight: (height) => {
@@ -89,6 +94,7 @@ export const useUiStore = create<UiStore>((set) => ({
       Math.min(UI_DIMENSIONS.MAX_TERMINAL_HEIGHT, height)
     );
     set({ terminalHeight: clamped });
+    if (typeof window !== 'undefined') requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
   },
 
   setCommandPaletteOpen: (open) => {

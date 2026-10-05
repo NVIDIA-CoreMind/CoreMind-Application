@@ -139,6 +139,8 @@ export function buildEditorConfiguration(
   const p = PALETTES[theme];
   return {
     "workbench.colorTheme": p.colorTheme,
+    "window.title": "${rootName}${separator}CoreMind${separator}${activeEditorShort}",
+    "window.titleSeparator": " - ",
     "window.commandCenter": false,
     "workbench.layoutControl.enabled": false,
     "workbench.tree.indent": 14,

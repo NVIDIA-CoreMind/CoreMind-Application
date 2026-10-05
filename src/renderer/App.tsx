@@ -5,6 +5,7 @@ import { useWorkspaceStore } from './stores/workspaceStore';
 import { useUiStore } from './stores/uiStore';
 import { useBackendStore } from './stores/backendStore';
 import { useAuthStore } from './stores/authStore';
+import { isMacClient } from '../shared/utils/shortcuts';
 
 export const App: React.FC = () => {
   const { saveActiveTab, closeTab, activeTabId } = useTabsStore();
@@ -70,8 +71,16 @@ export const App: React.FC = () => {
   // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
       const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+
+      // Cmd+N: New File
+      if (cmdOrCtrl && !e.shiftKey && (e.key === 'n' || e.key === 'N')) {
+        e.preventDefault();
+        useTabsStore.getState().createUntitledTab();
+        return;
+      }
 
       // Cmd+O: Open Folder
       if (cmdOrCtrl && !e.shiftKey && (e.key === 'o' || e.key === 'O')) {

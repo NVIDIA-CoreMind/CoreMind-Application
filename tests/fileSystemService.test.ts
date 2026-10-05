@@ -42,7 +42,12 @@ describe('FileSystemService & Workspace Security', () => {
       const outsideDir = await fs.mkdtemp(path.join(process.cwd(), '.coremind-outside-'));
       const linkPath = path.join(tempDir, 'outside-link');
       try {
-        await fs.symlink(outsideDir, linkPath);
+        try {
+          await fs.symlink(outsideDir, linkPath);
+        } catch (e: any) {
+          if (e.code === 'EPERM') return;
+          throw e;
+        }
         expect(service.validateWorkspacePath(path.join(linkPath, 'secret.txt'), tempDir)).toBe(false);
       } finally {
         await fs.rm(outsideDir, { recursive: true, force: true });
@@ -153,7 +158,12 @@ describe('FileSystemService & Workspace Security', () => {
       const linkPath = path.join(tempDir, 'outside-link');
       try {
         await fs.writeFile(outsideFile, 'searchable-secret');
-        await fs.symlink(outsideFile, linkPath);
+        try {
+          await fs.symlink(outsideFile, linkPath);
+        } catch (e: any) {
+          if (e.code === 'EPERM') return;
+          throw e;
+        }
         const searchRes = await service.searchFiles('searchable-secret', tempDir);
         expect(searchRes.success).toBe(true);
         if (searchRes.success) expect(searchRes.data).toHaveLength(0);

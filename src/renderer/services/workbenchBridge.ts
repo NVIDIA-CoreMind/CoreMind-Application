@@ -9,6 +9,8 @@ import {
 } from './CoreMindFileSystemProvider';
 import { baseName } from './fileIcons';
 import { STATUS_BADGE, STATUS_LABEL, TrackedChange } from './aiChanges';
+import { useWorkspaceStore } from '../stores/workspaceStore';
+import { extractBaseName } from '../../shared/utils/title';
 
 // Thin, typed bridge between React stores and the live VS Code Workbench.
 // Everything here goes through public VS Code APIs; nothing is exposed on `window`.
@@ -27,6 +29,25 @@ const STATUS_COLOR: Record<TrackedChange['status'], string> = {
 
 export function isWorkbenchReady(): boolean {
   return vscodeApi !== null;
+}
+
+function getActiveWorkbenchFileName(): string | null {
+  if (!vscodeApi) return null;
+  try {
+    const activeTab = (vscodeApi.window as any).tabGroups?.all
+      ?.flatMap((g: any) => g.tabs)
+      ?.find((t: any) => t.isActive);
+    if (activeTab?.label) {
+      return extractBaseName(activeTab.label);
+    }
+  } catch {
+    // ignore
+  }
+  const editor = vscodeApi.window.activeTextEditor;
+  if (editor?.document?.uri) {
+    return extractBaseName(editor.document.uri.path || editor.document.fileName);
+  }
+  return null;
 }
 
 export function initWorkbenchBridge(vscode: typeof VSCode, provider: CoreMindFileSystemProvider): void {
@@ -52,6 +73,28 @@ export function initWorkbenchBridge(vscode: typeof VSCode, provider: CoreMindFil
       return decoration;
     },
   });
+
+  const syncActiveEditor = () => {
+    const fileName = getActiveWorkbenchFileName();
+    useWorkspaceStore.getState().setActiveFileName(fileName);
+  };
+
+  syncActiveEditor();
+
+  vscode.window.onDidChangeActiveTextEditor(() => {
+    syncActiveEditor();
+  });
+
+  try {
+    (vscode.window as any).tabGroups?.onDidChangeTabs?.(() => {
+      syncActiveEditor();
+    });
+    (vscode.window as any).tabGroups?.onDidChangeTabGroups?.(() => {
+      syncActiveEditor();
+    });
+  } catch {
+    // ignore
+  }
 }
 
 export function syncDecorations(changes: TrackedChange[]): void {

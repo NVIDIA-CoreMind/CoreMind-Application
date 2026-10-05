@@ -1,12 +1,13 @@
 import { Menu, MenuItemConstructorOptions, app, dialog, BrowserWindow } from 'electron';
 import { getMainWindow } from './windows/mainWindow';
 import { authorizeWorkspace } from './services/workspaceAuthorization';
+import { isMac } from './platform/platform';
 
 export function setupApplicationMenu(): void {
-  const isMac = process.platform === 'darwin';
+  const mac = isMac();
 
   const template: MenuItemConstructorOptions[] = [
-    ...(isMac
+    ...(mac
       ? [
           {
             label: app.name,
@@ -31,9 +32,10 @@ export function setupApplicationMenu(): void {
           label: 'Open Folder...',
           accelerator: 'CmdOrCtrl+O',
           click: async () => {
-            if (process.platform === 'darwin') {
+            if (mac) {
               app.focus({ steal: true });
             }
+
             const result = await dialog.showOpenDialog({
               title: 'Open Project Folder',
               buttonLabel: 'Select Folder',
@@ -49,7 +51,7 @@ export function setupApplicationMenu(): void {
           },
         },
         { type: 'separator' as const },
-        isMac ? { role: 'close' as const } : { role: 'quit' as const },
+        mac ? { role: 'close' as const } : { role: 'quit' as const },
       ],
     },
     {
@@ -83,7 +85,7 @@ export function setupApplicationMenu(): void {
       submenu: [
         { role: 'minimize' as const },
         { role: 'zoom' as const },
-        ...(isMac
+        ...(mac
           ? [
               { type: 'separator' as const },
               { role: 'front' as const },
@@ -91,6 +93,7 @@ export function setupApplicationMenu(): void {
               { role: 'window' as const },
             ]
           : [{ role: 'close' as const }]),
+
       ],
     },
   ];
