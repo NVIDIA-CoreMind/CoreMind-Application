@@ -224,6 +224,41 @@ export function registerIpcHandlers(): void {
     }
   );
 
+  // 8b. Copy
+  ipcMain.handle(
+    IPC_CHANNELS.FILE_COPY,
+    async (
+      event,
+      { srcPath, destPath }: { srcPath: string; destPath: string; rootPath?: string }
+    ): Promise<IpcResult<void>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.copy(srcPath, destPath, rootPath) : noWorkspaceError();
+    }
+  );
+
+  // 8c. Reveal in File Explorer / Finder
+  ipcMain.handle(
+    IPC_CHANNELS.FILE_REVEAL_IN_EXPLORER,
+    async (
+      _event,
+      { targetPath }: { targetPath: string }
+    ): Promise<IpcResult<void>> => {
+      try {
+        shell.showItemInFolder(targetPath);
+        return { success: true, data: undefined };
+      } catch (err: unknown) {
+        const error = err as Error;
+        return {
+          success: false,
+          error: {
+            code: 'REVEAL_FAILED',
+            message: error.message || 'Failed to reveal item in file manager.',
+          },
+        };
+      }
+    }
+  );
+
   // 9. Search Files
   ipcMain.handle(
     IPC_CHANNELS.FILE_SEARCH,

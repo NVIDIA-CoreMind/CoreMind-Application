@@ -87,6 +87,8 @@ export const IPC_CHANNELS = {
   FILE_DELETE: 'file:delete',
   FILE_SEARCH: 'file:search',
   FILE_STAT: 'file:stat',
+  FILE_REVEAL_IN_EXPLORER: 'file:reveal-in-explorer',
+  FILE_COPY: 'file:copy',
 
   // Git Operations
   GIT_STATUS: 'git:status',

@@ -370,6 +370,40 @@ export class FileSystemService {
   }
 
   /**
+   * Copy file or directory.
+   */
+  public async copy(srcPath: string, destPath: string, rootPath: string): Promise<IpcResult<void>> {
+    try {
+      if (
+        !this.validateWorkspacePath(srcPath, rootPath) ||
+        !this.validateWorkspacePath(destPath, rootPath)
+      ) {
+        return {
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Path outside workspace is not allowed.',
+          },
+        };
+      }
+
+      await fs.cp(srcPath, destPath, { recursive: true });
+      logger.info('Copied successfully', { srcPath, destPath });
+      return { success: true, data: undefined };
+    } catch (err: unknown) {
+      const error = err as Error;
+      logger.error('Error copying path', { srcPath, destPath, message: error.message });
+      return {
+        success: false,
+        error: {
+          code: 'COPY_FAILED',
+          message: error.message || 'Failed to copy.',
+        },
+      };
+    }
+  }
+
+  /**
    * Search files for text query.
    */
   public async searchFiles(
