@@ -8,7 +8,7 @@ export class WindowsWindow implements IPlatformWindow {
       titleBarOverlay: {
         color: '#1E1E1E',
         symbolColor: '#9A9A9A',
-        height: 35,
+        height: 36,
       },
       autoHideMenuBar: true,
       icon,

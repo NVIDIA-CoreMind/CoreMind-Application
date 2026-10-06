@@ -3,6 +3,8 @@ import {
   getShortcutDisplay,
   formatShortcutString,
   getCmdOrCtrlSymbol,
+  isMacClient,
+  isWindowsClient,
 } from '../src/shared/utils/shortcuts';
 
 
@@ -50,5 +52,15 @@ describe('Platform-Aware Keyboard Shortcuts', () => {
   it('provides correct modifier symbol', () => {
     expect(getCmdOrCtrlSymbol(true)).toBe('⌘');
     expect(getCmdOrCtrlSymbol(false)).toBe('Ctrl+');
+  });
+
+  it('detects platform correctly from PlatformType', () => {
+    expect(isMacClient('macos')).toBe(true);
+    expect(isMacClient('windows')).toBe(false);
+    expect(isMacClient('linux')).toBe(false);
+
+    expect(isWindowsClient('windows')).toBe(true);
+    expect(isWindowsClient('macos')).toBe(false);
+    expect(isWindowsClient('linux')).toBe(false);
   });
 });
