@@ -1,13 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChevronRight,
   ChevronDown,
   Folder,
   FolderOpen,
-  Trash2,
-  Edit2,
-  FilePlus,
-  FolderPlus,
 } from 'lucide-react';
 import { FileNode } from '@shared/types/file';
 import { useFilesStore } from '../stores/filesStore';
@@ -18,9 +14,22 @@ import { FileIcon } from '../components/FileIcon';
 interface FileTreeItemProps {
   node: FileNode;
   depth: number;
+  onContextMenu: (e: React.MouseEvent, node: FileNode) => void;
+  renamingPath?: string | null;
+  onFinishRename?: () => void;
+  creatingInPath?: { path: string; type: 'file' | 'folder' } | null;
+  onFinishCreate?: () => void;
 }
 
-export const FileTreeItem: React.FC<FileTreeItemProps> = ({ node, depth }) => {
+export const FileTreeItem: React.FC<FileTreeItemProps> = ({
+  node,
+  depth,
+  onContextMenu,
+  renamingPath,
+  onFinishRename,
+  creatingInPath,
+  onFinishCreate,
+}) => {
   const { rootPath } = useWorkspaceStore();
   const {
     expandedPaths,
@@ -30,19 +39,25 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({ node, depth }) => {
     createFile,
     createDirectory,
     renameItem,
-    deleteItem,
   } = useFilesStore();
   const { openFile } = useTabsStore();
 
-  const [isRenaming, setIsRenaming] = useState(false);
+  const [isRenaming, setIsRenaming] = useState(renamingPath === node.path);
   const [renameValue, setRenameValue] = useState(node.name);
-  const [isCreatingFile, setIsCreatingFile] = useState(false);
-  const [newFileName, setNewFileName] = useState('');
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
+  const [newItemName, setNewItemName] = useState('');
 
   const isExpanded = expandedPaths.has(node.path);
   const isSelected = selectedPath === node.path;
+  const isCreatingInside = creatingInPath && creatingInPath.path === node.path;
+
+  useEffect(() => {
+    if (renamingPath === node.path) {
+      setIsRenaming(true);
+      setRenameValue(node.name);
+    } else {
+      setIsRenaming(false);
+    }
+  }, [renamingPath, node.path, node.name]);
 
   // File icon helper
   const renderIcon = () => {
@@ -68,53 +83,49 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({ node, depth }) => {
     }
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setSelectedPath(node.path);
+    onContextMenu(e, node);
+  };
+
   const handleRenameSubmit = async (e: React.FormEvent | React.FocusEvent) => {
     e.preventDefault();
-    if (!rootPath || !renameValue.trim() || renameValue === node.name) {
+    const trimmed = renameValue.trim();
+    if (!rootPath || !trimmed || trimmed === node.name) {
       setIsRenaming(false);
+      onFinishRename?.();
       return;
     }
     const parentDir = node.path.substring(0, node.path.lastIndexOf('/'));
-    const newPath = `${parentDir}/${renameValue.trim()}`;
+    const newPath = `${parentDir}/${trimmed}`;
     await renameItem(node.path, newPath, rootPath);
     setIsRenaming(false);
+    onFinishRename?.();
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!rootPath) return;
-    const confirm = window.confirm(`Are you sure you want to delete "${node.name}"?`);
-    if (confirm) {
-      await deleteItem(node.path, rootPath);
-    }
-  };
-
-  const handleCreateFileSubmit = async (e: React.FormEvent) => {
+  const handleCreateSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!rootPath || !newFileName.trim()) {
-      setIsCreatingFile(false);
+    if (!rootPath || !newItemName.trim() || !creatingInPath) {
+      onFinishCreate?.();
+      setNewItemName('');
       return;
     }
-    await createFile(node.path, newFileName.trim(), rootPath);
-    setIsCreatingFile(false);
-    setNewFileName('');
-  };
-
-  const handleCreateFolderSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rootPath || !newFolderName.trim()) {
-      setIsCreatingFolder(false);
-      return;
+    if (creatingInPath.type === 'file') {
+      await createFile(node.path, newItemName.trim(), rootPath);
+    } else {
+      await createDirectory(node.path, newItemName.trim(), rootPath);
     }
-    await createDirectory(node.path, newFolderName.trim(), rootPath);
-    setIsCreatingFolder(false);
-    setNewFolderName('');
+    setNewItemName('');
+    onFinishCreate?.();
   };
 
   return (
     <div>
       <div
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -155,6 +166,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({ node, depth }) => {
                   if (e.key === 'Escape') {
                     setIsRenaming(false);
                     setRenameValue(node.name);
+                    onFinishRename?.();
                   }
                 }}
                 style={{
@@ -162,6 +174,11 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({ node, depth }) => {
                   padding: '1px 4px',
                   fontSize: '12px',
                   width: '90%',
+                  backgroundColor: 'var(--bg-app)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--accent)',
+                  borderRadius: '2px',
+                  outline: 'none',
                 }}
               />
             </form>
@@ -178,103 +195,46 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({ node, depth }) => {
             </span>
           )}
         </div>
-
-        {/* Hover Actions */}
-        {!isRenaming && (
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '2px',
-              opacity: isSelected ? 1 : 0.6,
-            }}
-          >
-            {node.isDirectory && (
-              <>
-                <button
-                  onClick={() => setIsCreatingFile(true)}
-                  title="New File"
-                  style={{ padding: '2px', color: 'var(--text-muted)' }}
-                >
-                  <FilePlus size={11} />
-                </button>
-                <button
-                  onClick={() => setIsCreatingFolder(true)}
-                  title="New Folder"
-                  style={{ padding: '2px', color: 'var(--text-muted)' }}
-                >
-                  <FolderPlus size={11} />
-                </button>
-              </>
-            )}
-            <button
-              onClick={() => {
-                setRenameValue(node.name);
-                setIsRenaming(true);
-              }}
-              title="Rename"
-              style={{ padding: '2px', color: 'var(--text-muted)' }}
-            >
-              <Edit2 size={11} />
-            </button>
-            <button
-              onClick={handleDelete}
-              title="Delete"
-              style={{ padding: '2px', color: 'var(--error)' }}
-            >
-              <Trash2 size={11} />
-            </button>
-          </div>
-        )}
       </div>
 
-      {/* Inline Create File inside folder */}
-      {isCreatingFile && (
+      {/* Inline Create inside folder when triggered */}
+      {isCreatingInside && (
         <form
-          onSubmit={handleCreateFileSubmit}
+          onSubmit={handleCreateSubmit}
           style={{
             paddingLeft: `${(depth + 1) * 14 + 16}px`,
             paddingTop: '2px',
             paddingBottom: '2px',
           }}
+          onClick={(e) => e.stopPropagation()}
         >
           <input
             autoFocus
             type="text"
-            placeholder="File name..."
-            value={newFileName}
-            onChange={(e) => setNewFileName(e.target.value)}
-            onBlur={() => setIsCreatingFile(false)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setIsCreatingFile(false);
+            placeholder={creatingInPath.type === 'file' ? 'File name...' : 'Folder name...'}
+            value={newItemName}
+            onChange={(e) => setNewItemName(e.target.value)}
+            onBlur={() => {
+              onFinishCreate?.();
+              setNewItemName('');
             }}
-            style={{ height: '20px', fontSize: '11px', width: '90%' }}
-          />
-        </form>
-      )}
-
-      {/* Inline Create Folder inside folder */}
-      {isCreatingFolder && (
-        <form
-          onSubmit={handleCreateFolderSubmit}
-          style={{
-            paddingLeft: `${(depth + 1) * 14 + 16}px`,
-            paddingTop: '2px',
-            paddingBottom: '2px',
-          }}
-        >
-          <input
-            autoFocus
-            type="text"
-            placeholder="Folder name..."
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            onBlur={() => setIsCreatingFolder(false)}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') setIsCreatingFolder(false);
+              if (e.key === 'Escape') {
+                onFinishCreate?.();
+                setNewItemName('');
+              }
             }}
-            style={{ height: '20px', fontSize: '11px', width: '90%' }}
+            style={{
+              height: '20px',
+              fontSize: '11px',
+              width: '90%',
+              backgroundColor: 'var(--bg-app)',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--accent)',
+              borderRadius: '2px',
+              outline: 'none',
+              padding: '1px 4px',
+            }}
           />
         </form>
       )}
@@ -283,7 +243,16 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({ node, depth }) => {
       {node.isDirectory && isExpanded && node.children && (
         <div>
           {node.children.map((child) => (
-            <FileTreeItem key={child.path} node={child} depth={depth + 1} />
+            <FileTreeItem
+              key={child.path}
+              node={child}
+              depth={depth + 1}
+              onContextMenu={onContextMenu}
+              renamingPath={renamingPath}
+              onFinishRename={onFinishRename}
+              creatingInPath={creatingInPath}
+              onFinishCreate={onFinishCreate}
+            />
           ))}
         </div>
       )}

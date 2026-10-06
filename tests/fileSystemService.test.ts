@@ -123,6 +123,26 @@ describe('FileSystemService & Workspace Security', () => {
       }
     });
 
+    it('copies a file safely', async () => {
+      const srcPath = path.join(tempDir, 'source.txt');
+      const destPath = path.join(tempDir, 'dest.txt');
+      await service.createFile(srcPath, tempDir);
+      await service.writeFile(srcPath, 'Content to copy', tempDir);
+
+      const copyRes = await service.copy(srcPath, destPath, tempDir);
+      expect(copyRes.success).toBe(true);
+
+      const readDest = await service.readFile(destPath, tempDir);
+      expect(readDest.success).toBe(true);
+      if (readDest.success) {
+        expect(readDest.data).toBe('Content to copy');
+      }
+
+      // Source should still exist
+      const readSrc = await service.readFile(srcPath, tempDir);
+      expect(readSrc.success).toBe(true);
+    });
+
     it('prevents deleting or renaming normalized equivalents of the workspace root', async () => {
       const equivalentRoot = path.join(tempDir, '.');
       const deleteRes = await service.delete(equivalentRoot, tempDir);

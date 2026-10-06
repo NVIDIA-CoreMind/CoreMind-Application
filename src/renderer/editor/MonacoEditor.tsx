@@ -54,7 +54,37 @@ export const MonacoEditor: React.FC = () => {
       },
     });
 
-    monacoInstance.editor.setTheme('coremind-dark');
+    // Define CoreMind bespoke light theme
+    monacoInstance.editor.defineTheme('coremind-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [
+        { token: '', background: 'FFFFFF' },
+        { token: 'comment', foreground: '008000', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'AF00DB', fontStyle: 'bold' },
+        { token: 'string', foreground: 'A31515' },
+        { token: 'number', foreground: '098658' },
+        { token: 'type', foreground: '267F99' },
+        { token: 'function', foreground: '795E26' },
+        { token: 'variable', foreground: '001080' },
+        { token: 'constant', foreground: '0070C1' },
+      ],
+      colors: {
+        'editor.background': '#FFFFFF',
+        'editor.foreground': '#1F2328',
+        'editor.lineHighlightBackground': '#0000000a',
+        'editorCursor.foreground': '#10B981',
+        'editorWhitespace.foreground': '#D8D8D8',
+        'editorIndentGuide.background': '#E5E7EB',
+        'editorIndentGuide.activeBackground': '#10B981',
+        'editorLineNumber.foreground': '#9CA3AF',
+        'editorLineNumber.activeForeground': '#1F2328',
+      },
+    });
+
+    // Apply active theme immediately on mount
+    const activeTheme = useThemeStore.getState().theme;
+    monacoInstance.editor.setTheme(activeTheme === 'dark' ? 'coremind-dark' : 'coremind-light');
 
     // Track cursor movements
     editor.onDidChangeCursorPosition((e) => {
@@ -109,11 +139,9 @@ export const MonacoEditor: React.FC = () => {
     }
   }, [activeTab?.id]);
 
-  // Update theme when theme state changes
+  // Update theme dynamically when theme state changes without remounting
   useEffect(() => {
-    if (editorRef.current) {
-      monaco.editor.setTheme(theme === 'dark' ? 'coremind-dark' : 'vs');
-    }
+    monaco.editor.setTheme(theme === 'dark' ? 'coremind-dark' : 'coremind-light');
   }, [theme]);
 
   // Auto-layout Monaco on container size change or window resize
@@ -151,7 +179,7 @@ export const MonacoEditor: React.FC = () => {
 
   if (!activeTab) {
     return (
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-panel)' }}>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-app)' }}>
         <EditorTabs />
         <div
           style={{
@@ -171,19 +199,18 @@ export const MonacoEditor: React.FC = () => {
           <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
             Select a file from the explorer or press <kbd style={{ padding: '1px 5px', borderRadius: '3px', backgroundColor: 'var(--bg-surface)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>{getShortcutDisplay('quickOpen', isMac)}</kbd> to open
           </div>
-
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', backgroundColor: 'var(--bg-app)' }}>
       <EditorTabs />
       <div ref={editorContainerRef} style={{ flex: 1, position: 'relative', minHeight: 0 }}>
         <Editor
           height="100%"
-          theme={theme === 'dark' ? 'coremind-dark' : 'vs'}
+          theme={theme === 'dark' ? 'coremind-dark' : 'coremind-light'}
           language={activeTab.language}
           onMount={handleEditorDidMount}
           options={{

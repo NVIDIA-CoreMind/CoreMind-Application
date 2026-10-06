@@ -21,7 +21,6 @@ import {
 import { useAgentStore } from '../stores/agentStore';
 import { useTabsStore } from '../stores/tabsStore';
 import { useUiStore } from '../stores/uiStore';
-import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useBackendStore } from '../stores/backendStore';
 import { AIChangesSection } from './AIChangesSection';
 import { AgentTimeline } from './AgentTimeline';
@@ -64,7 +63,6 @@ export const AgentPanel: React.FC = () => {
 
   const { tabs, activeTabId } = useTabsStore();
   const { toggleRightPanel } = useUiStore();
-  const { rootName } = useWorkspaceStore();
   const { isHealthy, wsStatus } = useBackendStore();
 
   const [input, setInput] = useState('');
@@ -85,7 +83,6 @@ export const AgentPanel: React.FC = () => {
   const recognitionRef = useRef<any>(null);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
-  const displayName = rootName || 'CoreMind-Application';
 
   // Initialize real-time WebSocket listeners
   useEffect(() => {
@@ -493,18 +490,6 @@ export const AgentPanel: React.FC = () => {
             overflowY: 'auto',
           }}
         >
-          {/* Workspace Title */}
-          <div
-            style={{
-              fontSize: '15px',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              marginBottom: '14px',
-              letterSpacing: '-0.2px',
-            }}
-          >
-            {displayName}
-          </div>
 
           {/* Central Modern Prompt Card */}
           <div

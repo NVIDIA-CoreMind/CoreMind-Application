@@ -16,8 +16,10 @@ import { QuickOpen } from '../components/QuickOpen';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTabsStore } from '../stores/tabsStore';
 import { useUiStore } from '../stores/uiStore';
+import { isMacClient } from '../../shared/utils/shortcuts';
 
 export const IDELayout: React.FC = () => {
+  const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
   const { rootPath } = useWorkspaceStore();
   const tabs = useTabsStore((state) => state.tabs);
   const {
@@ -59,8 +61,8 @@ export const IDELayout: React.FC = () => {
       {/* 1. Top Title Bar (CoreMind Centered in Application Bar) */}
       <TitleBar />
 
-      {/* 2. Application Menu / Command Bar (File, Edit, View, Window + Quick Tools) */}
-      <AppMenuBar />
+      {/* 2. Application Menu / Command Bar (File, Edit, View, Window + Quick Tools on Windows/Linux) */}
+      {!isMac && <AppMenuBar />}
 
       {/* 3. Main Work Area: Row with ActivityBar, Left Sidebar, Center Editor/Terminal, Right Agent */}
       <div
