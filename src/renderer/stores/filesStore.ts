@@ -109,6 +109,7 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
         // Automatically open the newly created file in the editor
         try {
           await useTabsStore.getState().openFile(filePath, fileName, rootPath);
+          get().setSelectedPath(filePath);
         } catch {
           // ignore tab opening errors
         }
