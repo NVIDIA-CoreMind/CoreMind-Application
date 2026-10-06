@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import ReactMarkdown from 'react-markdown';
-import { User, Bot } from 'lucide-react';
 import { useThemeStore } from '../../stores/themeStore';
 
 export const ChatThread: React.FC = () => {
@@ -61,25 +60,6 @@ export const ChatThread: React.FC = () => {
               maxWidth: '90%',
               flexDirection: isUser ? 'row-reverse' : 'row'
             }}>
-              {/* Avatar */}
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isUser ? (isDark ? '#262626' : '#e5e7eb') : 'var(--accent-bg)',
-                border: isUser ? `1px solid var(--border-color)` : `1px solid rgba(16, 185, 129, 0.2)`,
-                color: isUser ? 'var(--text-primary)' : 'var(--accent)',
-                marginTop: '4px',
-                fontSize: isUser ? 'inherit' : '12px',
-                fontWeight: isUser ? 'normal' : 'bold'
-              }}>
-                {isUser ? <User size={14} /> : <Bot size={14} />}
-              </div>
-              
               {/* Message Bubble */}
               <div style={{
                 padding: '12px 16px',
@@ -119,25 +99,6 @@ export const ChatThread: React.FC = () => {
           maxWidth: '90%'
         }}>
           <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--accent-bg)',
-            border: `1px solid rgba(16, 185, 129, 0.2)`,
-            color: 'var(--accent)',
-            marginTop: '4px',
-            fontSize: '12px',
-            fontWeight: 'bold'
-          }}>
-            <div className="animate-pulse" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Bot size={14} />
-            </div>
-          </div>
-          <div style={{
             padding: '12px 16px',
             borderRadius: '16px',
             borderTopLeftRadius: '4px',
@@ -146,13 +107,9 @@ export const ChatThread: React.FC = () => {
             color: 'var(--text-secondary)',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
             fontSize: '13px'
           }}>
-            <div className="typing-dot" style={{ animationDelay: '0s' }}>.</div>
-            <div className="typing-dot" style={{ animationDelay: '0.2s' }}>.</div>
-            <div className="typing-dot" style={{ animationDelay: '0.4s' }}>.</div>
-            working...
+            working....
           </div>
         </div>
       )}
