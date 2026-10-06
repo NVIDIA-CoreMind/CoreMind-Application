@@ -491,8 +491,11 @@ export const AgentPanel: React.FC = () => {
             overflowY: 'auto',
           }}
         >
-
-          {/* Central Modern Prompt Card */}
+          <div style={{ margin: 'auto 0', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h2 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '16px' }}>
+              CoreMind-Application
+            </h2>
+            {/* Central Modern Prompt Card */}
           <div
             style={{
               backgroundColor: 'var(--bg-app)',
@@ -680,12 +683,14 @@ export const AgentPanel: React.FC = () => {
               </div>
             </div>
           </div>
+          </div>
 
           {/* Recent Conversations List */}
           {sessions.length > 0 && (
             <div
               style={{
-                marginTop: '36px',
+                marginTop: 'auto',
+                paddingTop: '36px',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '12px',
