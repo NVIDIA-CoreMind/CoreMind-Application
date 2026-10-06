@@ -13,6 +13,7 @@ import { EmptyState } from '../components/EmptyState';
 import { StatusBar } from '../components/StatusBar';
 import { CommandPalette } from '../components/CommandPalette';
 import { QuickOpen } from '../components/QuickOpen';
+import { GlobalPrompt } from '../components/GlobalPrompt';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTabsStore } from '../stores/tabsStore';
 import { useUiStore } from '../stores/uiStore';
@@ -169,6 +170,7 @@ export const IDELayout: React.FC = () => {
       {/* Global Quick Modals */}
       <CommandPalette />
       <QuickOpen />
+      <GlobalPrompt />
     </div>
   );
 };
