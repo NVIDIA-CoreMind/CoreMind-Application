@@ -1,12 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  FolderOpen,
   Sun,
   Moon,
   PanelLeft,
   Terminal,
   Bot,
-  Folder,
 } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTabsStore } from '../stores/tabsStore';
@@ -23,7 +21,7 @@ interface MenuItem {
 }
 
 export const AppMenuBar: React.FC = () => {
-  const { rootName, rootPath, openFolderDialog } = useWorkspaceStore();
+  const { rootPath, openFolderDialog } = useWorkspaceStore();
   const { saveActiveTab, closeTab, activeTabId, createUntitledTab } = useTabsStore();
   const { theme, toggleTheme } = useThemeStore();
   const {
@@ -216,6 +214,10 @@ export const AppMenuBar: React.FC = () => {
     item.action?.();
   };
 
+  if (isMac) {
+    return null;
+  }
+
   return (
     <div
       ref={menuBarRef}
@@ -338,56 +340,6 @@ export const AppMenuBar: React.FC = () => {
 
       {/* Right: Toolbar Quick Controls */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-        {rootName && (
-          <div
-            title={`Active Workspace: ${rootPath || rootName}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              fontSize: '11px',
-              color: 'var(--text-muted)',
-              padding: '2px 8px',
-              marginRight: '6px',
-              borderRadius: '3px',
-              backgroundColor: 'var(--bg-hover)',
-              maxWidth: '180px',
-              overflow: 'hidden',
-              whiteSpace: 'nowrap',
-              textOverflow: 'ellipsis',
-            }}
-          >
-            <Folder size={12} color="var(--accent)" />
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{rootName}</span>
-          </div>
-        )}
-
-        <button
-          onClick={() => void openFolderDialog()}
-          title={`Open Folder (${getShortcutDisplay('openFolder', isMac)})`}
-          style={{
-            padding: '4px 8px',
-            borderRadius: '4px',
-            color: 'var(--text-secondary)',
-            fontSize: '11px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '5px',
-          }}
-        >
-          <FolderOpen size={13} />
-          <span>Open Folder</span>
-        </button>
-
-        <div
-          style={{
-            width: '1px',
-            height: '14px',
-            backgroundColor: 'var(--border-color)',
-            margin: '0 4px',
-          }}
-        />
-
         <button
           onClick={toggleSidebar}
           title={`Toggle Primary Sidebar (${getShortcutDisplay('toggleSidebar', isMac)})`}

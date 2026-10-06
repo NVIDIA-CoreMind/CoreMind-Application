@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { FileNode, FileSearchResult } from '@shared/types/file';
 import { useTabsStore } from './tabsStore';
+import { useWorkspaceStore } from './workspaceStore';
 
 interface FilesStore {
   fileTree: FileNode[];
@@ -10,6 +11,7 @@ interface FilesStore {
   isSearching: boolean;
   searchQuery: string;
   error: string | null;
+  clipboardItem: { path: string; name: string; isDirectory: boolean; operation: 'copy' | 'cut' } | null;
 
   loadWorkspaceTree: (rootPath: string) => Promise<void>;
   toggleFolder: (folderPath: string, rootPath: string) => Promise<void>;
@@ -18,6 +20,10 @@ interface FilesStore {
   createDirectory: (parentDir: string, dirName: string, rootPath: string) => Promise<boolean>;
   renameItem: (oldPath: string, newPath: string, rootPath: string) => Promise<boolean>;
   deleteItem: (targetPath: string, rootPath: string) => Promise<boolean>;
+  copyItem: (srcPath: string, destPath: string, rootPath: string) => Promise<boolean>;
+  setClipboardItem: (item: { path: string; name: string; isDirectory: boolean; operation: 'copy' | 'cut' } | null) => void;
+  pasteItem: (targetDir: string, rootPath: string) => Promise<boolean>;
+  revealInExplorer: (targetPath: string) => Promise<boolean>;
   search: (query: string, rootPath: string) => Promise<void>;
   clearSearch: () => void;
 }
@@ -50,6 +56,7 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
   isSearching: false,
   searchQuery: '',
   error: null,
+  clipboardItem: null,
 
   loadWorkspaceTree: async (rootPath: string) => {
     try {
@@ -138,6 +145,24 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
       const result = await window.coreMindAPI.rename(oldPath, newPath, rootPath);
       if (result.success) {
         await get().loadWorkspaceTree(rootPath);
+        // Synchronize open tabs
+        const tabsState = useTabsStore.getState();
+        const tab = tabsState.tabs.find((t) => t.filePath === oldPath);
+        if (tab) {
+          const newFileName = newPath.split(/[/\\]/).pop() || newPath;
+          const updatedTabs = tabsState.tabs.map((t) =>
+            t.filePath === oldPath
+              ? { ...t, id: newPath, filePath: newPath, fileName: newFileName }
+              : t
+          );
+          useTabsStore.setState({
+            tabs: updatedTabs,
+            activeTabId: tabsState.activeTabId === oldPath ? newPath : tabsState.activeTabId,
+          });
+          if (tabsState.activeTabId === oldPath) {
+            useWorkspaceStore.getState().setActiveFileName(newFileName);
+          }
+        }
         return true;
       }
       set({ error: result.error.message });
@@ -154,6 +179,11 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
       const result = await window.coreMindAPI.delete(targetPath, rootPath);
       if (result.success) {
         await get().loadWorkspaceTree(rootPath);
+        // If deleted file had open tab, close it
+        const tabsState = useTabsStore.getState();
+        if (tabsState.tabs.some((t) => t.filePath === targetPath)) {
+          tabsState.closeTab(targetPath);
+        }
         return true;
       }
       set({ error: result.error.message });
@@ -161,6 +191,78 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
     } catch (err: unknown) {
       const error = err as Error;
       set({ error: error.message });
+      return false;
+    }
+  },
+
+  copyItem: async (srcPath: string, destPath: string, rootPath: string) => {
+    try {
+      const result = await window.coreMindAPI.copyItem(srcPath, destPath, rootPath);
+      if (result.success) {
+        await get().loadWorkspaceTree(rootPath);
+        return true;
+      }
+      set({ error: result.error.message });
+      return false;
+    } catch (err: unknown) {
+      const error = err as Error;
+      set({ error: error.message });
+      return false;
+    }
+  },
+
+  setClipboardItem: (item) => {
+    set({ clipboardItem: item });
+  },
+
+  pasteItem: async (targetDir: string, rootPath: string) => {
+    const { clipboardItem } = get();
+    if (!clipboardItem) return false;
+
+    try {
+      const destPath = `${targetDir}/${clipboardItem.name}`.replace(/\/+/g, '/');
+      if (clipboardItem.operation === 'cut') {
+        const result = await window.coreMindAPI.rename(clipboardItem.path, destPath, rootPath);
+        if (result.success) {
+          set({ clipboardItem: null });
+          await get().loadWorkspaceTree(rootPath);
+          return true;
+        }
+        set({ error: result.error.message });
+        return false;
+      } else {
+        // Copy operation
+        let finalDest = destPath;
+        if (clipboardItem.path === destPath) {
+          const extIndex = clipboardItem.name.lastIndexOf('.');
+          if (!clipboardItem.isDirectory && extIndex > 0) {
+            const base = clipboardItem.name.substring(0, extIndex);
+            const ext = clipboardItem.name.substring(extIndex);
+            finalDest = `${targetDir}/${base}_copy${ext}`.replace(/\/+/g, '/');
+          } else {
+            finalDest = `${targetDir}/${clipboardItem.name}_copy`.replace(/\/+/g, '/');
+          }
+        }
+        const result = await window.coreMindAPI.copyItem(clipboardItem.path, finalDest, rootPath);
+        if (result.success) {
+          await get().loadWorkspaceTree(rootPath);
+          return true;
+        }
+        set({ error: result.error.message });
+        return false;
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      set({ error: error.message });
+      return false;
+    }
+  },
+
+  revealInExplorer: async (targetPath: string) => {
+    try {
+      const result = await window.coreMindAPI.revealInExplorer(targetPath);
+      return result.success;
+    } catch {
       return false;
     }
   },
