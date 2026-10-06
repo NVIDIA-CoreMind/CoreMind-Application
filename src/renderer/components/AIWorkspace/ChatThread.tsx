@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import ReactMarkdown from 'react-markdown';
-import { User } from 'lucide-react';
+import { User, Bot } from 'lucide-react';
 import { useThemeStore } from '../../stores/themeStore';
 
 export const ChatThread: React.FC = () => {
@@ -26,23 +26,6 @@ export const ChatThread: React.FC = () => {
         padding: '24px',
         color: 'var(--text-secondary)'
       }}>
-        <div style={{
-          width: '64px',
-          height: '64px',
-          borderRadius: '32px',
-          background: isDark ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05))' : 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.1))',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '20px',
-          boxShadow: isDark ? '0 8px 32px rgba(16, 185, 129, 0.1)' : '0 8px 32px rgba(16, 185, 129, 0.2)',
-          border: `1px solid ${isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.3)'}`,
-          color: 'var(--accent)',
-          fontSize: '24px',
-          fontWeight: 'bold'
-        }}>
-          AI
-        </div>
         <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
           Welcome to CoreMind Chat
         </h2>
@@ -94,7 +77,7 @@ export const ChatThread: React.FC = () => {
                 fontSize: isUser ? 'inherit' : '12px',
                 fontWeight: isUser ? 'normal' : 'bold'
               }}>
-                {isUser ? <User size={14} /> : 'AI'}
+                {isUser ? <User size={14} /> : <Bot size={14} />}
               </div>
               
               {/* Message Bubble */}
@@ -150,7 +133,9 @@ export const ChatThread: React.FC = () => {
             fontSize: '12px',
             fontWeight: 'bold'
           }}>
-            <div className="animate-pulse">AI</div>
+            <div className="animate-pulse" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Bot size={14} />
+            </div>
           </div>
           <div style={{
             padding: '12px 16px',
