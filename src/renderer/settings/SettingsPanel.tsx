@@ -3,7 +3,6 @@ import {
   Monitor,
   Code,
   Server,
-  Sparkles,
   User as UserIcon,
   Check,
   AlertCircle,
@@ -416,7 +415,7 @@ export const SettingsPanel: React.FC = () => {
         {/* 3. AI Provider Diagnostics & Usage */}
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', color: 'var(--text-primary)' }}>
-            <Sparkles size={15} color="var(--accent)" />
+            <Server size={15} color="var(--accent)" />
             <span style={{ fontSize: '13px', fontWeight: 600 }}>AI Provider Diagnostics</span>
           </div>
 
@@ -451,7 +450,7 @@ export const SettingsPanel: React.FC = () => {
                   cursor: isTestingAi ? 'default' : 'pointer',
                 }}
               >
-                <Sparkles size={12} />
+                <RefreshCw size={12} />
                 <span>{isTestingAi ? 'Testing...' : 'Test AI Backend'}</span>
               </button>
             </div>

@@ -4,15 +4,12 @@ import {
   ChevronDown,
   Folder,
   FolderOpen,
-  File,
-  FileCode,
-  FileText,
-  FileJson,
 } from 'lucide-react';
 import { FileNode } from '@shared/types/file';
 import { useFilesStore } from '../stores/filesStore';
 import { useTabsStore } from '../stores/tabsStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
+import { FileIcon } from '../components/FileIcon';
 
 interface FileTreeItemProps {
   node: FileNode;
@@ -71,20 +68,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
         <Folder size={14} color="#6366F1" />
       );
     }
-    const ext = node.extension?.toLowerCase();
-    if (ext === '.ts' || ext === '.tsx' || ext === '.js' || ext === '.jsx') {
-      return <FileCode size={14} color="#38BDF8" />;
-    }
-    if (ext === '.json') {
-      return <FileJson size={14} color="#FBBF24" />;
-    }
-    if (ext === '.md' || ext === '.txt') {
-      return <FileText size={14} color="#94A3B8" />;
-    }
-    if (ext === '.py') {
-      return <FileCode size={14} color="#4ADE80" />;
-    }
-    return <File size={14} color="#94A3B8" />;
+    return <FileIcon path={node.path} size={14} />;
   };
 
   const handleClick = (e: React.MouseEvent) => {
