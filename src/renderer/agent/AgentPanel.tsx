@@ -174,7 +174,7 @@ export const AgentPanel: React.FC = () => {
     }
   };
 
-  const isConnected = isHealthy && wsStatus === 'connected';
+
   const recentList = showAllRecent ? sessions : sessions.slice(0, 3);
   // The run timeline sits under the prompt that started the current task (not under clarification answers).
   const timelineAnchorId = [...messages]
@@ -243,16 +243,17 @@ export const AgentPanel: React.FC = () => {
                   letterSpacing: '-0.1px',
                 }}
               >
-                CoreMind AI
+                Agent
               </span>
-              <span
+              <div
+                title={`Backend: ${isHealthy ? 'Healthy' : 'Unhealthy'} | WS: ${wsStatus}`}
                 style={{
-                  width: '6px',
-                  height: '6px',
+                  width: '8px',
+                  height: '8px',
                   borderRadius: '50%',
-                  backgroundColor: isConnected ? '#10B981' : '#EF4444',
+                  backgroundColor: isHealthy && wsStatus === 'connected' ? '#10b981' : (wsStatus === 'connecting' ? '#f59e0b' : '#ef4444'),
+                  marginLeft: '4px'
                 }}
-                title={isConnected ? 'Connected to AI Backend' : 'Backend Disconnected'}
               />
             </div>
           )}
@@ -983,77 +984,77 @@ export const AgentPanel: React.FC = () => {
           >
             {messages.map((msg) => (
               <React.Fragment key={msg.id}>
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
-                  alignSelf: msg.role === 'user' ? 'flex-end' : 'stretch',
-                  maxWidth: msg.role === 'user' ? '88%' : '100%',
-                }}
-              >
-                {/* Header label */}
                 <div
                   style={{
-                    fontSize: '10.5px',
-                    fontWeight: 600,
-                    color: msg.role === 'user' ? '#10B981' : 'var(--text-secondary)',
                     display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
+                    flexDirection: 'column',
+                    gap: '6px',
+                    alignSelf: msg.role === 'user' ? 'flex-end' : 'stretch',
+                    maxWidth: msg.role === 'user' ? '88%' : '100%',
                   }}
                 >
-                  <span>{msg.role === 'user' ? 'You' : 'CoreMind AI'}</span>
-                  {msg.role === 'assistant' && (
-                    <button
-                      onClick={() => handleCopy(msg.content, msg.id)}
-                      title="Copy Response"
-                      style={{
-                        padding: '2px 4px',
-                        color: 'var(--text-muted)',
-                        fontSize: '10px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '3px',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-body)')}
-                      onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
-                    >
-                      {copiedId === msg.id ? (
-                        <>
-                          <Check size={11} color="#10B981" />
-                          <span style={{ color: '#10B981' }}>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={11} />
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
+                  {/* Header label */}
+                  <div
+                    style={{
+                      fontSize: '10.5px',
+                      fontWeight: 600,
+                      color: msg.role === 'user' ? '#10B981' : 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                    }}
+                  >
+                    <span>{msg.role === 'user' ? 'You' : 'CoreMind AI'}</span>
+                    {msg.role === 'assistant' && (
+                      <button
+                        onClick={() => handleCopy(msg.content, msg.id)}
+                        title="Copy Response"
+                        style={{
+                          padding: '2px 4px',
+                          color: 'var(--text-muted)',
+                          fontSize: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-body)')}
+                        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-muted)')}
+                      >
+                        {copiedId === msg.id ? (
+                          <>
+                            <Check size={11} color="#10B981" />
+                            <span style={{ color: '#10B981' }}>Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={11} />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    )}
+                  </div>
 
-                {/* Content Bubble */}
-                <div
-                  style={{
-                    backgroundColor: msg.role === 'user' ? 'var(--bg-raised)' : 'transparent',
-                    padding: msg.role === 'user' ? '10px 12px' : '4px 0',
-                    borderRadius: msg.role === 'user' ? '10px' : '0',
-                    color: 'var(--text-primary)',
-                    fontSize: '12.5px',
-                    lineHeight: '1.55',
-                    whiteSpace: msg.role === 'user' ? 'pre-wrap' : 'normal',
-                    wordBreak: 'break-word',
-                  }}
-                >
-                  {msg.role === 'user' ? msg.content : <Markdown content={msg.content} />}
+                  {/* Content Bubble */}
+                  <div
+                    style={{
+                      backgroundColor: msg.role === 'user' ? 'var(--bg-raised)' : 'transparent',
+                      padding: msg.role === 'user' ? '10px 12px' : '4px 0',
+                      borderRadius: msg.role === 'user' ? '10px' : '0',
+                      color: 'var(--text-primary)',
+                      fontSize: '12.5px',
+                      lineHeight: '1.55',
+                      whiteSpace: msg.role === 'user' ? 'pre-wrap' : 'normal',
+                      wordBreak: 'break-word',
+                    }}
+                  >
+                    {msg.role === 'user' ? msg.content : <Markdown content={msg.content} />}
+                  </div>
                 </div>
-              </div>
-              {msg.id === timelineAnchorId && <AgentTimeline />}
+                {msg.id === timelineAnchorId && <AgentTimeline />}
               </React.Fragment>
             ))}
 
