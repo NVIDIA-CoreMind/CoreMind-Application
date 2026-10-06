@@ -53,6 +53,25 @@ export function isMacClient(platform?: PlatformType): boolean {
 }
 
 /**
+ * Check if running environment is Windows.
+ */
+export function isWindowsClient(platform?: PlatformType): boolean {
+  if (platform) {
+    return platform === 'windows';
+  }
+  if (typeof process !== 'undefined' && process.platform) {
+    return process.platform === 'win32';
+  }
+  if (typeof navigator !== 'undefined') {
+    return (
+      navigator.platform?.toUpperCase().includes('WIN') ||
+      /Win/.test(navigator.userAgent || '')
+    );
+  }
+  return false;
+}
+
+/**
  * Get display string for a shortcut action according to platform.
  */
 export function getShortcutDisplay(action: ShortcutAction, isMac?: boolean): string {
