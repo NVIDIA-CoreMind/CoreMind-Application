@@ -193,3 +193,23 @@ button:hover {
   display: inline-block;
   font-weight: bold;
 }
+
+/* Chat History Panel */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.session-item:hover {
+  background-color: var(--bg-hover) !important;
+}
+
+.session-item:hover .session-item-actions {
+  opacity: 1 !important;
+}

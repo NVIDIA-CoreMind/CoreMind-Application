@@ -5,6 +5,7 @@ import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { coremindClient } from '../../services/coremind-client';
 import { ChatThread } from './ChatThread';
+import { ChatHistory } from './ChatHistory';
 import { useThemeStore } from '../../stores/themeStore';
 
 export const AIWorkspace: React.FC = () => {
@@ -20,6 +21,13 @@ export const AIWorkspace: React.FC = () => {
       return;
     }
 
+    // Capture the history BEFORE adding the new user message
+    // This prevents the user message from being sent both as `query` and inside `history`
+    const historyToSend = chatHistory.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+
     const userMessageId = Date.now().toString();
     addChatMessage({
       id: userMessageId,
@@ -34,12 +42,6 @@ export const AIWorkspace: React.FC = () => {
     setAbortController(abortController);
     
     try {
-      // Map frontend chatHistory to backend history format
-      const historyToSend = chatHistory.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
-
       const response = await coremindClient.chatWithTools(prompt, rootPath, historyToSend);
       
       if (abortController.signal.aborted) {
@@ -85,7 +87,8 @@ export const AIWorkspace: React.FC = () => {
       color: 'var(--text-primary)',
       fontFamily: 'var(--font-sans)',
       overflow: 'hidden',
-      transition: 'background-color 0.2s ease, color 0.2s ease'
+      transition: 'background-color 0.2s ease, color 0.2s ease',
+      position: 'relative',
     }}>
       <WorkspaceHeader />
       
@@ -117,6 +120,9 @@ export const AIWorkspace: React.FC = () => {
       }}>
         <PromptComposer onSubmit={handleStartMock} />
       </div>
+
+      {/* History overlay panel */}
+      <ChatHistory />
     </div>
   );
 };

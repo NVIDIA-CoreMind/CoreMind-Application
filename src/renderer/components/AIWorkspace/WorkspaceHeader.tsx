@@ -5,7 +5,7 @@ import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 
 export const WorkspaceHeader: React.FC = () => {
   const { toggleRightPanel } = useUiStore();
-  const { clear } = useAIWorkspaceStore();
+  const { newSession, toggleHistory, isHistoryOpen } = useAIWorkspaceStore();
 
   return (
     <div style={{
@@ -24,10 +24,18 @@ export const WorkspaceHeader: React.FC = () => {
         </span>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-        <button onClick={clear} title="New Task" style={btnStyle}>
+        <button onClick={newSession} title="New Task" style={btnStyle}>
           <Plus size={14} />
         </button>
-        <button title="History" style={btnStyle}>
+        <button
+          onClick={toggleHistory}
+          title="History"
+          style={{
+            ...btnStyle,
+            color: isHistoryOpen ? 'var(--accent)' : '#9CA3AF',
+            backgroundColor: isHistoryOpen ? 'var(--accent-bg)' : 'transparent',
+          }}
+        >
           <History size={13} />
         </button>
         <button title="More" style={btnStyle}>
