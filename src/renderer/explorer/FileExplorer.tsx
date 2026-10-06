@@ -9,6 +9,7 @@ import {
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useFilesStore } from '../stores/filesStore';
 import { FileTree } from './FileTree';
+import { CreateFileDialog } from '../components/CreateFileDialog';
 
 export const FileExplorer: React.FC = () => {
   const { rootPath, rootName, openFolderDialog, isLoading, error: workspaceError } = useWorkspaceStore();
@@ -21,11 +22,8 @@ export const FileExplorer: React.FC = () => {
     error: filesError,
   } = useFilesStore();
 
-  const [isCreatingFile, setIsCreatingFile] = useState(false);
-  const [newFileName, setNewFileName] = useState('');
-  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
-  const [newFolderName, setNewFolderName] = useState('');
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [isCreatingFileDialogOpen, setIsCreatingFileDialogOpen] = useState(false);
+  const [isCreatingFolderDialogOpen, setIsCreatingFolderDialogOpen] = useState(false);
 
   const handleOpenFolder = async () => {
     await openFolderDialog();
@@ -63,47 +61,7 @@ export const FileExplorer: React.FC = () => {
     return rootPath;
   };
 
-  const validateName = (name: string): boolean => {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setValidationError('Name cannot be empty.');
-      return false;
-    }
-    if (trimmed.includes('..')) {
-      setValidationError('Path traversal (..) is not allowed.');
-      return false;
-    }
-    setValidationError(null);
-    return true;
-  };
 
-  const handleCreateFile = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const name = newFileName.trim();
-    if (!validateName(name) || !rootPath) return;
-
-    const targetDir = getTargetDirectory();
-    const success = await createFile(targetDir, name, rootPath);
-    if (success) {
-      setIsCreatingFile(false);
-      setNewFileName('');
-      setValidationError(null);
-    }
-  };
-
-  const handleCreateFolder = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    const name = newFolderName.trim();
-    if (!validateName(name) || !rootPath) return;
-
-    const targetDir = getTargetDirectory();
-    const success = await createDirectory(targetDir, name, rootPath);
-    if (success) {
-      setIsCreatingFolder(false);
-      setNewFolderName('');
-      setValidationError(null);
-    }
-  };
 
   return (
     <div
@@ -139,9 +97,8 @@ export const FileExplorer: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
             <button
               onClick={() => {
-                setIsCreatingFile(true);
-                setIsCreatingFolder(false);
-                setValidationError(null);
+                setIsCreatingFileDialogOpen(true);
+                setIsCreatingFolderDialogOpen(false);
               }}
               title="New File"
               style={{
@@ -157,9 +114,8 @@ export const FileExplorer: React.FC = () => {
 
             <button
               onClick={() => {
-                setIsCreatingFolder(true);
-                setIsCreatingFile(false);
-                setValidationError(null);
+                setIsCreatingFolderDialogOpen(true);
+                setIsCreatingFileDialogOpen(false);
               }}
               title="New Folder"
               style={{
@@ -218,8 +174,8 @@ export const FileExplorer: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             <button
               onClick={() => {
-                setIsCreatingFile(true);
-                setIsCreatingFolder(false);
+                setIsCreatingFileDialogOpen(true);
+                setIsCreatingFolderDialogOpen(false);
               }}
               style={{
                 fontSize: '10px',
@@ -236,8 +192,8 @@ export const FileExplorer: React.FC = () => {
             </button>
             <button
               onClick={() => {
-                setIsCreatingFolder(true);
-                setIsCreatingFile(false);
+                setIsCreatingFolderDialogOpen(true);
+                setIsCreatingFileDialogOpen(false);
               }}
               style={{
                 fontSize: '10px',
@@ -259,7 +215,7 @@ export const FileExplorer: React.FC = () => {
       {/* Main Content Tree Area */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '4px 0' }}>
         {/* Error notification */}
-        {(workspaceError || filesError || validationError) && (
+        {(workspaceError || filesError) && (
           <div
             style={{
               margin: '6px 8px',
@@ -274,7 +230,7 @@ export const FileExplorer: React.FC = () => {
               gap: '4px',
             }}
           >
-            <span>{validationError || workspaceError || filesError}</span>
+            <span>{workspaceError || filesError}</span>
           </div>
         )}
 
@@ -317,147 +273,43 @@ export const FileExplorer: React.FC = () => {
           </div>
         ) : (
           <div>
-            {/* Inline New File Form */}
-            {isCreatingFile && (
-              <form
-                onSubmit={handleCreateFile}
-                style={{
-                  padding: '6px 10px',
-                  backgroundColor: 'var(--bg-surface)',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                }}
-              >
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                  File name:
-                </div>
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="e.g. Button.tsx or utils/helper.ts"
-                  value={newFileName}
-                  onChange={(e) => {
-                    setNewFileName(e.target.value);
-                    if (validationError) setValidationError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setIsCreatingFile(false);
-                      setNewFileName('');
-                      setValidationError(null);
-                    }
-                  }}
-                  style={{ width: '100%', height: '24px', fontSize: '11px' }}
-                />
-                <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', marginTop: '2px' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCreatingFile(false);
-                      setNewFileName('');
-                      setValidationError(null);
-                    }}
-                    style={{
-                      fontSize: '10px',
-                      padding: '2px 8px',
-                      borderRadius: '3px',
-                      color: 'var(--text-muted)',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      fontSize: '10px',
-                      padding: '2px 8px',
-                      borderRadius: '3px',
-                      backgroundColor: 'var(--accent)',
-                      color: '#ffffff',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Create
-                  </button>
-                </div>
-              </form>
-            )}
 
-            {/* Inline New Folder Form */}
-            {isCreatingFolder && (
-              <form
-                onSubmit={handleCreateFolder}
-                style={{
-                  padding: '6px 10px',
-                  backgroundColor: 'var(--bg-surface)',
-                  borderBottom: '1px solid var(--border-subtle)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '4px',
-                }}
-              >
-                <div style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                  Folder name:
-                </div>
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="e.g. components or lib/core"
-                  value={newFolderName}
-                  onChange={(e) => {
-                    setNewFolderName(e.target.value);
-                    if (validationError) setValidationError(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Escape') {
-                      setIsCreatingFolder(false);
-                      setNewFolderName('');
-                      setValidationError(null);
-                    }
-                  }}
-                  style={{ width: '100%', height: '24px', fontSize: '11px' }}
-                />
-                <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end', marginTop: '2px' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCreatingFolder(false);
-                      setNewFolderName('');
-                      setValidationError(null);
-                    }}
-                    style={{
-                      fontSize: '10px',
-                      padding: '2px 8px',
-                      borderRadius: '3px',
-                      color: 'var(--text-muted)',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    style={{
-                      fontSize: '10px',
-                      padding: '2px 8px',
-                      borderRadius: '3px',
-                      backgroundColor: 'var(--accent)',
-                      color: '#ffffff',
-                      fontWeight: 500,
-                    }}
-                  >
-                    Create
-                  </button>
-                </div>
-              </form>
-            )}
 
             {/* Filesystem Tree */}
             <FileTree nodes={fileTree} />
           </div>
         )}
       </div>
+    <CreateFileDialog
+        isOpen={isCreatingFileDialogOpen}
+        title="Create New File"
+        placeholder="e.g. main.py, package.json"
+        errorMessage={filesError}
+        onClose={() => setIsCreatingFileDialogOpen(false)}
+        onSubmit={async (filename) => {
+          if (!rootPath) return;
+          const targetDir = getTargetDirectory();
+          const success = await createFile(targetDir, filename, rootPath);
+          if (success) {
+            setIsCreatingFileDialogOpen(false);
+          }
+        }}
+      />
+      <CreateFileDialog
+        isOpen={isCreatingFolderDialogOpen}
+        title="Create New Folder"
+        placeholder="e.g. components or lib/core"
+        errorMessage={filesError}
+        onClose={() => setIsCreatingFolderDialogOpen(false)}
+        onSubmit={async (foldername) => {
+          if (!rootPath) return;
+          const targetDir = getTargetDirectory();
+          const success = await createDirectory(targetDir, foldername, rootPath);
+          if (success) {
+            setIsCreatingFolderDialogOpen(false);
+          }
+        }}
+      />
     </div>
   );
 };
