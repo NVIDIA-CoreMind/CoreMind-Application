@@ -32,6 +32,8 @@ export interface CoreMindFilesAPI {
   createDirectory: (dirPath: string, rootPath: string) => Promise<IpcResult<void>>;
   rename: (oldPath: string, newPath: string, rootPath: string) => Promise<IpcResult<void>>;
   delete: (targetPath: string, rootPath: string) => Promise<IpcResult<void>>;
+  copyItem: (srcPath: string, destPath: string, rootPath: string) => Promise<IpcResult<void>>;
+  revealInExplorer: (targetPath: string) => Promise<IpcResult<void>>;
   searchFiles: (query: string, rootPath: string) => Promise<IpcResult<FileSearchResult[]>>;
 }
 
@@ -134,6 +136,10 @@ const filesAPI: CoreMindFilesAPI = {
     ipcRenderer.invoke(IPC_CHANNELS.FILE_RENAME, { oldPath, newPath, rootPath }),
   delete: (targetPath, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.FILE_DELETE, { targetPath, rootPath }),
+  copyItem: (srcPath, destPath, rootPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.FILE_COPY, { srcPath, destPath, rootPath }),
+  revealInExplorer: (targetPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.FILE_REVEAL_IN_EXPLORER, { targetPath }),
   searchFiles: (query, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.FILE_SEARCH, { query, rootPath }),
 };
