@@ -8,7 +8,7 @@ import { SearchPanel } from '../search/SearchPanel';
 import { SettingsPanel } from '../settings/SettingsPanel';
 import { MonacoEditor } from '../editor/MonacoEditor';
 import { PtyTerminal } from '../terminal/PtyTerminal';
-import { AgentPanel } from '../agent/AgentPanel';
+import { AIWorkspace } from '../components/AIWorkspace/AIWorkspace';
 import { EmptyState } from '../components/EmptyState';
 import { StatusBar } from '../components/StatusBar';
 import { CommandPalette } from '../components/CommandPalette';
@@ -155,7 +155,7 @@ export const IDELayout: React.FC = () => {
                 backgroundColor: 'var(--bg-panel)',
               }}
             >
-              <AgentPanel />
+              <AIWorkspace />
             </div>
           </>
         )}
