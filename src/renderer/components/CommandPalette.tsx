@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Sparkles, FolderOpen, Save, X, Terminal, Search, Settings, RefreshCw, Eye } from 'lucide-react';
+import { FolderOpen, Save, X, Terminal, Search, Settings, RefreshCw, Eye } from 'lucide-react';
 import { useUiStore } from '../stores/uiStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTabsStore } from '../stores/tabsStore';
@@ -162,7 +162,7 @@ export const CommandPalette: React.FC = () => {
             borderBottom: '1px solid var(--border-color)',
           }}
         >
-          <Sparkles size={16} color="var(--accent)" />
+          <Search size={16} color="var(--accent)" />
           <input
             ref={inputRef}
             type="text"

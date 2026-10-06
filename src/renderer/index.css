@@ -169,3 +169,27 @@ button:hover {
   opacity: 0;
   transition: opacity 0.1s ease;
 }
+
+/* Chat Animations */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes typing {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+.typing-dot {
+  animation: typing 1.4s infinite ease-in-out;
+  display: inline-block;
+  font-weight: bold;
+}

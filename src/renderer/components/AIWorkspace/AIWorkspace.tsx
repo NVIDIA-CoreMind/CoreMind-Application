@@ -1,85 +1,107 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { WorkspaceHeader } from './WorkspaceHeader';
-import { ActivityTimeline } from './ActivityTimeline';
 import { PromptComposer } from './PromptComposer';
-import { RunningIndicator } from './RunningIndicator';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
-import { AIWorkspaceEvent } from '../../types/aiWorkspace';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { coremindClient } from '../../services/coremind-client';
+import { ChatThread } from './ChatThread';
+import { useThemeStore } from '../../stores/themeStore';
 
 export const AIWorkspace: React.FC = () => {
-  const { currentState, addEvent, setState, setAbortController } = useAIWorkspaceStore();
+  const { currentState, setState, setAbortController, addChatMessage, chatHistory } = useAIWorkspaceStore();
+  const { rootPath } = useWorkspaceStore();
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === 'dark';
 
-  const handleStartMock = (prompt: string) => {
+  const handleStartMock = useCallback(async (prompt: string) => {
     if (!prompt.trim()) return;
+    if (!rootPath) {
+      alert('Please open a workspace first to use the chat.');
+      return;
+    }
+
+    const userMessageId = Date.now().toString();
+    addChatMessage({
+      id: userMessageId,
+      role: 'user',
+      content: prompt,
+      timestamp: Date.now()
+    });
     
-    useAIWorkspaceStore.getState().clear();
     setState('running');
     
     const abortController = new AbortController();
     setAbortController(abortController);
     
-    const signal = abortController.signal;
-    
-    const events: { delay: number; event: AIWorkspaceEvent; isWaiting?: boolean; isComplete?: boolean; isError?: boolean }[] = [
-      { delay: 0, event: { id: '1', type: 'UserRequestEvent', content: prompt, timestamp: Date.now() } },
-      { delay: 100, event: { id: '2', type: 'AgentStartedEvent', timestamp: Date.now() + 100 } },
-      { delay: 300, event: { id: '3', type: 'FileExploredEvent', filesCount: 3, timestamp: Date.now() + 200 } },
-      { delay: 800, event: { id: '4', type: 'ThoughtEvent', summary: "Planning execution strategy for the request...", durationMs: 500, timestamp: Date.now() + 1200 } },
-      { delay: 1000, event: { id: '5', type: 'FileReadEvent', file: 'package.json', startLine: 1, endLine: 162, timestamp: Date.now() + 1300 } },
-      { delay: 1500, event: { id: '6', type: 'TerminalEvent', command: 'npm run dev', output: "rendering chunks...\nbuilt in 93ms", status: 'completed', timestamp: Date.now() + 3000 } },
-      { delay: 2000, event: { id: '7', type: 'QuestionEvent', question: 'Would you like me to also run the tests?', options: ['Yes', 'No'], timestamp: Date.now() + 3100 }, isWaiting: true },
-    ];
+    try {
+      // Map frontend chatHistory to backend history format
+      const historyToSend = chatHistory.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
 
-    const scheduleNext = (index: number) => {
-      if (signal.aborted || index >= events.length) return;
+      const response = await coremindClient.chatWithTools(prompt, rootPath, historyToSend);
       
-      const step = events[index];
-      const previousDelay = index > 0 ? events[index - 1].delay : 0;
-      const waitTime = step.delay - previousDelay;
-      
-      setTimeout(() => {
-        if (signal.aborted) return;
-        
-        addEvent(step.event);
-        
-        if (step.isWaiting) setState('waiting');
-        else if (step.isComplete) setState('completed');
-        else if (step.isError) setState('error');
-        
-        if (!step.isWaiting && !step.isComplete && !step.isError) {
-          scheduleNext(index + 1);
-        }
-      }, waitTime);
-    };
-    
-    scheduleNext(0);
-  };
+      if (abortController.signal.aborted) {
+        return;
+      }
+
+      if (response.status === 'ok') {
+        addChatMessage({
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: response.response || 'Success, but no response provided.',
+          timestamp: Date.now()
+        });
+        setState('completed');
+      } else {
+        addChatMessage({
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `**Error:** ${response.error || 'Something went wrong.'}`,
+          timestamp: Date.now()
+        });
+        setState('error');
+      }
+    } catch (error: any) {
+      if (!abortController.signal.aborted) {
+        addChatMessage({
+          id: Date.now().toString(),
+          role: 'assistant',
+          content: `**Connection Error:** ${error.message || 'Could not reach CoreMind backend.'}`,
+          timestamp: Date.now()
+        });
+        setState('error');
+      }
+    }
+  }, [rootPath, chatHistory, addChatMessage, setState, setAbortController]);
 
   return (
     <div style={{
       display: 'flex',
       flexDirection: 'column',
       height: '100%',
-      backgroundColor: '#0A0A0A', // Deep black
-      color: '#F9FAFB', // White text
+      backgroundColor: 'var(--bg-app)',
+      color: 'var(--text-primary)',
       fontFamily: 'var(--font-sans)',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      transition: 'background-color 0.2s ease, color 0.2s ease'
     }}>
       <WorkspaceHeader />
       
-      <div style={{ flex: 1, overflowY: 'auto', position: 'relative' }}>
-        <ActivityTimeline />
+      <div style={{ flex: 1, overflowY: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+        <ChatThread />
         
         {currentState === 'stopped' && (
           <div style={{
             margin: '16px 14px',
             padding: '12px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
+            border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
             borderRadius: '8px',
             fontSize: '12px',
-            color: '#9CA3AF'
+            color: 'var(--text-secondary)'
           }}>
-            <strong style={{ color: '#E5E7EB', display: 'block', marginBottom: '4px' }}>Stopped</strong>
+            <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>Stopped</strong>
             The AI operation was cancelled by the user.
           </div>
         )}
@@ -87,12 +109,12 @@ export const AIWorkspace: React.FC = () => {
       
       <div style={{
         padding: '0 14px 14px 14px',
-        backgroundColor: '#0A0A0A',
+        backgroundColor: 'var(--bg-app)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px'
+        gap: '8px',
+        transition: 'background-color 0.2s ease'
       }}>
-        {currentState === 'running' && <RunningIndicator />}
         <PromptComposer onSubmit={handleStartMock} />
       </div>
     </div>
