@@ -1,20 +1,79 @@
 import React, { useState } from 'react';
 import {
-  FilePlus,
-  FolderPlus,
-  RefreshCw,
   FolderOpen,
-  Plus,
   X,
   FileText,
   Folder,
 } from 'lucide-react';
+
+const VscNewFile = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+    <path d="M9 1H3v14h7v-1H4V2h4.586l3.414 3.414V8h1V4.586L9 1zM9.5 2.207L11.793 4.5H9.5V2.207z"/>
+    <path d="M15 11h-2V9h-1v2h-2v1h2v2h1v-2h2v-1z"/>
+  </svg>
+);
+
+const VscNewFolder = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+    <path d="M14 4.5V8h-1V5.5l-.5-.5h-5.793L5 3.293V3H1.5L1 3.5v10l.5.5H8v-1H2V4h2.707l1.5 1.707.5.5H13.5z"/>
+    <path d="M15 11h-2V9h-1v2h-2v1h2v2h1v-2h2v-1z"/>
+  </svg>
+);
+
+const VscRefresh = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+    <path fillRule="evenodd" clipRule="evenodd" d="M4.681 3H2V2h3.5l.5.5V6H5V4a5 5 0 1 0 4.53-.761l.302-.953A6 6 0 1 1 4.681 3z"/>
+  </svg>
+);
+
+const VscCollapseAll = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+    <path fillRule="evenodd" clipRule="evenodd" d="M9 3H3v6H2V2.5l.5-.5h6.5l.5.5V3zm2.5 3h-6l-.5.5v6.5l.5.5h6.5l.5-.5v-6.5l-.5-.5zM6 13V7h5v6H6zm-1-3h3v-1H5v1z"/>
+  </svg>
+);
+
+const VscEllipsis = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+    <path d="M3 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
+  </svg>
+);
+
+const VscChevronDown = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+    <path fillRule="evenodd" clipRule="evenodd" d="M7.976 10.072l4.357-4.357.62.618L8.284 11h-.618L3 6.333l.619-.618 4.357 4.357z"/>
+  </svg>
+);
+
+const IconButton = ({ onClick, title, children }: { onClick?: (e: any) => void, title?: string, children: React.ReactNode }) => {
+  const [hover, setHover] = useState(false);
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        padding: '3px',
+        borderRadius: '4px',
+        color: hover ? 'var(--text-primary)' : 'var(--text-secondary)',
+        background: hover ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+        border: 'none',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        transition: 'background 0.1s, color 0.1s',
+      }}
+    >
+      {children}
+    </button>
+  );
+};
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useFilesStore } from '../stores/filesStore';
 import { FileTree } from './FileTree';
 import { ExplorerContextMenu, ContextMenuTarget } from './ExplorerContextMenu';
 import { FileNode, FileStat } from '@shared/types/file';
-import { CreateFileDialog } from '../components/CreateFileDialog';
 
 export const FileExplorer: React.FC = () => {
   const { rootPath, rootName, openFolderDialog, isLoading, error: workspaceError } = useWorkspaceStore();
@@ -22,13 +81,8 @@ export const FileExplorer: React.FC = () => {
     fileTree,
     selectedPath,
     loadWorkspaceTree,
-    createFile,
-    createDirectory,
     error: filesError,
   } = useFilesStore();
-
-  const [isCreatingFileDialogOpen, setIsCreatingFileDialogOpen] = useState(false);
-  const [isCreatingFolderDialogOpen, setIsCreatingFolderDialogOpen] = useState(false);
 
   // Context menu state
   const [contextMenuTarget, setContextMenuTarget] = useState<ContextMenuTarget | null>(null);
@@ -130,96 +184,41 @@ export const FileExplorer: React.FC = () => {
       <div
         style={{
           height: '35px',
-          padding: '0 10px',
+          padding: '0 10px 0 20px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          borderBottom: '1px solid var(--border-color)',
           fontSize: '11px',
-          fontWeight: 600,
           color: 'var(--text-secondary)',
-          letterSpacing: '0.5px',
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-          EXPLORER
+          Explorer
         </span>
-
-        {rootPath && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <button
-              onClick={() => {
-                setIsCreatingFileDialogOpen(true);
-                setIsCreatingFolderDialogOpen(false);
-              }}
-              title="New File"
-              style={{
-                padding: '3px 5px',
-                borderRadius: '3px',
-                color: 'var(--text-secondary)',
-                fontSize: '11px',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <FilePlus size={13} />
-            </button>
-
-            <button
-              onClick={() => {
-                setIsCreatingFolderDialogOpen(true);
-                setIsCreatingFileDialogOpen(false);
-              }}
-              title="New Folder"
-              style={{
-                padding: '3px 5px',
-                borderRadius: '3px',
-                color: 'var(--text-secondary)',
-                fontSize: '11px',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <FolderPlus size={13} />
-            </button>
-
-            <button
-              onClick={handleRefresh}
-              title="Refresh Explorer"
-              style={{
-                padding: '3px',
-                borderRadius: '3px',
-                color: 'var(--text-secondary)',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-              }}
-            >
-              <RefreshCw size={12} />
-            </button>
-          </div>
-        )}
+        <IconButton title="Views and More Actions...">
+          <VscEllipsis />
+        </IconButton>
       </div>
 
       {/* Explorer Workspace Sub-header */}
       {rootPath && (
         <div
           style={{
-            padding: '6px 10px',
+            padding: '2px 6px 2px 2px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: '1px solid var(--border-subtle)',
-            backgroundColor: 'var(--bg-surface)',
+            cursor: 'pointer',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflow: 'hidden' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', overflow: 'hidden' }}>
+            <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}>
+              <VscChevronDown />
+            </span>
             <span
               style={{
                 fontSize: '11px',
-                fontWeight: 600,
+                fontWeight: 700,
                 color: 'var(--text-primary)',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -230,51 +229,48 @@ export const FileExplorer: React.FC = () => {
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <button
-              onClick={() => {
-                setIsCreatingFileDialogOpen(true);
-                setIsCreatingFolderDialogOpen(false);
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                const targetDir = getTargetDirectory();
+                setCreatingInPath({ path: targetDir, type: 'file' });
               }}
-              style={{
-                fontSize: '10px',
-                padding: '2px 6px',
-                borderRadius: '3px',
-                backgroundColor: 'var(--bg-active)',
-                color: 'var(--text-secondary)',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px',
-              }}
-              title="Create new file in workspace"
+              title="New File..."
             >
-              <Plus size={10} />
-              <span>File</span>
-            </button>
-            <button
-              onClick={() => {
-                setIsCreatingFolderDialogOpen(true);
-                setIsCreatingFileDialogOpen(false);
+              <VscNewFile />
+            </IconButton>
+
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                const targetDir = getTargetDirectory();
+                setCreatingInPath({ path: targetDir, type: 'folder' });
               }}
-              style={{
-                fontSize: '10px',
-                padding: '2px 6px',
-                borderRadius: '3px',
-                backgroundColor: 'var(--bg-active)',
-                color: 'var(--text-secondary)',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px',
-              }}
-              title="Create new folder in workspace"
+              title="New Folder..."
             >
-              <Plus size={10} />
-              <span>Folder</span>
-            </button>
+              <VscNewFolder />
+            </IconButton>
+
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                handleRefresh();
+              }}
+              title="Refresh Explorer"
+            >
+              <VscRefresh />
+            </IconButton>
+
+            <IconButton
+              onClick={(e) => {
+                e.stopPropagation();
+                // Optional: Implement collapse all in tree logic
+              }}
+              title="Collapse Folders in Explorer"
+            >
+              <VscCollapseAll />
+            </IconButton>
           </div>
         </div>
       )}
@@ -506,36 +502,6 @@ export const FileExplorer: React.FC = () => {
         </div>
       )}
 
-      <CreateFileDialog
-        isOpen={isCreatingFileDialogOpen}
-        title="Create New File"
-        placeholder="e.g. main.py, package.json"
-        errorMessage={filesError}
-        onClose={() => setIsCreatingFileDialogOpen(false)}
-        onSubmit={async (filename) => {
-          if (!rootPath) return;
-          const targetDir = getTargetDirectory();
-          const success = await createFile(targetDir, filename, rootPath);
-          if (success) {
-            setIsCreatingFileDialogOpen(false);
-          }
-        }}
-      />
-      <CreateFileDialog
-        isOpen={isCreatingFolderDialogOpen}
-        title="Create New Folder"
-        placeholder="e.g. components or lib/core"
-        errorMessage={filesError}
-        onClose={() => setIsCreatingFolderDialogOpen(false)}
-        onSubmit={async (foldername) => {
-          if (!rootPath) return;
-          const targetDir = getTargetDirectory();
-          const success = await createDirectory(targetDir, foldername, rootPath);
-          if (success) {
-            setIsCreatingFolderDialogOpen(false);
-          }
-        }}
-      />
     </div>
   );
 };
