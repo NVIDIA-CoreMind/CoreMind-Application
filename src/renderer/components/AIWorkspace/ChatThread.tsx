@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import ReactMarkdown from 'react-markdown';
-import { User } from 'lucide-react';
+
 import { useThemeStore } from '../../stores/themeStore';
 
 export const ChatThread: React.FC = () => {
@@ -26,23 +26,7 @@ export const ChatThread: React.FC = () => {
         padding: '24px',
         color: 'var(--text-secondary)'
       }}>
-        <div style={{
-          width: '64px',
-          height: '64px',
-          borderRadius: '32px',
-          background: isDark ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05))' : 'linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(16, 185, 129, 0.1))',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '20px',
-          boxShadow: isDark ? '0 8px 32px rgba(16, 185, 129, 0.1)' : '0 8px 32px rgba(16, 185, 129, 0.2)',
-          border: `1px solid ${isDark ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.3)'}`,
-          color: 'var(--accent)',
-          fontSize: '24px',
-          fontWeight: 'bold'
-        }}>
-          AI
-        </div>
+
         <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
           Welcome to CoreMind Chat
         </h2>
@@ -78,25 +62,6 @@ export const ChatThread: React.FC = () => {
               maxWidth: '90%',
               flexDirection: isUser ? 'row-reverse' : 'row'
             }}>
-              {/* Avatar */}
-              <div style={{
-                width: '28px',
-                height: '28px',
-                borderRadius: '50%',
-                flexShrink: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: isUser ? (isDark ? '#262626' : '#e5e7eb') : 'var(--accent-bg)',
-                border: isUser ? `1px solid var(--border-color)` : `1px solid rgba(16, 185, 129, 0.2)`,
-                color: isUser ? 'var(--text-primary)' : 'var(--accent)',
-                marginTop: '4px',
-                fontSize: isUser ? 'inherit' : '12px',
-                fontWeight: isUser ? 'normal' : 'bold'
-              }}>
-                {isUser ? <User size={14} /> : 'AI'}
-              </div>
-              
               {/* Message Bubble */}
               <div style={{
                 padding: '12px 16px',
@@ -136,23 +101,6 @@ export const ChatThread: React.FC = () => {
           maxWidth: '90%'
         }}>
           <div style={{
-            width: '28px',
-            height: '28px',
-            borderRadius: '50%',
-            flexShrink: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'var(--accent-bg)',
-            border: `1px solid rgba(16, 185, 129, 0.2)`,
-            color: 'var(--accent)',
-            marginTop: '4px',
-            fontSize: '12px',
-            fontWeight: 'bold'
-          }}>
-            <div className="animate-pulse">AI</div>
-          </div>
-          <div style={{
             padding: '12px 16px',
             borderRadius: '16px',
             borderTopLeftRadius: '4px',
@@ -161,13 +109,9 @@ export const ChatThread: React.FC = () => {
             color: 'var(--text-secondary)',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
             fontSize: '13px'
           }}>
-            <div className="typing-dot" style={{ animationDelay: '0s' }}>.</div>
-            <div className="typing-dot" style={{ animationDelay: '0.2s' }}>.</div>
-            <div className="typing-dot" style={{ animationDelay: '0.4s' }}>.</div>
-            working...
+            working....
           </div>
         </div>
       )}
