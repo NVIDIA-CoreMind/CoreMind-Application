@@ -16,6 +16,7 @@ interface UiStore {
 
   isCommandPaletteOpen: boolean;
   isQuickOpenOpen: boolean;
+  isGlobalPromptOpen: boolean;
 
   setActiveSidebarTab: (tab: SidebarTab) => void;
   toggleSidebar: () => void;
@@ -29,6 +30,7 @@ interface UiStore {
 
   setCommandPaletteOpen: (open: boolean) => void;
   setQuickOpenOpen: (open: boolean) => void;
+  setGlobalPromptOpen: (open: boolean) => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -44,6 +46,7 @@ export const useUiStore = create<UiStore>((set) => ({
 
   isCommandPaletteOpen: false,
   isQuickOpenOpen: false,
+  isGlobalPromptOpen: false,
 
   setActiveSidebarTab: (tab) => {
     set((state) => {
@@ -103,5 +106,9 @@ export const useUiStore = create<UiStore>((set) => ({
 
   setQuickOpenOpen: (open) => {
     set({ isQuickOpenOpen: open });
+  },
+
+  setGlobalPromptOpen: (open) => {
+    set({ isGlobalPromptOpen: open });
   },
 }));
