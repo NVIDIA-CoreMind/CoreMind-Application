@@ -1,12 +1,21 @@
 import { create } from 'zustand';
 import { AIWorkspaceEvent, AIRequestStatus } from '../types/aiWorkspace';
 
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  timestamp: number;
+}
+
 interface AIWorkspaceStore {
   events: AIWorkspaceEvent[];
+  chatHistory: ChatMessage[];
   currentState: AIRequestStatus;
   selectedModel: string;
   abortController: AbortController | null;
   addEvent: (event: AIWorkspaceEvent) => void;
+  addChatMessage: (msg: ChatMessage) => void;
   updateEvent: (id: string, updates: Partial<AIWorkspaceEvent>) => void;
   setState: (state: AIRequestStatus) => void;
   setSelectedModel: (model: string) => void;
@@ -18,11 +27,14 @@ interface AIWorkspaceStore {
 
 export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => ({
   events: [],
+  chatHistory: [],
   currentState: 'idle',
   selectedModel: 'Nemotron-3-Ultra',
   abortController: null,
   
   addEvent: (event) => set((state) => ({ events: [...state.events, event] })),
+  
+  addChatMessage: (msg) => set((state) => ({ chatHistory: [...state.chatHistory, msg] })),
   
   updateEvent: (id, updates) =>
     set((state) => ({
@@ -40,14 +52,13 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => ({
     if (abortController) {
       abortController.abort();
     }
-    set({ events: [], currentState: 'idle', abortController: null });
+    set({ events: [], chatHistory: [], currentState: 'idle', abortController: null });
   },
   
   submitAnswer: (answer) => {
     const state = get();
     if (state.currentState === 'waiting') {
       state.setState('running');
-      // In a real implementation, this would send an IPC message to the main process
       console.log('Submitted answer:', answer);
     }
   },

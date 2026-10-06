@@ -1,10 +1,13 @@
 import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import { Plus, ArrowRight, Square, ChevronDown } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
+import { useThemeStore } from '../../stores/themeStore';
 
 export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = ({ onSubmit }) => {
   const [input, setInput] = useState('');
   const { currentState, selectedModel, cancelRequest } = useAIWorkspaceStore();
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === 'dark';
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const isRunning = currentState === 'running' || currentState === 'waiting';
@@ -32,15 +35,15 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
 
   return (
     <div style={{
-      backgroundColor: '#1C1C1C',
-      border: '1px solid rgba(255, 255, 255, 0.1)',
+      backgroundColor: isDark ? '#1C1C1C' : '#ffffff',
+      border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
       borderRadius: '12px',
       padding: '10px 12px',
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
-      transition: 'border-color 0.2s',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)'
+      transition: 'border-color 0.2s, background-color 0.2s',
+      boxShadow: isDark ? '0 4px 12px rgba(0, 0, 0, 0.2)' : '0 4px 12px rgba(0, 0, 0, 0.05)'
     }}>
       <textarea
         ref={textareaRef}
@@ -55,7 +58,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
           background: 'transparent',
           border: 'none',
           outline: 'none',
-          color: '#E5E7EB',
+          color: 'var(--text-primary)',
           fontSize: '13px',
           fontFamily: 'inherit',
           padding: 0,
@@ -82,10 +85,10 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
             gap: '4px',
             padding: '4px 6px',
             borderRadius: '6px',
-            color: '#D1D5DB'
+            color: 'var(--text-secondary)'
           }} title="Select Model">
             <span>{selectedModel}</span>
-            <ChevronDown size={12} color="#9CA3AF" />
+            <ChevronDown size={12} color="var(--text-muted)" />
           </button>
         </div>
         
@@ -114,8 +117,8 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
               title="Send (Enter)"
               style={{
                 ...primaryBtnStyle,
-                backgroundColor: input.trim() ? '#E5E7EB' : 'rgba(255, 255, 255, 0.1)',
-                color: input.trim() ? '#111827' : '#6B7280',
+                backgroundColor: input.trim() ? 'var(--accent)' : (isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)'),
+                color: input.trim() ? '#FFFFFF' : 'var(--text-muted)',
                 cursor: input.trim() ? 'pointer' : 'default',
               }}
             >
@@ -131,14 +134,14 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
 const actionBtnStyle = {
   background: 'transparent',
   border: 'none',
-  color: '#9CA3AF',
+  color: 'var(--text-secondary)',
   cursor: 'pointer',
   padding: '4px',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
   borderRadius: '4px',
-  transition: 'background-color 0.1s'
+  transition: 'background-color 0.1s, color 0.1s'
 };
 
 const primaryBtnStyle = {

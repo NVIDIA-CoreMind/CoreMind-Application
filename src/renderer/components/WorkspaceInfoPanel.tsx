@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Cpu, Layers, ShieldCheck, X } from 'lucide-react';
+import { Cpu, Layers, ShieldCheck, X } from 'lucide-react';
 import { useUiStore } from '../stores/uiStore';
 
 export const WorkspaceInfoPanel: React.FC = () => {
@@ -33,7 +33,7 @@ export const WorkspaceInfoPanel: React.FC = () => {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Sparkles size={13} color="var(--accent)" />
+          <Cpu size={13} color="var(--accent)" />
           <span>CoreMind</span>
         </div>
 
