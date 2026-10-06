@@ -1,7 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import ReactMarkdown from 'react-markdown';
-
 import { useThemeStore } from '../../stores/themeStore';
 
 export const ChatThread: React.FC = () => {
@@ -26,7 +25,6 @@ export const ChatThread: React.FC = () => {
         padding: '24px',
         color: 'var(--text-secondary)'
       }}>
-
         <h2 style={{ fontSize: '18px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '8px' }}>
           Welcome to CoreMind Chat
         </h2>
