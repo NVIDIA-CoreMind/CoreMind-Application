@@ -2,8 +2,6 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   FileText,
   FolderOpen,
-  FolderPlus,
-  FilePlus,
   Edit2,
   Trash2,
   Copy,
@@ -11,10 +9,15 @@ import {
   Clipboard,
   ExternalLink,
   Info,
-  RefreshCw,
   Folder,
   Columns,
 } from 'lucide-react';
+import {
+  NewFileCodicon,
+  NewFolderCodicon,
+  RefreshCodicon,
+  CollapseAllCodicon,
+} from '../components/Codicons';
 import { FileNode } from '@shared/types/file';
 import { useFilesStore } from '../stores/filesStore';
 import { useTabsStore } from '../stores/tabsStore';
@@ -64,6 +67,7 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
     deleteItem,
     loadWorkspaceTree,
     toggleFolder,
+    collapseAll,
     revealInExplorer,
     expandedPaths,
   } = useFilesStore();
@@ -278,7 +282,7 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
       { separator: true },
       {
         label: 'New File',
-        icon: <FilePlus size={13} />,
+        icon: <NewFileCodicon size={14} />,
         action: () => {
           onClose();
           onStartCreateFile?.(getParentDirectory());
@@ -286,7 +290,7 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
       },
       {
         label: 'New Folder',
-        icon: <FolderPlus size={13} />,
+        icon: <NewFolderCodicon size={14} />,
         action: () => {
           onClose();
           onStartCreateFolder?.(getParentDirectory());
@@ -294,7 +298,7 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
       },
       {
         label: 'Refresh',
-        icon: <RefreshCw size={13} />,
+        icon: <RefreshCodicon size={14} />,
         action: handleRefresh,
       },
       { separator: true },
@@ -321,7 +325,7 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
       { separator: true },
       {
         label: 'New File',
-        icon: <FilePlus size={13} />,
+        icon: <NewFileCodicon size={14} />,
         action: () => {
           onClose();
           onStartCreateFile?.(node.path);
@@ -329,7 +333,7 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
       },
       {
         label: 'New Folder',
-        icon: <FolderPlus size={13} />,
+        icon: <NewFolderCodicon size={14} />,
         action: () => {
           onClose();
           onStartCreateFolder?.(node.path);
@@ -387,7 +391,7 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
       { separator: true },
       {
         label: 'Refresh',
-        icon: <RefreshCw size={13} />,
+        icon: <RefreshCodicon size={14} />,
         action: handleRefresh,
       },
       { separator: true },
@@ -405,7 +409,7 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
     items.push(
       {
         label: 'New File',
-        icon: <FilePlus size={13} />,
+        icon: <NewFileCodicon size={14} />,
         action: () => {
           onClose();
           onStartCreateFile?.(rootPath || '');
@@ -413,7 +417,7 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
       },
       {
         label: 'New Folder',
-        icon: <FolderPlus size={13} />,
+        icon: <NewFolderCodicon size={14} />,
         action: () => {
           onClose();
           onStartCreateFolder?.(rootPath || '');
@@ -429,8 +433,16 @@ export const ExplorerContextMenu: React.FC<ExplorerContextMenuProps> = ({
       { separator: true },
       {
         label: 'Refresh',
-        icon: <RefreshCw size={13} />,
+        icon: <RefreshCodicon size={14} />,
         action: handleRefresh,
+      },
+      {
+        label: 'Collapse Folders in Explorer',
+        icon: <CollapseAllCodicon size={14} />,
+        action: () => {
+          collapseAll();
+          onClose();
+        },
       },
       {
         label: isMac ? 'Reveal in Finder' : 'Reveal in File Explorer',
