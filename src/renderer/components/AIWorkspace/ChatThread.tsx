@@ -41,7 +41,10 @@ function renderWithToggles(rawText: string) {
           onClick={(e) => {
             e.preventDefault();
             if (href) {
-              if ((window as any).electronAPI?.openExternalUrl) {
+              const api = window.coreMindAPI;
+              if (api?.openExternalUrl) {
+                api.openExternalUrl(href);
+              } else if ((window as any).electronAPI?.openExternalUrl) {
                 (window as any).electronAPI.openExternalUrl(href);
               } else {
                 window.open(href, '_blank');
@@ -49,23 +52,25 @@ function renderWithToggles(rawText: string) {
             }
           }}
           style={{
-            color: isLocal ? '#38BDF8' : '#60A5FA',
-            backgroundColor: isLocal ? 'rgba(56, 189, 248, 0.15)' : 'transparent',
-            padding: isLocal ? '2px 8px' : '0',
-            borderRadius: isLocal ? '4px' : '0',
-            border: isLocal ? '1px solid rgba(56, 189, 248, 0.3)' : 'none',
+            color: isLocal ? '#0284C7' : '#2563EB',
+            backgroundColor: isLocal ? '#F0F9FF' : 'transparent',
+            padding: isLocal ? '3px 8px' : '0',
+            borderRadius: isLocal ? '6px' : '0',
+            border: isLocal ? '1px solid #BAE6FD' : 'none',
             textDecoration: isLocal ? 'none' : 'underline',
             fontWeight: 600,
             cursor: 'pointer',
             display: isLocal ? 'inline-flex' : 'inline',
             alignItems: 'center',
-            gap: '4px',
+            gap: '5px',
             margin: isLocal ? '2px 0' : '0',
+            fontSize: isLocal ? '12px' : 'inherit',
           }}
           {...props}
         >
           {isLocal && <span>🌐</span>}
           {children}
+          {isLocal && <span style={{ fontSize: '11px', opacity: 0.8 }}>↗</span>}
         </a>
       );
     },
@@ -355,8 +360,12 @@ export const ChatThread: React.FC = () => {
                   <UserMessageBubble msgId={msg.id} content={msg.content} />
                 ) : (
                   <div>
-                    {msg.filesChanged && msg.filesChanged.length > 0 && (
-                      <FileChangesCard files={msg.filesChanged} />
+                    {((msg.filesChanged && msg.filesChanged.length > 0) || msg.localUrl) && (
+                      <FileChangesCard
+                        files={msg.filesChanged || []}
+                        localUrl={msg.localUrl}
+                        terminalCommand={msg.terminalCommand}
+                      />
                     )}
                     <StreamingMessage 
                       msgId={msg.id} 

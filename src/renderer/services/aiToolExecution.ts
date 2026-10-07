@@ -1,5 +1,6 @@
 import { useTabsStore } from '../stores/tabsStore';
 import { useFilesStore } from '../stores/filesStore';
+import { useTerminalStore } from '../stores/terminalStore';
 
 export interface ParsedToolCall {
   tool: string;
@@ -143,6 +144,22 @@ export async function executeToolCalls(toolCalls: ParsedToolCall[], rootPath: st
           }));
         } catch (err) {
           console.error('[AI Tool Execution] Failed to write/open file:', err);
+        }
+      }
+    } else if (
+      tc.command ||
+      toolLower.includes('terminal') ||
+      toolLower.includes('command') ||
+      toolLower.includes('bash') ||
+      toolLower.includes('exec') ||
+      toolLower.includes('run')
+    ) {
+      const cmdToRun = tc.command || tc.content;
+      if (cmdToRun && typeof cmdToRun === 'string') {
+        try {
+          await useTerminalStore.getState().runCommand(cmdToRun);
+        } catch (err) {
+          console.error('[AI Tool Execution] Failed to run command in terminal:', err);
         }
       }
     }

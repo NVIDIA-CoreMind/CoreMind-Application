@@ -28,9 +28,9 @@ export const FileActivity: React.FC<{ event: FileExploredEvent | FileReadEvent |
     content = (
       <div 
         onClick={() => setExpanded(!expanded)}
-        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#9CA3AF', cursor: 'pointer' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--text-secondary, #64748B)', cursor: 'pointer' }}
       >
-        <span>Explored <strong style={{ color: '#E5E7EB' }}>{event.filesCount} file{event.filesCount > 1 ? 's' : ''}</strong></span>
+        <span>Explored <strong style={{ color: 'var(--text-primary, #0F172A)' }}>{event.filesCount} file{event.filesCount > 1 ? 's' : ''}</strong></span>
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
       </div>
     );
@@ -38,12 +38,12 @@ export const FileActivity: React.FC<{ event: FileExploredEvent | FileReadEvent |
     content = (
       <div 
         onClick={() => handleOpenFile(event.file)}
-        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: '#9CA3AF', cursor: 'pointer' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--text-secondary, #64748B)', cursor: 'pointer' }}
       >
         <span>Analyzed</span>
         <FileIcon path={event.file.split('/').pop() || ''} size={14} />
-        <strong style={{ color: '#E5E7EB' }}>{event.file.split('/').pop()}</strong>
-        {event.startLine && <span style={{ color: '#9CA3AF' }}>#L{event.startLine}-{event.endLine}</span>}
+        <strong style={{ color: 'var(--text-primary, #0F172A)' }}>{event.file.split('/').pop()}</strong>
+        {event.startLine && <span style={{ color: 'var(--text-muted, #94A3B8)' }}>#L{event.startLine}-{event.endLine}</span>}
       </div>
     );
   } else {
@@ -57,25 +57,26 @@ export const FileActivity: React.FC<{ event: FileExploredEvent | FileReadEvent |
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          fontSize: '12px',
-          color: '#9CA3AF',
+          fontSize: '12.5px',
+          color: 'var(--text-secondary, #64748B)',
           cursor: 'pointer',
         }}
       >
-        <span style={{ color: isCreated ? '#34D399' : '#60A5FA', fontWeight: 500 }}>
+        <span style={{ color: isCreated ? '#059669' : '#2563EB', fontWeight: 600 }}>
           {isCreated ? 'Created' : 'Modified'}
         </span>
         <FileIcon path={event.file.split('/').pop() || ''} size={14} />
-        <strong style={{ color: '#E5E7EB' }}>{event.file.split('/').pop()}</strong>
+        <strong style={{ color: 'var(--text-primary, #0F172A)' }}>{event.file.split('/').pop()}</strong>
         {lines !== undefined && lines > 0 && (
           <span
             style={{
               fontSize: '11px',
               fontFamily: 'monospace',
-              padding: '1px 5px',
+              padding: '1px 6px',
               borderRadius: '4px',
-              backgroundColor: 'rgba(255, 255, 255, 0.08)',
-              color: '#D1D5DB',
+              backgroundColor: '#F1F5F9',
+              border: '1px solid #E2E8F0',
+              color: '#475569',
             }}
           >
             {lines} {lines === 1 ? 'line' : 'lines'}

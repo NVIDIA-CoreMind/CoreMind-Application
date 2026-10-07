@@ -15,6 +15,8 @@ export interface ChatMessage {
   content: string;
   timestamp: number;
   filesChanged?: FileChangeInfo[];
+  localUrl?: string;
+  terminalCommand?: string;
 }
 
 export interface ChatSession {
