@@ -360,11 +360,9 @@ export const ChatThread: React.FC = () => {
                   <UserMessageBubble msgId={msg.id} content={msg.content} />
                 ) : (
                   <div>
-                    {((msg.filesChanged && msg.filesChanged.length > 0) || msg.localUrl) && (
+                    {msg.filesChanged && msg.filesChanged.length > 0 && (
                       <FileChangesCard
-                        files={msg.filesChanged || []}
-                        localUrl={msg.localUrl}
-                        terminalCommand={msg.terminalCommand}
+                        files={msg.filesChanged}
                       />
                     )}
                     <StreamingMessage 
