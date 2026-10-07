@@ -18,7 +18,6 @@
     "test:watch": "vitest",
     "postinstall": "node -e \"if (process.platform === 'darwin') { try { require('child_process').execSync('chmod +x node_modules/node-pty/prebuilds/*/*helper* 2>/dev/null'); } catch(e) {} }\""
   },
-
   "dependencies": {
     "@codingame/monaco-vscode-api": "^37.3.0",
     "@codingame/monaco-vscode-configuration-service-override": "^37.3.0",
@@ -80,16 +79,20 @@
     "@vitejs/plugin-react": "^4.3.4",
     "cross-env": "^10.1.0",
     "electron": "^34.3.0",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.15.3",
     "eslint": "^8.57.1",
     "typescript": "^5.7.3",
     "vite": "^6.2.1",
     "vite-plugin-electron": "^0.29.0",
     "vite-plugin-electron-renderer": "^0.14.6",
-    "vitest": "^3.0.7"
+    "vitest": "^4.1.11"
   },
   "overrides": {
-    "http-cache-semantics": "^4.3.0"
+    "http-cache-semantics": "^4.3.0",
+    "tar": "^7.5.22",
+    "builder-util-runtime": "^9.7.0",
+    "tinypool": "^2.2.0",
+    "source-map-js": "^1.2.2"
   },
   "build": {
     "appId": "com.coremind.ide",
