@@ -12,6 +12,7 @@ import { ChatHistory } from './ChatHistory';
 import { useThemeStore } from '../../stores/themeStore';
 
 import { extractToolCalls, executeToolCalls } from '../../services/aiToolExecution';
+import { useTerminalStore } from '../../stores/terminalStore';
 
 export const AIWorkspace: React.FC = () => {
   const { currentState, setState, setAbortController, addChatMessage, chatHistory } = useAIWorkspaceStore();
@@ -241,12 +242,44 @@ export const AIWorkspace: React.FC = () => {
           }
         }
 
+        // Detect if web files are present
+        const hasWebFiles = filesChangedDetails.some(
+          (f) =>
+            f.file.endsWith('index.html') ||
+            f.file.endsWith('index.htm') ||
+            f.file === 'index.html' ||
+            f.file.endsWith('.html')
+        );
+
+        const isWin = window.coreMindAPI?.platform
+          ? window.coreMindAPI.platform.isWindows
+          : false;
+        const autoTerminalCmd = isWin
+          ? 'python -m http.server 3000'
+          : 'python3 -m http.server 3000';
+
+        // Auto-run local web server in terminal if web files were created/modified
+        if (hasWebFiles) {
+          try {
+            await useTerminalStore.getState().runCommand(autoTerminalCmd);
+          } catch (tErr) {
+            console.warn('[AI Workspace] Auto-running terminal server failed:', tErr);
+          }
+        }
+
+        const detectedUrl =
+          response.local_url ||
+          (rawResponse.match(/https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i)?.[0]) ||
+          (hasWebFiles ? 'http://localhost:3000' : undefined);
+
         addChatMessage({
           id: Date.now().toString(),
           role: 'assistant',
           content: formattedText,
           timestamp: Date.now(),
           filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
+          localUrl: detectedUrl,
+          terminalCommand: hasWebFiles ? autoTerminalCmd : undefined,
         });
         setState('completed');
       } else {

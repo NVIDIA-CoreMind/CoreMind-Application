@@ -17,12 +17,12 @@ export const FinalResult: React.FC<{ event: CompletedEvent }> = ({ event }) => {
       
       <div style={{
         fontSize: '13px',
-        color: '#E5E7EB',
+        color: 'var(--text-primary, #0F172A)',
         lineHeight: '1.6'
       }}>
         <p>{event.summary}</p>
         {event.filesChanged.length > 0 && (
-          <ul style={{ paddingLeft: '20px', marginTop: '8px', color: '#9CA3AF' }}>
+          <ul style={{ paddingLeft: '20px', marginTop: '8px', color: 'var(--text-secondary, #64748B)' }}>
             {event.filesChanged.map(f => (
               <li key={f} style={{ fontFamily: 'var(--font-mono)', fontSize: '12px' }}>{f}</li>
             ))}
