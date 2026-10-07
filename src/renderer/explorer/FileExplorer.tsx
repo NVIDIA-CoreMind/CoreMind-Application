@@ -1,74 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   FolderOpen,
   X,
   FileText,
   Folder,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
-
-const VscNewFile = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-    <path d="M9 1H3v14h7v-1H4V2h4.586l3.414 3.414V8h1V4.586L9 1zM9.5 2.207L11.793 4.5H9.5V2.207z"/>
-    <path d="M15 11h-2V9h-1v2h-2v1h2v2h1v-2h2v-1z"/>
-  </svg>
-);
-
-const VscNewFolder = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-    <path d="M14 4.5V8h-1V5.5l-.5-.5h-5.793L5 3.293V3H1.5L1 3.5v10l.5.5H8v-1H2V4h2.707l1.5 1.707.5.5H13.5z"/>
-    <path d="M15 11h-2V9h-1v2h-2v1h2v2h1v-2h2v-1z"/>
-  </svg>
-);
-
-const VscRefresh = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-    <path fillRule="evenodd" clipRule="evenodd" d="M4.681 3H2V2h3.5l.5.5V6H5V4a5 5 0 1 0 4.53-.761l.302-.953A6 6 0 1 1 4.681 3z"/>
-  </svg>
-);
-
-const VscCollapseAll = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-    <path fillRule="evenodd" clipRule="evenodd" d="M9 3H3v6H2V2.5l.5-.5h6.5l.5.5V3zm2.5 3h-6l-.5.5v6.5l.5.5h6.5l.5-.5v-6.5l-.5-.5zM6 13V7h5v6H6zm-1-3h3v-1H5v1z"/>
-  </svg>
-);
-
-const VscEllipsis = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-    <path d="M3 7a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm5 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z" />
-  </svg>
-);
-
-const VscChevronDown = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
-    <path fillRule="evenodd" clipRule="evenodd" d="M7.976 10.072l4.357-4.357.62.618L8.284 11h-.618L3 6.333l.619-.618 4.357 4.357z"/>
-  </svg>
-);
-
-const IconButton = ({ onClick, title, children }: { onClick?: (e: any) => void, title?: string, children: React.ReactNode }) => {
-  const [hover, setHover] = useState(false);
-  return (
-    <button
-      onClick={onClick}
-      title={title}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        padding: '3px',
-        borderRadius: '4px',
-        color: hover ? 'var(--text-primary)' : 'var(--text-secondary)',
-        background: hover ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
-        border: 'none',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transition: 'background 0.1s, color 0.1s',
-      }}
-    >
-      {children}
-    </button>
-  );
-};
+import {
+  NewFileCodicon,
+  NewFolderCodicon,
+  RefreshCodicon,
+  CollapseAllCodicon,
+  EllipsisCodicon,
+} from '../components/Codicons';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useFilesStore } from '../stores/filesStore';
 import { FileTree } from './FileTree';
@@ -80,9 +25,17 @@ export const FileExplorer: React.FC = () => {
   const {
     fileTree,
     selectedPath,
+    expandedPaths,
     loadWorkspaceTree,
+    toggleFolder,
+    collapseAll,
     error: filesError,
   } = useFilesStore();
+
+  const [isWorkspaceExpanded, setIsWorkspaceExpanded] = useState(true);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const moreMenuRef = useRef<HTMLDivElement>(null);
 
   // Context menu state
   const [contextMenuTarget, setContextMenuTarget] = useState<ContextMenuTarget | null>(null);
@@ -94,14 +47,64 @@ export const FileExplorer: React.FC = () => {
   const [propertiesStat, setPropertiesStat] = useState<FileStat | null>(null);
   const [loadingProperties, setLoadingProperties] = useState(false);
 
+  // Close more menu when clicking outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) {
+        setIsMoreMenuOpen(false);
+      }
+    };
+    if (isMoreMenuOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [isMoreMenuOpen]);
+
   const handleOpenFolder = async () => {
     await openFolderDialog();
   };
 
   const handleRefresh = async () => {
     if (rootPath) {
-      await loadWorkspaceTree(rootPath);
+      setIsRefreshing(true);
+      try {
+        await loadWorkspaceTree(rootPath);
+      } finally {
+        setTimeout(() => setIsRefreshing(false), 350);
+      }
     }
+  };
+
+  const handleStartCreate = async (type: 'file' | 'folder') => {
+    if (!rootPath) return;
+    setIsWorkspaceExpanded(true);
+
+    let targetDir = rootPath;
+    if (selectedPath) {
+      const findNode = (nodes: FileNode[]): FileNode | null => {
+        for (const n of nodes) {
+          if (n.path === selectedPath) return n;
+          if (n.children) {
+            const found = findNode(n.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      const node = findNode(fileTree);
+      if (node?.isDirectory) {
+        targetDir = node.path;
+        if (!expandedPaths.has(node.path)) {
+          await toggleFolder(node.path, rootPath);
+        }
+      } else if (node) {
+        targetDir = selectedPath.substring(0, selectedPath.lastIndexOf('/')) || rootPath;
+      }
+    }
+
+    setCreatingInPath({ path: targetDir, type });
   };
 
   const handleItemContextMenu = (e: React.MouseEvent, node: FileNode) => {
@@ -142,31 +145,30 @@ export const FileExplorer: React.FC = () => {
     return new Date(timestamp).toLocaleString();
   };
 
-  // Determine target directory: if a directory is selected, create inside it; otherwise create in workspace root
-  const getTargetDirectory = (): string => {
-    if (!rootPath) return '';
-    if (selectedPath) {
-      const findNode = (nodes: any[]): any => {
-        for (const n of nodes) {
-          if (n.path === selectedPath) return n;
-          if (n.children) {
-            const found = findNode(n.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-      const node = findNode(fileTree);
-      if (node?.isDirectory) {
-        return node.path;
-      } else if (node) {
-        return selectedPath.substring(0, selectedPath.lastIndexOf('/'));
-      }
-    }
-    return rootPath;
+  const actionBtnStyle: React.CSSProperties = {
+    width: '22px',
+    height: '22px',
+    padding: 0,
+    borderRadius: '3px',
+    color: 'var(--text-secondary)',
+    background: 'transparent',
+    border: 'none',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'background-color 0.1s, color 0.1s',
   };
 
+  const handleActionBtnEnter = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.backgroundColor = 'var(--bg-active, rgba(255, 255, 255, 0.08))';
+    e.currentTarget.style.color = 'var(--text-primary)';
+  };
 
+  const handleActionBtnLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.backgroundColor = 'transparent';
+    e.currentTarget.style.color = 'var(--text-secondary)';
+  };
 
   return (
     <div
@@ -180,40 +182,163 @@ export const FileExplorer: React.FC = () => {
         position: 'relative',
       }}
     >
-      {/* Header bar */}
+      {/* 1. Explorer Top Header Bar */}
       <div
         style={{
           height: '35px',
-          padding: '0 10px 0 20px',
+          padding: '0 8px 0 16px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          borderBottom: '1px solid var(--border-color)',
           fontSize: '11px',
+          fontWeight: 600,
           color: 'var(--text-secondary)',
+          letterSpacing: '0.5px',
         }}
       >
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           Explorer
         </span>
-        <IconButton title="Views and More Actions...">
-          <VscEllipsis />
-        </IconButton>
+
+        {/* More Actions (...) button */}
+        <div ref={moreMenuRef} style={{ position: 'relative' }}>
+          <button
+            onClick={() => setIsMoreMenuOpen((v) => !v)}
+            title="More Actions..."
+            style={actionBtnStyle}
+            onMouseEnter={handleActionBtnEnter}
+            onMouseLeave={handleActionBtnLeave}
+          >
+            <EllipsisCodicon size={16} />
+          </button>
+
+          {isMoreMenuOpen && (
+            <div
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: '26px',
+                minWidth: '200px',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '6px',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+                padding: '4px 0',
+                zIndex: 1000,
+                fontSize: '12px',
+                userSelect: 'none',
+              }}
+            >
+              <button
+                onClick={() => {
+                  setIsMoreMenuOpen(false);
+                  void handleRefresh();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '12px',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-active)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <RefreshCodicon size={14} />
+                <span>Refresh Explorer</span>
+              </button>
+              <button
+                onClick={() => {
+                  setIsMoreMenuOpen(false);
+                  collapseAll();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '12px',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-active)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <CollapseAllCodicon size={14} />
+                <span>Collapse Folders in Explorer</span>
+              </button>
+              <div style={{ height: '1px', backgroundColor: 'var(--border-subtle)', margin: '4px 0' }} />
+              <button
+                onClick={() => {
+                  setIsMoreMenuOpen(false);
+                  void handleOpenFolder();
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-primary)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: '12px',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-active)')}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <FolderOpen size={14} />
+                <span>Open Folder...</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Explorer Workspace Sub-header */}
+      {/* 2. Workspace Section Header with Action Icons */}
       {rootPath && (
         <div
           style={{
-            padding: '2px 6px 2px 2px',
+            height: '26px',
+            padding: '0 8px 0 6px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            cursor: 'pointer',
+            borderBottom: '1px solid var(--border-subtle)',
+            backgroundColor: 'var(--bg-surface)',
           }}
+          className="explorer-workspace-section-header"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', overflow: 'hidden' }}>
+          {/* Left: Chevron + Workspace Root Name */}
+          <div
+            onClick={() => setIsWorkspaceExpanded((v) => !v)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              overflow: 'hidden',
+              cursor: 'pointer',
+              flex: 1,
+              userSelect: 'none',
+              paddingRight: '6px',
+            }}
+            title={rootPath}
+          >
             <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-secondary)' }}>
-              <VscChevronDown />
+              {isWorkspaceExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </span>
             <span
               style={{
@@ -223,59 +348,84 @@ export const FileExplorer: React.FC = () => {
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
+                letterSpacing: '0.2px',
               }}
             >
               {rootName}
             </span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-            <IconButton
+          {/* Right: 4 Action Symbols (New File, New Folder, Refresh, Collapse Folders) */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
+              flexShrink: 0,
+            }}
+          >
+            <button
               onClick={(e) => {
                 e.stopPropagation();
-                const targetDir = getTargetDirectory();
-                setCreatingInPath({ path: targetDir, type: 'file' });
+                void handleStartCreate('file');
               }}
               title="New File..."
+              style={actionBtnStyle}
+              onMouseEnter={handleActionBtnEnter}
+              onMouseLeave={handleActionBtnLeave}
             >
-              <VscNewFile />
-            </IconButton>
+              <NewFileCodicon size={16} />
+            </button>
 
-            <IconButton
+            <button
               onClick={(e) => {
                 e.stopPropagation();
-                const targetDir = getTargetDirectory();
-                setCreatingInPath({ path: targetDir, type: 'folder' });
+                void handleStartCreate('folder');
               }}
               title="New Folder..."
+              style={actionBtnStyle}
+              onMouseEnter={handleActionBtnEnter}
+              onMouseLeave={handleActionBtnLeave}
             >
-              <VscNewFolder />
-            </IconButton>
+              <NewFolderCodicon size={16} />
+            </button>
 
-            <IconButton
+            <button
               onClick={(e) => {
                 e.stopPropagation();
-                handleRefresh();
+                void handleRefresh();
               }}
               title="Refresh Explorer"
+              style={actionBtnStyle}
+              onMouseEnter={handleActionBtnEnter}
+              onMouseLeave={handleActionBtnLeave}
             >
-              <VscRefresh />
-            </IconButton>
+              <RefreshCodicon
+                size={16}
+                style={{
+                  transition: 'transform 0.4s ease',
+                  transform: isRefreshing ? 'rotate(360deg)' : 'none',
+                }}
+              />
+            </button>
 
-            <IconButton
+            <button
               onClick={(e) => {
                 e.stopPropagation();
-                // Optional: Implement collapse all in tree logic
+                collapseAll();
               }}
               title="Collapse Folders in Explorer"
+              style={actionBtnStyle}
+              onMouseEnter={handleActionBtnEnter}
+              onMouseLeave={handleActionBtnLeave}
             >
-              <VscCollapseAll />
-            </IconButton>
+              <CollapseAllCodicon size={16} />
+            </button>
           </div>
         </div>
       )}
 
-      {/* Main Content Tree Area */}
+      {/* 3. Main Content Tree Area */}
       <div
         onContextMenu={(e) => {
           e.preventDefault();
@@ -349,11 +499,12 @@ export const FileExplorer: React.FC = () => {
               Open Folder
             </button>
           </div>
-        ) : (
+        ) : isWorkspaceExpanded ? (
           <div>
             {/* Filesystem Tree with Right Click Context Menu */}
             <FileTree
               nodes={fileTree}
+              rootPath={rootPath}
               onContextMenu={handleItemContextMenu}
               renamingPath={renamingPath}
               onFinishRename={() => setRenamingPath(null)}
@@ -361,8 +512,9 @@ export const FileExplorer: React.FC = () => {
               onFinishCreate={() => setCreatingInPath(null)}
             />
           </div>
-        )}
+        ) : null}
       </div>
+
       {/* Right Click Context Menu */}
       {contextMenuTarget && (
         <ExplorerContextMenu
@@ -501,7 +653,6 @@ export const FileExplorer: React.FC = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };
