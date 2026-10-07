@@ -19,7 +19,6 @@ import { useFilesStore } from '../stores/filesStore';
 import { FileTree } from './FileTree';
 import { ExplorerContextMenu, ContextMenuTarget } from './ExplorerContextMenu';
 import { FileNode, FileStat } from '@shared/types/file';
-import { CreateFileDialog } from '../components/CreateFileDialog';
 
 export const FileExplorer: React.FC = () => {
   const { rootPath, rootName, openFolderDialog, isLoading, error: workspaceError } = useWorkspaceStore();
@@ -30,8 +29,6 @@ export const FileExplorer: React.FC = () => {
     loadWorkspaceTree,
     toggleFolder,
     collapseAll,
-    createFile,
-    createDirectory,
     error: filesError,
   } = useFilesStore();
 
@@ -39,9 +36,6 @@ export const FileExplorer: React.FC = () => {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const moreMenuRef = useRef<HTMLDivElement>(null);
-
-  const [isCreatingFileDialogOpen, setIsCreatingFileDialogOpen] = useState(false);
-  const [isCreatingFolderDialogOpen, setIsCreatingFolderDialogOpen] = useState(false);
 
   // Context menu state
   const [contextMenuTarget, setContextMenuTarget] = useState<ContextMenuTarget | null>(null);
@@ -149,30 +143,6 @@ export const FileExplorer: React.FC = () => {
   const formatModifiedDate = (timestamp?: number): string => {
     if (!timestamp) return 'Unknown';
     return new Date(timestamp).toLocaleString();
-  };
-
-  // Determine target directory: if a directory is selected, create inside it; otherwise create in workspace root
-  const getTargetDirectory = (): string => {
-    if (!rootPath) return '';
-    if (selectedPath) {
-      const findNode = (nodes: any[]): any => {
-        for (const n of nodes) {
-          if (n.path === selectedPath) return n;
-          if (n.children) {
-            const found = findNode(n.children);
-            if (found) return found;
-          }
-        }
-        return null;
-      };
-      const node = findNode(fileTree);
-      if (node?.isDirectory) {
-        return node.path;
-      } else if (node) {
-        return selectedPath.substring(0, selectedPath.lastIndexOf('/'));
-      }
-    }
-    return rootPath;
   };
 
   const actionBtnStyle: React.CSSProperties = {
@@ -683,40 +653,6 @@ export const FileExplorer: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Fallback Create File Modal */}
-      <CreateFileDialog
-        isOpen={isCreatingFileDialogOpen}
-        title="Create New File"
-        placeholder="e.g. main.py, package.json"
-        errorMessage={filesError}
-        onClose={() => setIsCreatingFileDialogOpen(false)}
-        onSubmit={async (filename) => {
-          if (!rootPath) return;
-          const targetDir = getTargetDirectory();
-          const success = await createFile(targetDir, filename, rootPath);
-          if (success) {
-            setIsCreatingFileDialogOpen(false);
-          }
-        }}
-      />
-
-      {/* Fallback Create Folder Modal */}
-      <CreateFileDialog
-        isOpen={isCreatingFolderDialogOpen}
-        title="Create New Folder"
-        placeholder="e.g. components or lib/core"
-        errorMessage={filesError}
-        onClose={() => setIsCreatingFolderDialogOpen(false)}
-        onSubmit={async (foldername) => {
-          if (!rootPath) return;
-          const targetDir = getTargetDirectory();
-          const success = await createDirectory(targetDir, foldername, rootPath);
-          if (success) {
-            setIsCreatingFolderDialogOpen(false);
-          }
-        }}
-      />
     </div>
   );
 };
