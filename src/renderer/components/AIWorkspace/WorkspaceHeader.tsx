@@ -19,7 +19,7 @@ export const WorkspaceHeader: React.FC = () => {
       userSelect: 'none'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span style={{ fontSize: '12px', fontWeight: 500, color: '#E5E7EB' }}>
+        <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--text-primary)' }}>
           CoreMind AI Workspace
         </span>
       </div>
@@ -32,7 +32,7 @@ export const WorkspaceHeader: React.FC = () => {
           title="History"
           style={{
             ...btnStyle,
-            color: isHistoryOpen ? 'var(--accent)' : '#9CA3AF',
+            color: isHistoryOpen ? 'var(--accent)' : 'var(--text-secondary)',
             backgroundColor: isHistoryOpen ? 'var(--accent-bg)' : 'transparent',
           }}
         >
@@ -52,7 +52,7 @@ export const WorkspaceHeader: React.FC = () => {
 const btnStyle = {
   padding: '6px',
   borderRadius: '6px',
-  color: '#9CA3AF',
+  color: 'var(--text-secondary)',
   background: 'transparent',
   border: 'none',
   cursor: 'pointer',

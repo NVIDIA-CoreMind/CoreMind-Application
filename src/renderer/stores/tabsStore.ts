@@ -64,17 +64,27 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
     if (existing) {
       set({ activeTabId: existing.id });
       useWorkspaceStore.getState().setActiveFileName(existing.fileName);
+      if (!existing.isDirty && window.coreMindAPI?.readFile) {
+        try {
+          const res = await window.coreMindAPI.readFile(filePath, rootPath);
+          if (res.success && res.data !== existing.content) {
+            get().updateTabContent(existing.id, res.data);
+          }
+        } catch {
+          // ignore
+        }
+      }
       return;
     }
 
     // Read file content
+    let content = '';
     const result = await window.coreMindAPI.readFile(filePath, rootPath);
-    if (!result.success) {
-      console.error('Failed to read file for tab:', result.error);
-      return;
+    if (result.success) {
+      content = result.data;
+    } else {
+      console.warn('Failed to read file for tab, creating empty:', result.error);
     }
-
-    const content = result.data;
     const newTab: TabItem = {
       id: filePath,
       filePath,
