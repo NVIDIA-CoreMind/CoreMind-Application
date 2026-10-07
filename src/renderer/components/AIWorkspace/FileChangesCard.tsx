@@ -3,12 +3,9 @@ import { FileChangeInfo } from '../../services/aiWorkspaceService';
 import { FileIcon } from '../FileIcon';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useTerminalStore } from '../../stores/terminalStore';
 import { useThemeStore } from '../../stores/themeStore';
 import {
   ExternalLink,
-  Globe,
-  Terminal,
   FileText,
   ChevronRight,
   ChevronDown,
@@ -24,33 +21,17 @@ interface FileChangesCardProps {
 export const FileChangesCard: React.FC<FileChangesCardProps> = ({
   files,
   isRealtime = false,
-  localUrl,
-  terminalCommand,
 }) => {
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
-  const runCommand = useTerminalStore((s) => s.runCommand);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
 
   const [isExpanded, setIsExpanded] = useState(false);
 
   const hasFiles = Boolean(files && files.length > 0);
-  const hasWebEntry = Boolean(
-    files &&
-      files.some(
-        (f) =>
-          f.file.endsWith('index.html') ||
-          f.file.endsWith('index.htm') ||
-          f.file === 'index.html' ||
-          f.file.endsWith('.html')
-      )
-  );
 
-  const hasWebPreview = Boolean(localUrl || hasWebEntry);
-  const displayUrl = localUrl || 'http://localhost:3000';
-
-  if (!hasFiles && !hasWebPreview) return null;
+  if (!hasFiles) return null;
 
   const totalAdditions = (files || []).reduce(
     (acc, f) => acc + (f.additions || f.lines || 0),
@@ -81,34 +62,9 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
     }
   };
 
-  const handleOpenPreview = () => {
-    const api = window.coreMindAPI;
-    if (api?.openExternalUrl) {
-      api.openExternalUrl(displayUrl);
-    } else if ((window as any).electronAPI?.openExternalUrl) {
-      (window as any).electronAPI.openExternalUrl(displayUrl);
-    } else {
-      window.open(displayUrl, '_blank');
-    }
-  };
-
-  const handleRunInTerminal = async () => {
-    const isWin = window.coreMindAPI?.platform
-      ? window.coreMindAPI.platform.isWindows
-      : false;
-    const cmd =
-      terminalCommand ||
-      (isWin ? 'python -m http.server 3000' : 'python3 -m http.server 3000');
-    try {
-      await runCommand(cmd);
-    } catch (err) {
-      console.warn('[FileChangesCard] Failed to run terminal command:', err);
-    }
-  };
-
   return (
     <div style={{ margin: '10px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-      {/* Antigravity Change Summary Bar (matching screenshot) */}
+      {/* Antigravity Change Summary Bar */}
       {hasFiles && (
         <div
           style={{
@@ -374,162 +330,6 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
         </div>
       )}
 
-      {/* Website Live on Local Preview Banner */}
-      {hasWebPreview && (
-        <div
-          style={{
-            borderRadius: '8px',
-            border: isDark
-              ? '1px solid rgba(14, 165, 233, 0.3)'
-              : '1px solid #BAE6FD',
-            backgroundColor: isDark
-              ? 'rgba(14, 165, 233, 0.1)'
-              : '#F0F9FF',
-            padding: '10px 14px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div
-              style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                backgroundColor: isDark
-                  ? 'rgba(14, 165, 233, 0.2)'
-                  : '#E0F2FE',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <Globe size={16} color={isDark ? '#38BDF8' : '#0284C7'} />
-            </div>
-            <div>
-              <div
-                style={{
-                  fontWeight: 600,
-                  fontSize: '12.5px',
-                  color: isDark ? '#38BDF8' : '#0284C7',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <span>Website Live on Local</span>
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    padding: '1px 6px',
-                    borderRadius: '999px',
-                    backgroundColor: isDark
-                      ? 'rgba(34, 197, 94, 0.2)'
-                      : '#DCFCE7',
-                    color: isDark ? '#4ADE80' : '#15803D',
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '5px',
-                      height: '5px',
-                      borderRadius: '50%',
-                      backgroundColor: '#22C55E',
-                      display: 'inline-block',
-                    }}
-                  />
-                  Live
-                </span>
-              </div>
-              <div
-                style={{
-                  fontSize: '11.5px',
-                  color: isDark ? '#94A3B8' : '#64748B',
-                  marginTop: '2px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <span>Running at</span>
-                <a
-                  onClick={handleOpenPreview}
-                  style={{
-                    color: isDark ? '#38BDF8' : '#0284C7',
-                    textDecoration: 'underline',
-                    fontWeight: 600,
-                    fontFamily:
-                      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {displayUrl}
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button
-              onClick={handleRunInTerminal}
-              title="Run or restart server in terminal"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '6px 11px',
-                backgroundColor: isDark
-                  ? 'rgba(255, 255, 255, 0.08)'
-                  : '#FFFFFF',
-                color: isDark ? '#E2E8F0' : '#334155',
-                border: isDark
-                  ? '1px solid rgba(255, 255, 255, 0.12)'
-                  : '1px solid #CBD5E1',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-              }}
-              className="antigravity-terminal-btn"
-            >
-              <Terminal size={12} color={isDark ? '#38BDF8' : '#0284C7'} />
-              <span>Run in Terminal</span>
-            </button>
-
-            <button
-              onClick={handleOpenPreview}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 14px',
-                backgroundColor: '#0284C7',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '6px',
-                fontSize: '12px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                boxShadow: '0 2px 4px rgba(2, 132, 199, 0.25)',
-              }}
-              className="antigravity-preview-btn"
-            >
-              <span>Preview Website</span>
-              <ExternalLink size={13} />
-            </button>
-          </div>
-        </div>
-      )}
-
       <style>{`
         .antigravity-summary-bar:hover {
           background-color: ${
@@ -545,15 +345,6 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
           background-color: ${
             isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC'
           } !important;
-        }
-        .antigravity-terminal-btn:hover {
-          background-color: ${
-            isDark ? 'rgba(255, 255, 255, 0.12)' : '#F1F5F9'
-          } !important;
-        }
-        .antigravity-preview-btn:hover {
-          background-color: #0369A1 !important;
-          box-shadow: 0 3px 8px rgba(2, 132, 199, 0.35) !important;
         }
       `}</style>
     </div>
