@@ -4,6 +4,7 @@ import {
   ChevronDown,
   Folder,
   FolderOpen,
+  FileText,
 } from 'lucide-react';
 import { FileNode } from '@shared/types/file';
 import { useFilesStore } from '../stores/filesStore';
@@ -105,8 +106,8 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
     onFinishRename?.();
   };
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!rootPath || !newItemName.trim() || !creatingInPath) {
       onFinishCreate?.();
       setNewItemName('');
@@ -202,12 +203,22 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
         <form
           onSubmit={handleCreateSubmit}
           style={{
-            paddingLeft: `${(depth + 1) * 14 + 16}px`,
-            paddingTop: '2px',
-            paddingBottom: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            height: '24px',
+            paddingLeft: `${(depth + 1) * 14 + 8}px`,
+            paddingRight: '6px',
+            backgroundColor: 'var(--bg-active)',
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          <span style={{ width: '13px' }} />
+          {creatingInPath.type === 'file' ? (
+            <FileText size={14} color="var(--text-muted)" />
+          ) : (
+            <Folder size={14} color="#6366F1" />
+          )}
           <input
             autoFocus
             type="text"
@@ -215,8 +226,12 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
             onBlur={() => {
-              onFinishCreate?.();
-              setNewItemName('');
+              if (newItemName.trim()) {
+                void handleCreateSubmit();
+              } else {
+                onFinishCreate?.();
+                setNewItemName('');
+              }
             }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
@@ -226,11 +241,11 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
             }}
             style={{
               height: '20px',
-              fontSize: '11px',
-              width: '90%',
+              fontSize: '12px',
+              flex: 1,
               backgroundColor: 'var(--bg-app)',
               color: 'var(--text-primary)',
-              border: '1px solid var(--accent)',
+              border: '1px solid var(--accent, #3b82f6)',
               borderRadius: '2px',
               outline: 'none',
               padding: '1px 4px',

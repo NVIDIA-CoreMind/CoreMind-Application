@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { FileNode } from '@shared/types/file';
 import { FileTreeItem } from './FileTreeItem';
+import { FileText, Folder } from 'lucide-react';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useFilesStore } from '../stores/filesStore';
 
 interface FileTreeProps {
   nodes: FileNode[];
+  rootPath?: string | null;
   onContextMenu: (e: React.MouseEvent, node: FileNode) => void;
   renamingPath?: string | null;
   onFinishRename?: () => void;
@@ -15,69 +17,98 @@ interface FileTreeProps {
 
 export const FileTree: React.FC<FileTreeProps> = ({
   nodes,
+  rootPath: propRootPath,
   onContextMenu,
   renamingPath,
   onFinishRename,
   creatingInPath,
   onFinishCreate,
 }) => {
-  const { rootPath } = useWorkspaceStore();
+  const storeRootPath = useWorkspaceStore((state) => state.rootPath);
+  const rootPath = propRootPath || storeRootPath;
   const { createFile, createDirectory } = useFilesStore();
-  const [newItemName, setNewItemName] = useState('');
+  const [rootItemName, setRootItemName] = useState('');
 
-  const isCreatingInRoot = creatingInPath && rootPath && creatingInPath.path === rootPath;
+  const isCreatingAtRoot = Boolean(
+    creatingInPath &&
+      rootPath &&
+      (creatingInPath.path === rootPath || !creatingInPath.path)
+  );
 
-  const handleCreateSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!rootPath || !newItemName.trim() || !creatingInPath) {
+  const handleRootCreateSubmit = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const trimmed = rootItemName.trim();
+    if (!rootPath || !trimmed || !creatingInPath) {
       onFinishCreate?.();
-      setNewItemName('');
+      setRootItemName('');
       return;
     }
     if (creatingInPath.type === 'file') {
-      await createFile(rootPath, newItemName.trim(), rootPath);
+      await createFile(rootPath, trimmed, rootPath);
     } else {
-      await createDirectory(rootPath, newItemName.trim(), rootPath);
+      await createDirectory(rootPath, trimmed, rootPath);
     }
-    setNewItemName('');
+    setRootItemName('');
     onFinishCreate?.();
   };
 
+  if (nodes.length === 0 && !isCreatingAtRoot) {
+    return (
+      <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' }}>
+        Folder is empty
+      </div>
+    );
+  }
+
   return (
-    <div style={{ padding: '4px 0' }}>
-      {isCreatingInRoot && (
+    <div style={{ padding: '2px 0' }}>
+      {/* Inline Create directly at workspace root */}
+      {isCreatingAtRoot && creatingInPath && (
         <form
-          onSubmit={handleCreateSubmit}
+          onSubmit={handleRootCreateSubmit}
           style={{
-            paddingLeft: '22px', // matches depth 0 (8px + 14px for chevron space ideally)
-            paddingTop: '2px',
-            paddingBottom: '2px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            height: '24px',
+            paddingLeft: '26px',
+            paddingRight: '8px',
+            backgroundColor: 'var(--bg-active)',
           }}
           onClick={(e) => e.stopPropagation()}
         >
+          {creatingInPath.type === 'file' ? (
+            <FileText size={14} color="var(--text-muted)" />
+          ) : (
+            <Folder size={14} color="#6366F1" />
+          )}
           <input
             autoFocus
             type="text"
             placeholder={creatingInPath.type === 'file' ? 'File name...' : 'Folder name...'}
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
+            value={rootItemName}
+            onChange={(e) => setRootItemName(e.target.value)}
             onBlur={() => {
-              onFinishCreate?.();
-              setNewItemName('');
+              if (rootItemName.trim()) {
+                void handleRootCreateSubmit();
+              } else {
+                onFinishCreate?.();
+                setRootItemName('');
+              }
             }}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
                 onFinishCreate?.();
-                setNewItemName('');
+                setRootItemName('');
               }
             }}
             style={{
               height: '20px',
-              fontSize: '11px',
-              width: '90%',
+              fontSize: '12px',
+              flex: 1,
               backgroundColor: 'var(--bg-app)',
               color: 'var(--text-primary)',
-              border: '1px solid var(--accent)',
+              border: '1px solid var(--accent, #3b82f6)',
               borderRadius: '2px',
               outline: 'none',
               padding: '1px 4px',
@@ -85,6 +116,7 @@ export const FileTree: React.FC<FileTreeProps> = ({
           />
         </form>
       )}
+
       {nodes.map((node) => (
         <FileTreeItem
           key={node.path}
@@ -97,11 +129,6 @@ export const FileTree: React.FC<FileTreeProps> = ({
           onFinishCreate={onFinishCreate}
         />
       ))}
-      {nodes.length === 0 && !isCreatingInRoot && (
-        <div style={{ padding: '16px', color: 'var(--text-muted)', fontSize: '12px', textAlign: 'center' }}>
-          Folder is empty
-        </div>
-      )}
     </div>
   );
 };
