@@ -26,6 +26,7 @@ interface FilesStore {
   revealInExplorer: (targetPath: string) => Promise<boolean>;
   search: (query: string, rootPath: string) => Promise<void>;
   clearSearch: () => void;
+  collapseAll: () => void;
 }
 
 // Helper to update children of a directory node inside the tree recursively
@@ -284,5 +285,9 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
 
   clearSearch: () => {
     set({ searchQuery: '', searchResults: [], isSearching: false });
+  },
+
+  collapseAll: () => {
+    set({ expandedPaths: new Set<string>() });
   },
 }));
