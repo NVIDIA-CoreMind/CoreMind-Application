@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FileChangeInfo } from '../../services/aiWorkspaceService';
 import { FileIcon } from '../FileIcon';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTerminalStore } from '../../stores/terminalStore';
-import { ExternalLink, Check, Globe, Terminal } from 'lucide-react';
+import { useThemeStore } from '../../stores/themeStore';
+import {
+  ExternalLink,
+  Globe,
+  Terminal,
+  FileText,
+  ChevronRight,
+  ChevronDown,
+} from 'lucide-react';
 
 interface FileChangesCardProps {
   files: FileChangeInfo[];
@@ -22,6 +30,10 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
   const runCommand = useTerminalStore((s) => s.runCommand);
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === 'dark';
+
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const hasFiles = Boolean(files && files.length > 0);
   const hasWebEntry = Boolean(
@@ -40,11 +52,14 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
 
   if (!hasFiles && !hasWebPreview) return null;
 
-  const totalLines = (files || []).reduce(
-    (acc, f) => acc + (f.lines || f.additions || 0),
+  const totalAdditions = (files || []).reduce(
+    (acc, f) => acc + (f.additions || f.lines || 0),
     0
   );
-  const hasCreated = (files || []).some((f) => f.action === 'created');
+  const totalDeletions = (files || []).reduce(
+    (acc, f) => acc + (f.deletions || 0),
+    0
+  );
 
   const handleOpenFile = async (relPath: string) => {
     if (!rootPath) return;
@@ -55,6 +70,14 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
       await openFile(fullPath, fileName, rootPath);
     } catch (err) {
       console.warn('[FileChangesCard] Failed to open file:', fullPath, err);
+    }
+  };
+
+  const handleReviewClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded((prev) => !prev);
+    if (!isExpanded && files && files.length > 0) {
+      handleOpenFile(files[0].file);
     }
   };
 
@@ -84,254 +107,314 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
   };
 
   return (
-    <div
-      style={{
-        margin: '10px 0 14px 0',
-        borderRadius: '10px',
-        border: '1px solid #E2E8F0',
-        backgroundColor: '#FFFFFF',
-        overflow: 'hidden',
-        boxShadow:
-          '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.03)',
-        fontSize: '12.5px',
-        color: '#0F172A',
-        fontFamily:
-          '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-      }}
-    >
-      {/* Header - shown when files are present */}
+    <div style={{ margin: '10px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {/* Antigravity Change Summary Bar (matching screenshot) */}
       {hasFiles && (
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 14px',
-            borderBottom: '1px solid #F1F5F9',
-            backgroundColor: '#F8FAFC',
+            borderRadius: '8px',
+            border: isDark
+              ? '1px solid rgba(255, 255, 255, 0.12)'
+              : '1px solid #E2E8F0',
+            backgroundColor: isDark
+              ? 'rgba(255, 255, 255, 0.04)'
+              : '#F8FAFC',
+            overflow: 'hidden',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+            transition: 'border-color 0.15s ease',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div
+          {/* Main Top Bar */}
+          <div
+            onClick={() => setIsExpanded((prev) => !prev)}
+            className="antigravity-summary-bar"
+            style={{
+              padding: '8px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              cursor: 'pointer',
+              userSelect: 'none',
+              gap: '12px',
+            }}
+          >
+            {/* Left: Files changed, +additions, -deletions, chevron */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+              {isRealtime && (
+                <span
+                  style={{
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    backgroundColor: '#10B981',
+                    animation: 'pulse 1.5s infinite',
+                    display: 'inline-block',
+                    flexShrink: 0,
+                  }}
+                />
+              )}
+              <span
+                style={{
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: isDark ? '#E2E8F0' : '#1E293B',
+                }}
+              >
+                {files.length} {files.length === 1 ? 'file changed' : 'files changed'}
+              </span>
+
+              {totalAdditions > 0 && (
+                <span
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#22C55E',
+                    fontFamily:
+                      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  }}
+                >
+                  +{totalAdditions}
+                </span>
+              )}
+
+              {totalDeletions > 0 && (
+                <span
+                  style={{
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#EF4444',
+                    fontFamily:
+                      'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  }}
+                >
+                  -{totalDeletions}
+                </span>
+              )}
+
+              <span
+                style={{
+                  color: isDark ? '#94A3B8' : '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  marginLeft: '2px',
+                }}
+              >
+                {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              </span>
+            </div>
+
+            {/* Right: Review Button */}
+            <button
+              onClick={handleReviewClick}
+              className="antigravity-review-btn"
               style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                backgroundColor: '#ECFDF5',
-                border: '1px solid #A7F3D0',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: '5px',
+                padding: '4px 10px',
+                borderRadius: '6px',
+                border: isDark
+                  ? '1px solid rgba(255, 255, 255, 0.12)'
+                  : '1px solid #CBD5E1',
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.07)'
+                  : '#FFFFFF',
+                color: isDark ? '#E2E8F0' : '#1E293B',
+                fontSize: '12px',
+                fontWeight: 500,
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
                 flexShrink: 0,
               }}
             >
-              {isRealtime ? (
-                <div
-                  style={{
-                    width: '8px',
-                    height: '8px',
-                    borderRadius: '50%',
-                    backgroundColor: '#10B981',
-                  }}
-                />
-              ) : (
-                <Check size={12} color="#059669" strokeWidth={2.5} />
-              )}
-            </div>
-            <span
-              style={{
-                fontWeight: 600,
-                fontSize: '13px',
-                color: '#0F172A',
-                letterSpacing: '-0.01em',
-              }}
-            >
-              {files.length === 1
-                ? hasCreated
-                  ? '1 File Created'
-                  : '1 File Modified'
-                : `${files.length} Files ${
-                    hasCreated ? 'Created / Modified' : 'Modified'
-                  }`}
-            </span>
+              <FileText size={13} style={{ opacity: 0.85 }} />
+              <span>Review</span>
+            </button>
           </div>
 
-          {totalLines > 0 && (
-            <span
+          {/* Expanded File List */}
+          {isExpanded && (
+            <div
               style={{
-                fontSize: '11px',
-                padding: '2px 8px',
-                borderRadius: '999px',
-                backgroundColor: '#ECFDF5',
-                border: '1px solid #A7F3D0',
-                color: '#047857',
-                fontWeight: 600,
-                fontFamily:
-                  'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                borderTop: isDark
+                  ? '1px solid rgba(255, 255, 255, 0.08)'
+                  : '1px solid #E2E8F0',
+                backgroundColor: isDark
+                  ? 'rgba(0, 0, 0, 0.15)'
+                  : '#FFFFFF',
               }}
             >
-              +{totalLines} lines written
-            </span>
+              {files.map((file, idx) => {
+                const fileName = file.file.split('/').pop() || file.file;
+                const dirPath = file.file.includes('/')
+                  ? file.file.slice(0, file.file.lastIndexOf('/'))
+                  : '';
+                const lineCount = file.lines || file.additions || 0;
+                const isCreated = file.action === 'created' || !file.action;
+
+                return (
+                  <div
+                    key={`${file.file}-${idx}`}
+                    onClick={() => handleOpenFile(file.file)}
+                    title={`Click to open ${file.file}`}
+                    className="antigravity-file-row"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      padding: '8px 12px',
+                      borderBottom:
+                        idx < files.length - 1
+                          ? isDark
+                            ? '1px solid rgba(255, 255, 255, 0.05)'
+                            : '1px solid #F1F5F9'
+                          : 'none',
+                      cursor: 'pointer',
+                      transition: 'background-color 0.15s ease',
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        minWidth: 0,
+                      }}
+                    >
+                      <FileIcon path={fileName} size={15} />
+                      <span
+                        style={{
+                          fontWeight: 500,
+                          fontSize: '12.5px',
+                          color: isDark ? '#F1F5F9' : '#1E293B',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          fontFamily:
+                            'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                        }}
+                      >
+                        {fileName}
+                      </span>
+                      {dirPath && (
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            color: isDark ? '#94A3B8' : '#64748B',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          ({dirPath})
+                        </span>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: '11px',
+                          padding: '1px 7px',
+                          borderRadius: '4px',
+                          fontWeight: 500,
+                          backgroundColor: isCreated
+                            ? isDark
+                              ? 'rgba(34, 197, 94, 0.15)'
+                              : '#ECFDF5'
+                            : isDark
+                              ? 'rgba(59, 130, 246, 0.15)'
+                              : '#EFF6FF',
+                          color: isCreated
+                            ? isDark
+                              ? '#4ADE80'
+                              : '#059669'
+                            : isDark
+                              ? '#60A5FA'
+                              : '#2563EB',
+                        }}
+                      >
+                        {isCreated ? 'Created' : 'Modified'}
+                      </span>
+
+                      {lineCount > 0 && (
+                        <span
+                          style={{
+                            fontSize: '11px',
+                            fontFamily:
+                              'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                            color: '#22C55E',
+                            fontWeight: 600,
+                          }}
+                        >
+                          +{lineCount}
+                        </span>
+                      )}
+
+                      <ExternalLink
+                        size={12}
+                        style={{
+                          color: isDark ? '#64748B' : '#94A3B8',
+                          marginLeft: '2px',
+                        }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
 
-      {/* File Items */}
-      {hasFiles && (
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          {files.map((file, idx) => {
-            const fileName = file.file.split('/').pop() || file.file;
-            const dirPath = file.file.includes('/')
-              ? file.file.slice(0, file.file.lastIndexOf('/'))
-              : '';
-            const lineCount = file.lines || file.additions || 0;
-            const isCreated = file.action === 'created' || !file.action;
-
-            return (
-              <div
-                key={`${file.file}-${idx}`}
-                onClick={() => handleOpenFile(file.file)}
-                title={`Click to open ${file.file}`}
-                className="antigravity-file-row"
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: '9px 14px',
-                  borderBottom:
-                    idx < files.length - 1 ? '1px solid #F1F5F9' : 'none',
-                  cursor: 'pointer',
-                  backgroundColor: '#FFFFFF',
-                  transition: 'background-color 0.15s ease',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    minWidth: 0,
-                  }}
-                >
-                  <FileIcon path={fileName} size={16} />
-                  <span
-                    style={{
-                      fontWeight: 600,
-                      fontSize: '12.5px',
-                      color: '#1E293B',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                    }}
-                  >
-                    {fileName}
-                  </span>
-                  {dirPath && (
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        color: '#64748B',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      ({dirPath})
-                    </span>
-                  )}
-                </div>
-
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    flexShrink: 0,
-                  }}
-                >
-                  {/* Action Badge */}
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      padding: '2px 8px',
-                      borderRadius: '4px',
-                      fontWeight: 600,
-                      backgroundColor: isCreated ? '#ECFDF5' : '#EFF6FF',
-                      border: isCreated ? '1px solid #BBF7D0' : '1px solid #BFDBFE',
-                      color: isCreated ? '#047857' : '#1D4ED8',
-                    }}
-                  >
-                    {isCreated ? 'Created' : 'Modified'}
-                  </span>
-
-                  {/* Lines Badge */}
-                  {lineCount > 0 && (
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontFamily:
-                          'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        backgroundColor: '#F1F5F9',
-                        border: '1px solid #E2E8F0',
-                        color: '#475569',
-                        fontWeight: 500,
-                      }}
-                    >
-                      {lineCount} {lineCount === 1 ? 'line' : 'lines'}
-                    </span>
-                  )}
-
-                  <ExternalLink
-                    size={13}
-                    className="row-external-link"
-                    style={{
-                      color: '#94A3B8',
-                      marginLeft: '2px',
-                      transition: 'color 0.15s ease',
-                    }}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Local Website Preview Banner */}
+      {/* Website Live on Local Preview Banner */}
       {hasWebPreview && (
         <div
           style={{
+            borderRadius: '8px',
+            border: isDark
+              ? '1px solid rgba(14, 165, 233, 0.3)'
+              : '1px solid #BAE6FD',
+            backgroundColor: isDark
+              ? 'rgba(14, 165, 233, 0.1)'
+              : '#F0F9FF',
+            padding: '10px 14px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            padding: '12px 14px',
-            backgroundColor: '#F0F9FF',
-            borderTop: hasFiles ? '1px solid #BAE6FD' : 'none',
+            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
-                width: '34px',
-                height: '34px',
+                width: '32px',
+                height: '32px',
                 borderRadius: '50%',
-                backgroundColor: '#E0F2FE',
+                backgroundColor: isDark
+                  ? 'rgba(14, 165, 233, 0.2)'
+                  : '#E0F2FE',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
               }}
             >
-              <Globe size={18} color="#0284C7" strokeWidth={2} />
+              <Globe size={16} color={isDark ? '#38BDF8' : '#0284C7'} />
             </div>
             <div>
               <div
                 style={{
                   fontWeight: 600,
-                  fontSize: '13px',
-                  color: '#0284C7',
+                  fontSize: '12.5px',
+                  color: isDark ? '#38BDF8' : '#0284C7',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '6px',
@@ -343,13 +426,14 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '4px',
-                    fontSize: '10.5px',
+                    fontSize: '10px',
                     fontWeight: 600,
                     padding: '1px 6px',
                     borderRadius: '999px',
-                    backgroundColor: '#DCFCE7',
-                    color: '#15803D',
-                    border: '1px solid #BBF7D0',
+                    backgroundColor: isDark
+                      ? 'rgba(34, 197, 94, 0.2)'
+                      : '#DCFCE7',
+                    color: isDark ? '#4ADE80' : '#15803D',
                   }}
                 >
                   <span
@@ -367,7 +451,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
               <div
                 style={{
                   fontSize: '11.5px',
-                  color: '#64748B',
+                  color: isDark ? '#94A3B8' : '#64748B',
                   marginTop: '2px',
                   display: 'flex',
                   alignItems: 'center',
@@ -378,7 +462,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                 <a
                   onClick={handleOpenPreview}
                   style={{
-                    color: '#0284C7',
+                    color: isDark ? '#38BDF8' : '#0284C7',
                     textDecoration: 'underline',
                     fontWeight: 600,
                     fontFamily:
@@ -401,19 +485,22 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                 alignItems: 'center',
                 gap: '5px',
                 padding: '6px 11px',
-                backgroundColor: '#FFFFFF',
-                color: '#334155',
-                border: '1px solid #CBD5E1',
+                backgroundColor: isDark
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : '#FFFFFF',
+                color: isDark ? '#E2E8F0' : '#334155',
+                border: isDark
+                  ? '1px solid rgba(255, 255, 255, 0.12)'
+                  : '1px solid #CBD5E1',
                 borderRadius: '6px',
                 fontSize: '11.5px',
                 fontWeight: 600,
                 cursor: 'pointer',
                 transition: 'all 0.15s ease',
-                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
               }}
               className="antigravity-terminal-btn"
             >
-              <Terminal size={12} color="#0284C7" />
+              <Terminal size={12} color={isDark ? '#38BDF8' : '#0284C7'} />
               <span>Run in Terminal</span>
             </button>
 
@@ -423,7 +510,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '7px 15px',
+                padding: '6px 14px',
                 backgroundColor: '#0284C7',
                 color: '#FFFFFF',
                 border: 'none',
@@ -444,15 +531,25 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
       )}
 
       <style>{`
-        .antigravity-file-row:hover {
-          background-color: #F8FAFC !important;
+        .antigravity-summary-bar:hover {
+          background-color: ${
+            isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9'
+          } !important;
         }
-        .antigravity-file-row:hover .row-external-link {
-          color: #2563EB !important;
+        .antigravity-review-btn:hover {
+          background-color: ${
+            isDark ? 'rgba(255, 255, 255, 0.14)' : '#F8FAFC'
+          } !important;
+        }
+        .antigravity-file-row:hover {
+          background-color: ${
+            isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC'
+          } !important;
         }
         .antigravity-terminal-btn:hover {
-          background-color: #F1F5F9 !important;
-          border-color: #94A3B8 !important;
+          background-color: ${
+            isDark ? 'rgba(255, 255, 255, 0.12)' : '#F1F5F9'
+          } !important;
         }
         .antigravity-preview-btn:hover {
           background-color: #0369A1 !important;
