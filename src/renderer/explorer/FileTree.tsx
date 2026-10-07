@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FileNode } from '@shared/types/file';
 import { FileTreeItem } from './FileTreeItem';
 import { FileText, Folder } from 'lucide-react';
+import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useFilesStore } from '../stores/filesStore';
 
 interface FileTreeProps {
@@ -16,13 +17,15 @@ interface FileTreeProps {
 
 export const FileTree: React.FC<FileTreeProps> = ({
   nodes,
-  rootPath,
+  rootPath: propRootPath,
   onContextMenu,
   renamingPath,
   onFinishRename,
   creatingInPath,
   onFinishCreate,
 }) => {
+  const storeRootPath = useWorkspaceStore((state) => state.rootPath);
+  const rootPath = propRootPath || storeRootPath;
   const { createFile, createDirectory } = useFilesStore();
   const [rootItemName, setRootItemName] = useState('');
 
