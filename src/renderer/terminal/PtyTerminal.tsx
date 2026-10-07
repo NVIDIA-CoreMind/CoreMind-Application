@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Terminal as XTerm } from 'xterm';
 import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
@@ -7,12 +7,12 @@ import { useUiStore } from '../stores/uiStore';
 import { useThemeStore } from '../stores/themeStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 
+import { useTerminalStore } from '../stores/terminalStore';
+
 const THEMES = {
   dark: { background: '#181818', foreground: '#d4d4d4', cursor: '#10b981', selectionBackground: '#264f7888' },
   light: { background: '#ffffff', foreground: '#1f2328', cursor: '#059669', selectionBackground: '#add6ff88' },
 };
-
-let sessionCounter = 0;
 
 interface TerminalViewProps {
   id: string;
@@ -101,30 +101,13 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, onExit }) => {
 export const PtyTerminal: React.FC = () => {
   const { toggleTerminal } = useUiStore();
   const rootPath = useWorkspaceStore((s) => s.rootPath);
-  const [tabs, setTabs] = useState<{ id: string; title: string }[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  const addTab = useCallback(() => {
-    sessionCounter += 1;
-    const id = `pty-${Date.now()}-${sessionCounter}`;
-    setTabs((t) => [...t, { id, title: `Terminal ${sessionCounter}` }]);
-    setActiveId(id);
-  }, []);
-
-  const closeTab = useCallback((id: string) => {
-    setTabs((t) => {
-      const next = t.filter((x) => x.id !== id);
-      setActiveId((cur) => (cur === id ? (next[next.length - 1]?.id ?? null) : cur));
-      return next;
-    });
-  }, []);
+  const { tabs, activeId, setActiveId, addTab, closeTab, resetTabs } = useTerminalStore();
 
   // Shells are bound to the authorized workspace, so restart them when it changes.
   useEffect(() => {
-    setTabs([]);
-    setActiveId(null);
+    resetTabs();
     if (rootPath) addTab();
-  }, [rootPath, addTab]);
+  }, [rootPath, resetTabs, addTab]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', backgroundColor: 'var(--bg-panel)' }}>

@@ -67,6 +67,10 @@ export interface QuestionEvent extends BaseEvent {
 export interface FileChangedEvent extends BaseEvent {
   type: 'FileChangedEvent';
   file: string;
+  action?: 'created' | 'modified' | 'deleted';
+  lines?: number;
+  additions?: number;
+  deletions?: number;
 }
 
 export interface TestEvent extends BaseEvent {

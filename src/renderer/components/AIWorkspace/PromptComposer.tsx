@@ -4,13 +4,22 @@ import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useThemeStore } from '../../stores/themeStore';
 
 export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = ({ onSubmit }) => {
+  const { currentState, selectedModel, cancelRequest, draftPrompt, setDraftPrompt } = useAIWorkspaceStore();
   const [input, setInput] = useState('');
-  const { currentState, selectedModel, cancelRequest } = useAIWorkspaceStore();
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const isRunning = currentState === 'running' || currentState === 'waiting';
+
+  // Sync draftPrompt with input when it changes
+  useEffect(() => {
+    if (draftPrompt) {
+      setInput(draftPrompt);
+      setDraftPrompt(''); // Clear it so it only syncs once
+      setTimeout(() => textareaRef.current?.focus(), 10);
+    }
+  }, [draftPrompt, setDraftPrompt]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

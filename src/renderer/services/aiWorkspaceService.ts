@@ -1,11 +1,20 @@
 import { create } from 'zustand';
 import { AIWorkspaceEvent, AIRequestStatus } from '../types/aiWorkspace';
 
+export interface FileChangeInfo {
+  file: string;
+  action?: 'created' | 'modified' | 'deleted';
+  lines?: number;
+  additions?: number;
+  deletions?: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: number;
+  filesChanged?: FileChangeInfo[];
 }
 
 export interface ChatSession {
@@ -81,8 +90,10 @@ interface AIWorkspaceStore {
   sessions: ChatSession[];
   activeSessionId: string | null;
   isHistoryOpen: boolean;
+  draftPrompt: string;
 
   addEvent: (event: AIWorkspaceEvent) => void;
+  setDraftPrompt: (prompt: string) => void;
   addChatMessage: (msg: ChatMessage) => void;
   updateEvent: (id: string, updates: Partial<AIWorkspaceEvent>) => void;
   setState: (state: AIRequestStatus) => void;
@@ -118,8 +129,10 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
     sessions: savedSessions,
     activeSessionId: activeSession ? activeSession.id : null,
     isHistoryOpen: false,
+    draftPrompt: '',
 
     addEvent: (event) => set((state) => ({ events: [...state.events, event] })),
+    setDraftPrompt: (prompt) => set({ draftPrompt: prompt }),
 
     addChatMessage: (msg) => {
       set((state) => {

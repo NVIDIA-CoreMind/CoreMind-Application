@@ -4,7 +4,7 @@ export class CoreMindClient {
   private baseUrl: string;
   private token: string | null = null;
 
-  constructor(baseUrl: string = 'http://localhost:43110') {
+  constructor(baseUrl: string = 'http://127.0.0.1:43110') {
     this.baseUrl = baseUrl;
   }
 
