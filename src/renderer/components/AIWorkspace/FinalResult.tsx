@@ -10,7 +10,7 @@ export const FinalResult: React.FC<{ event: CompletedEvent }> = ({ event }) => {
       gap: '8px',
       marginTop: '8px'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#10B981' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent, #3B82F6)' }}>
         <CheckCircle2 size={14} />
         <span style={{ fontSize: '12px', fontWeight: 500 }}>Completed</span>
       </div>

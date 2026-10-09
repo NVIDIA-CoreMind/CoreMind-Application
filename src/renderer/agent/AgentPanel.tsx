@@ -633,7 +633,7 @@ export const AgentPanel: React.FC = () => {
                           }}
                         >
                           <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{m}</span>
-                          {m === selectedModel && <Check size={12} color="#10B981" />}
+                          {m === selectedModel && <Check size={12} color="#3B82F6" />}
                         </button>
                       ))}
                     </div>
@@ -1003,7 +1003,7 @@ export const AgentPanel: React.FC = () => {
                     style={{
                       fontSize: '10.5px',
                       fontWeight: 600,
-                      color: msg.role === 'user' ? '#10B981' : 'var(--text-secondary)',
+                      color: msg.role === 'user' ? '#3B82F6' : 'var(--text-secondary)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
@@ -1030,8 +1030,8 @@ export const AgentPanel: React.FC = () => {
                       >
                         {copiedId === msg.id ? (
                           <>
-                            <Check size={11} color="#10B981" />
-                            <span style={{ color: '#10B981' }}>Copied</span>
+                            <Check size={11} color="#3B82F6" />
+                            <span style={{ color: '#3B82F6' }}>Copied</span>
                           </>
                         ) : (
                           <>

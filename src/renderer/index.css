@@ -13,10 +13,10 @@
   --text-secondary: #9A9A9A;
   --text-muted: #666666;
 
-  /* CoreMind Accent */
-  --accent: #10B981;
-  --accent-hover: #34D399;
-  --accent-bg: rgba(16, 185, 129, 0.12);
+  /* Antigravity Electric Blue Accent */
+  --accent: #3B82F6;
+  --accent-hover: #60A5FA;
+  --accent-bg: rgba(59, 130, 246, 0.12);
 
   --success: #22C55E;
   --warning: #F59E0B;
@@ -54,6 +54,11 @@
   --bg-active: #e0e0e0;
   --border-color: #d8d8d8;
   --border-subtle: #e4e4e4;
+
+  /* Light Theme Antigravity Blue */
+  --accent: #2563EB;
+  --accent-hover: #1D4ED8;
+  --accent-bg: rgba(37, 99, 235, 0.08);
 
   --text-primary: #1f2328;
   --text-secondary: #57606a;

@@ -117,7 +117,7 @@ export const StatusBar: React.FC = () => {
           style={{ display: 'flex', alignItems: 'center', gap: '4px', cursor: 'pointer', color: '#9ca3af' }}
           title={`Active AI Model: ${selectedModel}`}
         >
-          <Radio size={10} color="#10B981" />
+          <Radio size={10} color="#3B82F6" />
           <span style={{ fontSize: '10.5px', maxWidth: '140px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {selectedModel.split('/').pop()}
           </span>

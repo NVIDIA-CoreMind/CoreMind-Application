@@ -117,7 +117,150 @@ export const AIWorkspace: React.FC = () => {
     setAbortController(abortController);
     setState('running');
 
-    // If CoreMind Autonomous Agent IPC API is available in Electron, run execution engine directly
+    // Primary Fast AI Path: Live CoreMind Backend AI with immediate file creation & code writing
+    const isAutonomousAgentMode = prompt.startsWith('/agent ') || prompt.startsWith('/autonomous ');
+
+    if (!isAutonomousAgentMode) {
+      try {
+        const response = await coremindClient.chatWithTools(prompt, rootPath, historyToSend);
+
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        if (response.status === 'ok') {
+          const rawResponse = response.response || 'Success, but no response provided.';
+          const { toolCalls, formattedText } = extractToolCalls(rawResponse);
+          const filesChangedDetails: FileChangeInfo[] = [];
+
+          if (toolCalls.length > 0) {
+            await executeToolCalls(toolCalls, rootPath);
+            for (const tc of toolCalls) {
+              if (tc.path && typeof tc.content === 'string') {
+                const cleanPath = tc.path.replace(/^\/+/, '').trim();
+                filesChangedDetails.push({
+                  file: cleanPath,
+                  action: 'created',
+                  lines: tc.content.split('\n').length,
+                });
+              }
+            }
+          }
+
+          // Handle files modified or created on disk by backend agent
+          const backendFiles: string[] = Array.isArray(response.files_changed) ? response.files_changed : [];
+          if (backendFiles.length > 0 && rootPath) {
+            try {
+              await useFilesStore.getState().loadWorkspaceTree(rootPath);
+            } catch (e) {
+              console.warn('Failed to refresh workspace tree:', e);
+            }
+
+            const tabsState = useTabsStore.getState();
+            for (const relPath of backendFiles) {
+              const cleanPath = relPath.replace(/^\/+/, '').trim();
+              const fullPath = relPath.startsWith('/') ? relPath : `${rootPath}/${cleanPath}`;
+              const fileName = cleanPath.split('/').pop() || cleanPath;
+
+              try {
+                if (window.coreMindAPI?.readFile) {
+                  const readRes = await window.coreMindAPI.readFile(fullPath, rootPath);
+                  if (readRes.success && typeof readRes.data === 'string') {
+                    const lineCount = readRes.data.split('\n').length;
+                    const existingIdx = filesChangedDetails.findIndex((f) => f.file === cleanPath);
+                    if (existingIdx >= 0) {
+                      filesChangedDetails[existingIdx].lines = lineCount;
+                    } else {
+                      filesChangedDetails.push({
+                        file: cleanPath,
+                        action: 'created',
+                        lines: lineCount,
+                      });
+                    }
+
+                    const existingTab = tabsState.tabs.find((t) => t.filePath === fullPath || t.id === fullPath);
+                    if (existingTab) {
+                      tabsState.updateTabContent(existingTab.id, readRes.data);
+                      useTabsStore.setState((state) => ({
+                        tabs: state.tabs.map((t) =>
+                          t.id === existingTab.id
+                            ? { ...t, content: readRes.data, savedContent: readRes.data, isDirty: false }
+                            : t
+                        ),
+                      }));
+                    } else {
+                      await tabsState.openFile(fullPath, fileName, rootPath);
+                      tabsState.updateTabContent(fullPath, readRes.data);
+                    }
+                  }
+                }
+              } catch (err) {
+                console.error('[AI Workspace] Failed to reload changed file:', fullPath, err);
+              }
+            }
+          }
+
+          if (Array.isArray(response.files_details)) {
+            for (const fd of response.files_details) {
+              if (fd && fd.file) {
+                const clean = fd.file.replace(/^\/+/, '').trim();
+                const existing = filesChangedDetails.find((f) => f.file === clean);
+                if (!existing) {
+                  filesChangedDetails.push({
+                    file: clean,
+                    action: fd.action || 'created',
+                    lines: fd.lines,
+                  });
+                } else if (!existing.lines && fd.lines) {
+                  existing.lines = fd.lines;
+                }
+              }
+            }
+          }
+
+          const hasWebFiles = filesChangedDetails.some(
+            (f) =>
+              f.file.endsWith('index.html') ||
+              f.file.endsWith('index.htm') ||
+              f.file === 'index.html' ||
+              f.file.endsWith('.html')
+          );
+
+          const isWin = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isWindows : false;
+          const autoTerminalCmd = isWin ? 'python -m http.server 3000' : 'python3 -m http.server 3000';
+
+          if (hasWebFiles) {
+            try {
+              await useTerminalStore.getState().runCommand(autoTerminalCmd);
+            } catch (tErr) {
+              console.warn('[AI Workspace] Auto-running terminal server failed:', tErr);
+            }
+          }
+
+          const detectedUrl =
+            response.local_url ||
+            (rawResponse.match(/https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i)?.[0]) ||
+            (hasWebFiles ? 'http://localhost:3000' : undefined);
+
+          addChatMessage({
+            id: Date.now().toString(),
+            role: 'assistant',
+            content: formattedText,
+            timestamp: Date.now(),
+            filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
+            localUrl: detectedUrl,
+            terminalCommand: hasWebFiles ? autoTerminalCmd : undefined,
+          });
+          setState('completed');
+          return;
+        }
+      } catch (err) {
+        // Fall through to agent task if backend was unreachable
+        console.warn('[AI Workspace] Fast backend path unavailable, using agent fallback', err);
+      }
+    }
+
+    // Secondary / Autonomous Agent Path:
     if (window.coreMindAPI?.runAgentTask) {
       const assistantMsgId = `asst-${Date.now()}`;
       let explanationReceived = false;

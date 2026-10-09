@@ -111,6 +111,7 @@ export interface CoreMindAPI extends CoreMindFilesAPI {
 
   // External & Auth
   openAuthWindow: (authUrl: string) => Promise<IpcResult<any>>;
+  openInChrome: (url: string) => Promise<IpcResult<{ opened: boolean }>>;
   openExternalUrl: (url: string) => Promise<void>;
 
   // Structured Namespaces (Section 11)
@@ -248,6 +249,7 @@ const api: CoreMindAPI = {
 
   // External & Auth
   openAuthWindow: (authUrl: string) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_OPEN_WINDOW, { authUrl }),
+  openInChrome: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.AUTH_OPEN_IN_CHROME, { url }),
   openExternalUrl: (url: string) => ipcRenderer.invoke(IPC_CHANNELS.OPEN_EXTERNAL_URL, { url }),
 
   // Structured Namespaces

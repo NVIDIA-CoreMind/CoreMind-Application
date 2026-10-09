@@ -35,6 +35,32 @@ export class FeatureAuthService {
   }
 
   /**
+   * Opens Google OAuth consent URL directly in Google Chrome.
+   */
+  public async openInGoogleChrome(): Promise<{ success: boolean; authUrl?: string; state?: string; error?: string }> {
+    try {
+      const res = await googleOAuthService.openInGoogleChrome();
+      return res;
+    } catch (err: unknown) {
+      const error = err as Error;
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Checks whether the user has completed Google authentication in Chrome.
+   */
+  public async checkPendingSession(state?: string): Promise<boolean> {
+    const { authService } = await import('@/services/coremind/auth');
+    const tokens = await authService.getPendingOAuthSession(state);
+    if (tokens) {
+      await useAuthStore.getState().setAuthTokens(tokens);
+      return true;
+    }
+    return false;
+  }
+
+  /**
    * Bypasses authentication for development and local testing.
    */
   public bypassDevAuth(): void {

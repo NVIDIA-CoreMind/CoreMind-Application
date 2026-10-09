@@ -277,7 +277,7 @@ export const GlobalPrompt: React.FC = () => {
                       }}
                     >
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{m}</span>
-                      {m === selectedModel && <Check size={12} color="#10B981" />}
+                      {m === selectedModel && <Check size={12} color="#3B82F6" />}
                     </button>
                   ))}
                 </div>

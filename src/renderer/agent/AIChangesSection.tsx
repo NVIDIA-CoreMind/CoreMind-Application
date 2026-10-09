@@ -10,7 +10,7 @@ const STATUS_COLOR: Record<ChangeStatus, string> = {
   deleted: '#f87171',
 };
 
-const ACCEPT = '#10b981';
+const ACCEPT = '#3B82F6';
 const REJECT = '#f87171';
 
 const pillButton: React.CSSProperties = {

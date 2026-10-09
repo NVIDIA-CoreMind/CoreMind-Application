@@ -46,8 +46,8 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
             width: '7px',
             height: '7px',
             borderRadius: '50%',
-            backgroundColor: '#10B981',
-            boxShadow: '0 0 6px #10B981',
+            backgroundColor: '#3B82F6',
+            boxShadow: '0 0 6px #3B82F6',
             animation: 'pulse-dot 1.5s infinite',
             display: 'inline-block',
             marginLeft: '4px',
@@ -106,7 +106,7 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
             overflowY: 'auto',
           }}>
             {event.output || (event.status === 'running' ? 'Executing in real terminal...' : 'No output')}
-            {event.status === 'completed' && <div style={{ marginTop: '8px', color: '#10B981', fontWeight: 600 }}>✔ Process exited with code 0</div>}
+            {event.status === 'completed' && <div style={{ marginTop: '8px', color: '#3B82F6', fontWeight: 600 }}>✔ Process exited with code 0</div>}
             {event.status === 'failed' && <div style={{ marginTop: '8px', color: '#EF4444', fontWeight: 600 }}>✖ Process exited with error code</div>}
           </div>
         </div>

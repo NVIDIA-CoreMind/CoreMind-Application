@@ -1,5 +1,6 @@
 import { ipcMain, dialog, app, BrowserWindow, shell } from 'electron';
 import os from 'node:os';
+import { execFile } from 'node:child_process';
 import {
   IPC_CHANNELS,
   IpcResult,
@@ -693,6 +694,70 @@ export function registerIpcHandlers(): void {
       if (url.startsWith('http://') || url.startsWith('https://')) {
         await shell.openExternal(url);
       }
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.AUTH_OPEN_IN_CHROME,
+    async (_event, { url }: { url: string }): Promise<IpcResult<{ opened: boolean }>> => {
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return {
+          success: false,
+          error: { code: 'INVALID_URL', message: 'URL must start with http:// or https://' },
+        };
+      }
+
+      return new Promise((resolve) => {
+        const platform = process.platform;
+        if (platform === 'darwin') {
+          execFile('open', ['-a', 'Google Chrome', url], (err) => {
+            if (err) {
+              logger.warn(`Failed to open Google Chrome via open -a, falling back to default browser: ${err.message}`);
+              void shell.openExternal(url).then(() => {
+                resolve({ success: true, data: { opened: true } });
+              }).catch((fallbackErr: unknown) => {
+                resolve({
+                  success: false,
+                  error: { code: 'OPEN_FAILED', message: (fallbackErr as Error).message || 'Failed to open URL' },
+                });
+              });
+            } else {
+              resolve({ success: true, data: { opened: true } });
+            }
+          });
+        } else if (platform === 'win32') {
+          execFile('cmd.exe', ['/c', 'start', 'chrome', url], (err) => {
+            if (err) {
+              void shell.openExternal(url).then(() => {
+                resolve({ success: true, data: { opened: true } });
+              }).catch((fallbackErr: unknown) => {
+                resolve({
+                  success: false,
+                  error: { code: 'OPEN_FAILED', message: (fallbackErr as Error).message || 'Failed to open URL' },
+                });
+              });
+            } else {
+              resolve({ success: true, data: { opened: true } });
+            }
+          });
+        } else {
+          // Linux
+          execFile('google-chrome', [url], (err) => {
+            if (err) {
+              void shell.openExternal(url).then(() => {
+                resolve({ success: true, data: { opened: true } });
+              }).catch((fallbackErr: unknown) => {
+                resolve({
+                  success: false,
+                  error: { code: 'OPEN_FAILED', message: (fallbackErr as Error).message || 'Failed to open URL' },
+                });
+              });
+            } else {
+              resolve({ success: true, data: { opened: true } });
+            }
+          });
+        }
+      });
     }
   );
 }

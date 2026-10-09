@@ -75,7 +75,7 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
             style={codeActionBtnStyle}
             title="Copy code"
           >
-            {copied ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
+            {copied ? <Check size={12} color="#3B82F6" /> : <Copy size={12} />}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
           <button
@@ -83,7 +83,7 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
             style={codeActionBtnStyle}
             title="Insert into active editor tab"
           >
-            {inserted ? <Check size={12} color="#10B981" /> : <ArrowDownRight size={12} />}
+            {inserted ? <Check size={12} color="#3B82F6" /> : <ArrowDownRight size={12} />}
             <span>{inserted ? 'Inserted' : 'Insert'}</span>
           </button>
           <button
@@ -91,7 +91,7 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
             style={codeActionBtnStyle}
             title="Apply changes to active file"
           >
-            {applied ? <Check size={12} color="#10B981" /> : <FileCheck size={12} />}
+            {applied ? <Check size={12} color="#3B82F6" /> : <FileCheck size={12} />}
             <span>{applied ? 'Applied' : 'Apply'}</span>
           </button>
         </div>
@@ -230,20 +230,14 @@ function renderWithToggles(rawText: string) {
     <>
       {parts.map((part, index) => {
         if (part.type === 'toggle') {
-          let title = 'Working...';
-          if (part.tag === 'thought') title = 'Thinking...';
-          else if (part.tag === 'search') title = 'Searching...';
-          else if (part.tag === 'tool' || part.tag === 'call') title = 'Running tool...';
-
+          // Remove intrusive board for working/thinking
+          if (part.tag === 'thought' || part.tag === 'working') {
+            return null;
+          }
           return (
-            <details key={index} className="ai-thought-block" open={!part.isClosed} style={{ marginBottom: '12px' }}>
-              <summary style={{ cursor: 'pointer', color: 'var(--text-secondary)', fontWeight: 500, userSelect: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '12px' }}>{title}</span>
-              </summary>
-              <div style={{ paddingLeft: '14px', borderLeft: '2px solid var(--border-color)', margin: '8px 0 0 4px', color: 'var(--text-muted)' }}>
-                <ReactMarkdown components={markdownComponents}>{part.content}</ReactMarkdown>
-              </div>
-            </details>
+            <div key={index} style={{ marginBottom: '8px', fontSize: '12px', color: 'var(--text-muted)' }}>
+              <ReactMarkdown components={markdownComponents}>{part.content}</ReactMarkdown>
+            </div>
           );
         }
         return <ReactMarkdown key={index} components={markdownComponents}>{part.content}</ReactMarkdown>;
@@ -253,50 +247,23 @@ function renderWithToggles(rawText: string) {
 }
 
 const StreamingMessage: React.FC<{ msgId: string, content: string, isLastGenerating: boolean, onUpdate?: () => void }> = ({ msgId, content, isLastGenerating, onUpdate }) => {
-  const [displayed, setDisplayed] = useState(streamedMessages.has(msgId) ? content : '');
-  const [isTyping, setIsTyping] = useState(!streamedMessages.has(msgId));
+  const [displayed, setDisplayed] = useState(content);
 
   useEffect(() => {
-    if (streamedMessages.has(msgId)) {
-      setDisplayed(content);
-      setIsTyping(false);
-      return;
-    }
-
-    let currentIndex = 0;
-    
-    const interval = setInterval(async () => {
-      if (currentIndex >= content.length) {
-        clearInterval(interval);
-        streamedMessages.add(msgId);
-        setIsTyping(false);
-        return;
-      }
-
-      // Stream dynamically faster based on remaining text
-      const remaining = content.length - currentIndex;
-      const charsToAddCount = Math.max(5, Math.ceil(remaining / 20));
-      const charsToAdd = content.slice(currentIndex, currentIndex + charsToAddCount);
-      currentIndex += charsToAdd.length;
-      
-      const currentDisplayed = content.slice(0, currentIndex);
-      setDisplayed(currentDisplayed);
-      onUpdate?.();
-      
-    }, 15);
-
-    return () => clearInterval(interval);
-  }, [content, msgId]);
+    setDisplayed(content);
+    streamedMessages.add(msgId);
+    onUpdate?.();
+  }, [content, msgId, onUpdate]);
 
   return (
     <div className="markdown-body" style={{ color: 'inherit', position: 'relative' }}>
       {renderWithToggles(displayed)}
-      {(isLastGenerating || isTyping) && (
+      {isLastGenerating && (
         <span style={{
           display: 'inline-block',
           width: '8px',
           height: '14px',
-          backgroundColor: 'currentColor',
+          backgroundColor: 'var(--accent, #3B82F6)',
           marginLeft: '4px',
           verticalAlign: 'middle',
           animation: 'chatgpt-blink 1s step-end infinite'
@@ -378,7 +345,6 @@ export const ChatThread: React.FC = () => {
   
   const isDark = theme === 'dark';
 
-  let runningText = 'working';
   const realtimeFiles: FileChangeInfo[] = [];
 
   if (currentState === 'running' && events.length > 0) {
@@ -396,25 +362,6 @@ export const ChatThread: React.FC = () => {
             additions: ev.additions,
           });
         }
-      }
-    }
-
-    const lastEvent = [...events].reverse().find(e => e.type === 'ToolCallEvent' || e.type === 'ThoughtEvent' || e.type === 'FileChangedEvent');
-    if (lastEvent) {
-      if (lastEvent.type === 'ToolCallEvent') {
-        const toolName = lastEvent.tool.toLowerCase();
-        if (toolName.includes('search') || toolName.includes('web')) {
-          runningText = 'Searching the web';
-        } else if (toolName.includes('write') || toolName.includes('create') || toolName.includes('file')) {
-          runningText = 'Writing files';
-        } else {
-          runningText = `Running ${lastEvent.tool}`;
-        }
-      } else if (lastEvent.type === 'ThoughtEvent') {
-        runningText = 'thinking';
-      } else if (lastEvent.type === 'FileChangedEvent') {
-        const fileName = (lastEvent as any).file?.split('/')?.pop() || 'files';
-        runningText = `Writing ${fileName}`;
       }
     }
   }
@@ -560,7 +507,7 @@ export const ChatThread: React.FC = () => {
       })}
 
       
-      {currentState === 'running' && (
+      {currentState === 'running' && realtimeFiles.length > 0 && (
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -568,34 +515,7 @@ export const ChatThread: React.FC = () => {
           maxWidth: '90%',
           alignSelf: 'flex-start'
         }}>
-          {realtimeFiles.length > 0 && (
-            <FileChangesCard files={realtimeFiles} isRealtime={true} />
-          )}
-
-          <div style={{
-            padding: '10px 14px',
-            borderRadius: '12px',
-            backgroundColor: isDark ? 'rgba(32, 32, 32, 0.7)' : '#ffffff',
-            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.08)',
-            color: 'var(--text-secondary)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '13px',
-            boxShadow: isDark ? '0 4px 12px rgba(0,0,0,0.2)' : '0 4px 12px rgba(0,0,0,0.05)',
-            width: 'fit-content'
-          }}>
-            <span style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: '#10B981',
-              boxShadow: '0 0 8px #10B981',
-              animation: 'pulse-dot 1.5s ease-in-out infinite',
-              display: 'inline-block'
-            }} />
-            <span style={{ fontWeight: 500 }}>{runningText}<span className="animated-dots"></span></span>
-          </div>
+          <FileChangesCard files={realtimeFiles} isRealtime={true} />
         </div>
       )}
       

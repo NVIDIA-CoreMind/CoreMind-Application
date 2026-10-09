@@ -174,6 +174,7 @@ export const IPC_CHANNELS = {
 
   // External & Auth
   AUTH_OPEN_WINDOW: 'auth:open-window',
+  AUTH_OPEN_IN_CHROME: 'auth:open-in-chrome',
   OPEN_EXTERNAL_URL: 'app:open-external-url',
 } as const;
 

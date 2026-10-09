@@ -54,7 +54,7 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
                 <div style={{ width: '70%', height: '3px', backgroundColor: '#3B82F6', borderRadius: '1px' }} />
                 <div style={{ width: '45%', height: '3px', backgroundColor: '#8B5CF6', borderRadius: '1px' }} />
-                <div style={{ width: '85%', height: '3px', backgroundColor: '#10B981', borderRadius: '1px' }} />
+                <div style={{ width: '85%', height: '3px', backgroundColor: '#60A5FA', borderRadius: '1px' }} />
                 <div style={{ width: '60%', height: '3px', backgroundColor: '#D1D5DB', borderRadius: '1px' }} />
               </div>
             </div>
@@ -172,7 +172,7 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
           style={{
             height: '4px',
             width: '100%',
-            backgroundColor: isLight ? '#059669' : '#10B981',
+            backgroundColor: isLight ? '#2563EB' : '#3B82F6',
             borderRadius: '1px',
             opacity: 0.8,
           }}
@@ -193,17 +193,17 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
         flexDirection: 'column',
         borderRadius: '10px',
         border: isSelected
-          ? '2px solid var(--accent, #10B981)'
+          ? '2px solid var(--accent, #3B82F6)'
           : '1px solid var(--border-color, rgba(128, 128, 128, 0.2))',
         backgroundColor: isSelected
-          ? 'var(--accent-bg, rgba(16, 185, 129, 0.08))'
+          ? 'var(--accent-bg, rgba(59, 130, 246, 0.08))'
           : 'var(--bg-card, rgba(255, 255, 255, 0.03))',
         padding: '12px',
         cursor: 'pointer',
         transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         position: 'relative',
         boxShadow: isSelected
-          ? '0 0 0 1px var(--accent, #10B981), 0 4px 14px rgba(0, 0, 0, 0.15)'
+          ? '0 0 0 1px var(--accent, #3B82F6), 0 4px 14px rgba(0, 0, 0, 0.15)'
           : '0 2px 6px rgba(0, 0, 0, 0.04)',
         outline: 'none',
       }}
@@ -218,7 +218,7 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
             width: '18px',
             height: '18px',
             borderRadius: '50%',
-            backgroundColor: 'var(--accent, #10B981)',
+            backgroundColor: 'var(--accent, #3B82F6)',
             color: '#FFFFFF',
             display: 'flex',
             alignItems: 'center',

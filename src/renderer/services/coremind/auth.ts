@@ -23,6 +23,26 @@ export class AuthService {
   }
 
   /**
+   * Polls or checks for completed OAuth session from Google Chrome login.
+   */
+  public async getPendingOAuthSession(state?: string): Promise<AuthTokens | null> {
+    try {
+      const queryString = state ? `?state=${encodeURIComponent(state)}` : '';
+      const res = await coremindClient.get<any>(`/v1/auth/session${queryString}`);
+      if (res && res.access_token) {
+        coremindClient.setTokens({
+          accessToken: res.access_token,
+          refreshToken: res.refresh_token,
+        });
+        return res as AuthTokens;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
    * Exchanges Google ID token or Auth code for CoreMind access/refresh JWT tokens.
    */
   public async loginWithGoogle(payload: GoogleLoginRequest): Promise<AuthTokens> {
