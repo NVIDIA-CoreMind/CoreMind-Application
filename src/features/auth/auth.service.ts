@@ -71,7 +71,12 @@ export class FeatureAuthService {
    * Signs out user and clears all credentials.
    */
   public async signOut(): Promise<void> {
-    await useAuthStore.getState().logout();
+    try {
+      await useAuthStore.getState().logout();
+    } finally {
+      const { onboardingService } = await import('../onboarding/onboarding.service');
+      onboardingService.signOutAndNavigateToGoogle();
+    }
   }
 
   /**

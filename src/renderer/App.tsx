@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { IDELayout } from './layouts/IDELayout';
 import { OnboardingWindow } from '../features/onboarding/OnboardingWindow';
 import { onboardingService } from '../features/onboarding/onboarding.service';
+import { OnboardingStep } from '../features/onboarding/onboarding.types';
 import { useTabsStore } from './stores/tabsStore';
 import { useWorkspaceStore } from './stores/workspaceStore';
 import { useUiStore } from './stores/uiStore';
@@ -13,6 +14,30 @@ export const App: React.FC = () => {
   const [isOnboardingCompleted, setIsOnboardingCompleted] = useState<boolean>(() =>
     onboardingService.isOnboardingCompleted()
   );
+  const [onboardingInitialStep, setOnboardingInitialStep] = useState<OnboardingStep>(() =>
+    onboardingService.getInitialStep()
+  );
+
+  // Subscribe to onboarding lifecycle events (e.g., sign out routing to Google auth)
+  useEffect(() => {
+    const unsubscribe = onboardingService.subscribe((completed, step) => {
+      setIsOnboardingCompleted(completed);
+      setOnboardingInitialStep(step);
+    });
+
+    const handleSignOutEvent = () => {
+      setIsOnboardingCompleted(false);
+      setOnboardingInitialStep(3);
+    };
+
+    window.addEventListener('coremind:signout', handleSignOutEvent);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener('coremind:signout', handleSignOutEvent);
+    };
+  }, []);
+
   const { saveActiveTab, closeTab, activeTabId } = useTabsStore();
   const { rootPath, openFolderDialog, openWorkspacePath, restoreLastWorkspace } = useWorkspaceStore();
   const {
@@ -169,6 +194,7 @@ export const App: React.FC = () => {
   if (!isOnboardingCompleted) {
     return (
       <OnboardingWindow
+        initialStep={onboardingInitialStep}
         onComplete={() => {
           setIsOnboardingCompleted(true);
           restoreLastWorkspace();
