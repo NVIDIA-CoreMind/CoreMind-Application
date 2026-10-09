@@ -14,6 +14,7 @@ export interface CapabilityHighlight {
 export interface OnboardingWindowProps {
   onComplete?: () => void;
   isDevelopment?: boolean;
+  initialStep?: OnboardingStep;
 }
 
 export interface OnboardingLayoutProps {

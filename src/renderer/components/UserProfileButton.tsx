@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { LogOut, CheckCircle2, ChevronDown } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { onboardingService } from '../../features/onboarding/onboarding.service';
 
 export const UserProfileButton: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
@@ -29,7 +30,11 @@ export const UserProfileButton: React.FC = () => {
 
   const handleSignOut = async () => {
     setIsOpen(false);
-    await logout();
+    try {
+      await logout();
+    } finally {
+      onboardingService.signOutAndNavigateToGoogle();
+    }
   };
 
   const displayName = user?.name || (isAuthenticated ? 'CoreMind User' : 'Guest');

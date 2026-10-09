@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { OnboardingLayout } from './OnboardingLayout';
 import { WelcomePage } from './WelcomePage';
 import { ThemeSelectionPage } from './ThemeSelectionPage';
@@ -11,8 +11,15 @@ import { featureAuthService } from '../auth/auth.service';
 export const OnboardingWindow: React.FC<OnboardingWindowProps> = ({
   onComplete,
   isDevelopment,
+  initialStep = 1,
 }) => {
-  const [currentStep, setCurrentStep] = useState<OnboardingStep>(1);
+  const [currentStep, setCurrentStep] = useState<OnboardingStep>(initialStep);
+
+  useEffect(() => {
+    if (initialStep) {
+      setCurrentStep(initialStep);
+    }
+  }, [initialStep]);
   const theme = useThemeStore((s) => s.theme);
 
   const handleSelectTheme = (newTheme: ThemeChoice) => {

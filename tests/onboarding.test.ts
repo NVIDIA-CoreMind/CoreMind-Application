@@ -80,6 +80,20 @@ describe('CoreMind IDE — Three-Page Onboarding Experience', () => {
       onboardingService.setDevBypass(false);
       expect(onboardingService.isDevBypassed()).toBe(false);
     });
+
+    it('routes directly to Continue with Google (Step 3) on sign out', () => {
+      onboardingService.markOnboardingCompleted();
+      expect(onboardingService.isOnboardingCompleted()).toBe(true);
+
+      const listener = vi.fn();
+      const unsub = onboardingService.subscribe(listener);
+
+      onboardingService.signOutAndNavigateToGoogle();
+      expect(onboardingService.isOnboardingCompleted()).toBe(false);
+      expect(onboardingService.getInitialStep()).toBe(3);
+      expect(listener).toHaveBeenCalledWith(false, 3);
+      unsub();
+    });
   });
 
   describe('2. Theme Selection & System Preferences', () => {
@@ -129,13 +143,15 @@ describe('CoreMind IDE — Three-Page Onboarding Experience', () => {
       expect(tokens?.access_token).toBeDefined();
     });
 
-    it('clears state on sign out', async () => {
+    it('clears state and routes to Continue with Google on sign out', async () => {
       featureAuthService.bypassDevAuth();
       expect(featureAuthService.isAuthenticated()).toBe(true);
 
       await featureAuthService.signOut();
       expect(featureAuthService.isAuthenticated()).toBe(false);
       expect(featureAuthService.getCurrentUser()).toBeNull();
+      expect(onboardingService.isOnboardingCompleted()).toBe(false);
+      expect(onboardingService.getInitialStep()).toBe(3);
     });
 
     it('handles Google OAuth error when backend is unreachable', async () => {
