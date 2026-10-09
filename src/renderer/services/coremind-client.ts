@@ -151,6 +151,88 @@ export class CoreMindClient {
   async rejectChanges(changeId: string) {
     return this.request<any>(`/v1/changes/${changeId}/reject`, { method: 'POST' });
   }
+
+  async streamChat(
+    query: string,
+    projectPath: string = '.',
+    history: any[] = [],
+    onToken: (token: string) => void,
+    signal?: AbortSignal
+  ): Promise<string> {
+    const url = `${this.baseUrl}/v1/ai/chat/stream`;
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    };
+    if (this.token) {
+      headers['Authorization'] = `Bearer ${this.token}`;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ query, project_path: projectPath, history }),
+      signal,
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      throw new Error(`Streaming failed (${response.status}): ${errText || response.statusText}`);
+    }
+
+    if (!response.body) {
+      throw new Error('ReadableStream not supported');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let accumulated = '';
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed || !trimmed.startsWith('data:')) continue;
+
+          const dataPayload = trimmed.replace(/^data:\s*/, '');
+          if (dataPayload === '[DONE]') {
+            return accumulated;
+          }
+
+          try {
+            const parsed = JSON.parse(dataPayload);
+            if (parsed.type === 'token' && typeof parsed.token === 'string') {
+              accumulated += parsed.token;
+              onToken(parsed.token);
+            } else if (parsed.content && typeof parsed.content === 'string') {
+              accumulated += parsed.content;
+              onToken(parsed.content);
+            } else if (parsed.type === 'done') {
+              return accumulated;
+            }
+          } catch {
+            if (dataPayload !== '[DONE]') {
+              accumulated += dataPayload;
+              onToken(dataPayload);
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    return accumulated;
+  }
 }
 
 export const coremindClient = new CoreMindClient();
+

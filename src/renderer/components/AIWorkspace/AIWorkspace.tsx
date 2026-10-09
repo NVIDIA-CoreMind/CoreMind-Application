@@ -1,653 +1,591 @@
 import React, { useCallback, useEffect } from 'react';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { PromptComposer } from './PromptComposer';
-import { useAIWorkspaceStore, FileChangeInfo } from '../../services/aiWorkspaceService';
-import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useFilesStore } from '../../stores/filesStore';
-import { useTabsStore } from '../../stores/tabsStore';
-import { coremindClient } from '../../services/coremind-client';
-import { coremindWs } from '../../services/coremind/websocket';
 import { ChatThread } from './ChatThread';
+import { ImplementationPlan } from './ImplementationPlan';
+import { ActivityTimeline } from './ActivityTimeline';
+import { DiffViewer } from './DiffViewer';
 import { ChatHistory } from './ChatHistory';
+import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useThemeStore } from '../../stores/themeStore';
-
+import { coremindClient } from '../../services/coremind/client';
+import { coremindWs } from '../../services/coremind/websocket';
+import { agentService } from '../../services/coremind/agent';
 import { extractToolCalls, executeToolCalls } from '../../services/aiToolExecution';
-import { useTerminalStore } from '../../stores/terminalStore';
+import { TaskNode } from '../../types/aiWorkspace';
 
 export const AIWorkspace: React.FC = () => {
-  const { currentState, setState, setAbortController, addChatMessage, chatHistory } = useAIWorkspaceStore();
+  const {
+    currentState,
+    setState,
+    setAbortController,
+    addChatMessage,
+    appendStreamChunk,
+    chatHistory,
+    activeView,
+    agentMode,
+    setAgentId,
+    setTaskGraph,
+    updateTaskNode,
+    recordFileChange,
+    setChangeId,
+    setPendingQuestion,
+    setPendingApproval,
+    safeRefreshEditorBuffers,
+    addEvent,
+    updateEvent,
+  } = useAIWorkspaceStore();
+
   const { rootPath } = useWorkspaceStore();
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
 
-  // Subscribe to backend WebSocket events for live streaming status
+  // Real-time backend event subscriptions via WebSocket (/ws)
   useEffect(() => {
     coremindWs.connect();
 
-    const unsubTool = coremindWs.on('tool.started', (event) => {
-      const toolName = (event.data?.tool || '').toLowerCase();
-      if (/search|grep|find|read|scan|list/i.test(toolName)) {
-        useAIWorkspaceStore.getState().setAgentPhase('searching', event.data?.args?.query || event.data?.tool);
-      } else {
-        useAIWorkspaceStore.getState().setAgentPhase('working', event.data?.tool);
+    const unsubAny = coremindWs.onAny((event) => {
+      const store = useAIWorkspaceStore.getState();
+      const currentAgentId = store.agentId;
+      const now = Date.now();
+
+      // Filter events if targeted to a different agent
+      if (currentAgentId && event.agent_id && event.agent_id !== currentAgentId) {
+        return;
       }
 
-      useAIWorkspaceStore.getState().addEvent({
-        id: `tool-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        type: 'ToolCallEvent',
-        tool: event.data?.tool || 'tool',
-        args: event.data?.args || {},
-        timestamp: Date.now(),
-      });
-    });
-
-    const unsubThinking = coremindWs.on('agent.thinking', (event) => {
-      useAIWorkspaceStore.getState().setAgentPhase('thinking', event.data?.phase || event.data?.summary);
-      useAIWorkspaceStore.getState().addEvent({
-        id: `thought-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-        type: 'ThoughtEvent',
-        summary: event.data?.phase || 'thinking',
-        durationMs: 0,
-        timestamp: Date.now(),
-      });
-    });
-
-    const unsubFileChanged = coremindWs.on('file.changed', async (event) => {
-      useAIWorkspaceStore.getState().setAgentPhase('working', 'Updating files...');
-      if (event.data?.file && rootPath) {
-        const filePath = event.data.file;
-        let linesCount = event.data.lines;
-
-        if (!linesCount && window.coreMindAPI?.readFile) {
-          try {
-            const cleanPath = filePath.replace(/^\/+/, '').trim();
-            const fullPath = filePath.startsWith('/') ? filePath : `${rootPath}/${cleanPath}`;
-            const readRes = await window.coreMindAPI.readFile(fullPath, rootPath);
-            if (readRes.success && typeof readRes.data === 'string') {
-              linesCount = readRes.data.split('\n').length;
-            }
-          } catch {
-            // ignore
-          }
+      switch (event.type) {
+        case 'agent.started': {
+          store.setState('running');
+          store.setAgentPhase('working', event.data?.task || 'Starting agent task');
+          addEvent({
+            id: `evt-started-${now}`,
+            type: 'AgentStartedEvent',
+            task: event.data?.task,
+            projectPath: event.data?.project_path,
+            timestamp: now,
+          });
+          break;
         }
 
-        useAIWorkspaceStore.getState().addEvent({
-          id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-          type: 'FileChangedEvent',
-          file: filePath,
-          action: event.data.action || 'created',
-          lines: linesCount,
-          additions: event.data.additions,
-          timestamp: Date.now(),
-        });
-        useFilesStore.getState().loadWorkspaceTree(rootPath).catch(() => {});
-      }
-    });
+        case 'agent.planning': {
+          store.setAgentPhase('planning', 'Constructing implementation plan...');
+          addEvent({
+            id: `evt-planning-${now}`,
+            type: 'ThoughtEvent',
+            summary: 'Constructing implementation plan and analyzing repository context...',
+            durationMs: 0,
+            timestamp: now,
+          });
+          break;
+        }
 
-    const unsubApproval = coremindWs.on('approval.required', (event) => {
-      if (event.data?.approval_id) {
-        coremindWs.approve(event.data.approval_id);
+        case 'plan.created': {
+          const rawNodes: TaskNode[] =
+            event.data?.nodes ||
+            event.data?.tasks ||
+            event.data?.task_graph?.tasks ||
+            event.data?.task_graph?.nodes ||
+            [];
+          const graph = event.data?.task_graph || {
+            goal: event.data?.goal,
+            tasks: rawNodes,
+            nodes: rawNodes,
+          };
+
+          setTaskGraph(graph);
+          store.setAgentPhase('working', `Executing plan (${rawNodes.length} tasks)`);
+          addEvent({
+            id: `evt-plan-${now}`,
+            type: 'PlanCreatedEvent',
+            goal: event.data?.goal,
+            tasks: rawNodes,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'task.started': {
+          const taskId = event.data?.task_id;
+          const title = event.data?.title || taskId;
+          if (taskId) {
+            updateTaskNode(taskId, { status: 'in_progress' });
+          }
+          store.setAgentPhase('working', title);
+          addEvent({
+            id: `evt-task-start-${now}`,
+            type: 'TaskProgressEvent',
+            taskId: taskId || `task-${now}`,
+            title: title || 'Subtask',
+            status: 'in_progress',
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'task.completed': {
+          const taskId = event.data?.task_id;
+          const title = event.data?.title || taskId;
+          if (taskId) {
+            updateTaskNode(taskId, { status: 'completed', result: event.data?.result });
+          }
+          addEvent({
+            id: `evt-task-done-${now}`,
+            type: 'TaskProgressEvent',
+            taskId: taskId || `task-${now}`,
+            title: title || 'Subtask',
+            status: 'completed',
+            result: event.data?.result,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'agent.thinking': {
+          store.setAgentPhase('thinking', `Step ${event.data?.step || 1} of ${event.data?.max_steps || '...'}`);
+          addEvent({
+            id: `evt-thought-${now}`,
+            type: 'ThoughtEvent',
+            summary: `Reasoning step ${event.data?.step || 1}...`,
+            durationMs: 0,
+            step: event.data?.step,
+            maxSteps: event.data?.max_steps,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'agent.ai.token': {
+          const chunk = event.data?.token || '';
+          if (chunk) {
+            const streamId = store.streamMessageId || `asst-stream-${now}`;
+            appendStreamChunk(streamId, chunk);
+          }
+          break;
+        }
+
+        case 'tool.started': {
+          const tool = event.data?.tool || 'tool';
+          const query = event.data?.args?.query || event.data?.args?.path;
+          if (/search|grep|find|read|scan|list/i.test(tool)) {
+            store.setAgentPhase('searching', query || tool);
+          } else {
+            store.setAgentPhase('working', `Tool: ${tool}`);
+          }
+          addEvent({
+            id: `evt-tool-${now}`,
+            type: 'ToolCallEvent',
+            tool,
+            args: event.data?.args || {},
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'tool.completed': {
+          addEvent({
+            id: `evt-tool-done-${now}`,
+            type: 'ToolCallEvent',
+            tool: event.data?.tool || 'tool',
+            args: {},
+            result: event.data?.result,
+            success: event.data?.success !== false,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'file.read': {
+          const path = event.data?.path || '';
+          addEvent({
+            id: `evt-read-${now}`,
+            type: 'FileReadEvent',
+            file: path,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'file.created':
+        case 'file.changed':
+        case 'file.deleted': {
+          const path = event.data?.path || event.data?.file || '';
+          const action = event.type === 'file.created' ? 'created' : event.type === 'file.deleted' ? 'deleted' : 'modified';
+          if (path) {
+            recordFileChange(path, action, event.data?.additions || event.data?.lines, event.data?.deletions);
+            if (rootPath) {
+              void safeRefreshEditorBuffers([path], rootPath);
+            }
+          }
+          addEvent({
+            id: `evt-file-${now}`,
+            type: 'FileChangedEvent',
+            file: path,
+            action,
+            lines: event.data?.lines,
+            additions: event.data?.additions,
+            deletions: event.data?.deletions,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'diff.created': {
+          const path = event.data?.path || '';
+          if (path) {
+            recordFileChange(path, 'modified', event.data?.additions, event.data?.deletions, event.data?.diff);
+          }
+          addEvent({
+            id: `evt-diff-${now}`,
+            type: 'DiffCreatedEvent',
+            path,
+            diff: event.data?.diff,
+            additions: event.data?.additions || 0,
+            deletions: event.data?.deletions || 0,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'command.started': {
+          store.setAgentPhase('working', `Running: ${event.data?.command || 'shell'}`);
+          addEvent({
+            id: `evt-cmd-${now}`,
+            type: 'TerminalEvent',
+            command: event.data?.command || '',
+            output: '',
+            status: 'running',
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'command.output': {
+          const out = event.data?.output || '';
+          const currentEvents = useAIWorkspaceStore.getState().events;
+          const lastCmd = [...currentEvents].reverse().find((e) => e.type === 'TerminalEvent') as any;
+          if (lastCmd) {
+            updateEvent(lastCmd.id, { output: (lastCmd.output || '') + out });
+          }
+          break;
+        }
+
+        case 'command.completed': {
+          const currentEvents = useAIWorkspaceStore.getState().events;
+          const lastCmd = [...currentEvents].reverse().find((e) => e.type === 'TerminalEvent') as any;
+          if (lastCmd) {
+            updateEvent(lastCmd.id, {
+              status: event.data?.exit_code === 0 ? 'completed' : 'failed',
+              exitCode: event.data?.exit_code,
+              durationMs: event.data?.duration_ms,
+            });
+          }
+          break;
+        }
+
+        case 'verification.started': {
+          store.setAgentPhase('verifying', `Verification attempt ${event.data?.attempt || 1}...`);
+          addEvent({
+            id: `evt-verify-${now}`,
+            type: 'TestEvent',
+            testName: `Verification (Attempt ${event.data?.attempt || 1})`,
+            status: 'running',
+            attempt: event.data?.attempt,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'verification.passed': {
+          addEvent({
+            id: `evt-verify-pass-${now}`,
+            type: 'TestEvent',
+            testName: 'Verification Checks',
+            status: 'passed',
+            command: event.data?.command,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'verification.failed': {
+          store.setAgentPhase('working', 'Self-healing / fixing test issues...');
+          addEvent({
+            id: `evt-verify-fail-${now}`,
+            type: 'TestEvent',
+            testName: 'Verification Failure',
+            status: 'failed',
+            error: event.data?.error || `Command exited with code ${event.data?.exit_code}`,
+            exitCode: event.data?.exit_code,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'agent.waiting_for_user': {
+          store.setState('waiting');
+          setPendingQuestion({
+            question_id: event.data?.question_id,
+            question: event.data?.question,
+            options: event.data?.options,
+          });
+          break;
+        }
+
+        case 'agent.approval.required': {
+          store.setState('waiting');
+          setPendingApproval({
+            approval_id: event.data?.approval_id,
+            tool: event.data?.tool,
+            args: event.data?.args || {},
+            description: event.data?.description,
+          });
+          break;
+        }
+
+        case 'agent.completed': {
+          store.setState('completed');
+          if (event.data?.change_id) {
+            setChangeId(event.data.change_id);
+          }
+          if (event.data?.task_graph) {
+            setTaskGraph(event.data.task_graph);
+          }
+          if (Array.isArray(event.data?.files_changed) && rootPath) {
+            void safeRefreshEditorBuffers(event.data.files_changed, rootPath);
+          }
+          addEvent({
+            id: `evt-complete-${now}`,
+            type: 'CompletedEvent',
+            summary: `Agent completed execution in ${event.data?.steps || 0} steps.`,
+            filesChanged: event.data?.files_changed || [],
+            tests: [],
+            changeId: event.data?.change_id,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'agent.failed':
+        case 'agent.error': {
+          store.setState('error');
+          addEvent({
+            id: `evt-err-${now}`,
+            type: 'ErrorEvent',
+            error: event.data?.error || 'Agent encountered an error.',
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'agent.stopped': {
+          store.setState('stopped');
+          break;
+        }
       }
     });
 
     return () => {
-      unsubTool();
-      unsubThinking();
-      unsubFileChanged();
-      unsubApproval();
+      unsubAny();
     };
-  }, [rootPath]);
+  }, [rootPath, setTaskGraph, updateTaskNode, recordFileChange, setChangeId, setPendingQuestion, setPendingApproval, safeRefreshEditorBuffers, addEvent, updateEvent, appendStreamChunk]);
 
-  const handleStartMock = useCallback(async (prompt: string) => {
-    if (!prompt.trim()) return;
+  // Main Prompt Submission Handler
+  const handlePromptSubmit = useCallback(async (prompt: string) => {
+    if (!prompt.trim() || currentState === 'running') return;
+
     if (!rootPath) {
-      alert('Please open a workspace first to use the chat.');
+      alert('Please open a workspace folder before executing AI tasks.');
       return;
     }
 
-    // Capture the history BEFORE adding the new user message
-    // This prevents the user message from being sent both as `query` and inside `history`
-    const historyToSend = chatHistory.map(msg => ({
-      role: msg.role,
-      content: msg.content
-    }));
-
-    const userMessageId = Date.now().toString();
-    addChatMessage({
-      id: userMessageId,
-      role: 'user',
-      content: prompt,
-      timestamp: Date.now()
-    });
-    
-    // Reset events for this execution turn and set initial Antigravity phase
-    const isSearchIntent = /\b(search|find|grep|look for|where is|locate|scan)\b/i.test(prompt);
-    useAIWorkspaceStore.setState({
-      events: [],
-      agentPhase: isSearchIntent ? 'searching' : 'thinking',
-      agentPhaseDetail: isSearchIntent ? 'Searching workspace...' : undefined,
-    });
     const abortController = new AbortController();
     setAbortController(abortController);
     setState('running');
 
-    // Primary Fast AI Path: Live CoreMind Backend AI with immediate file creation & code writing
-    const isAutonomousAgentMode = prompt.startsWith('/agent ') || prompt.startsWith('/autonomous ');
+    // Capture history prior to adding the new prompt
+    const historyToSend = chatHistory.map((msg) => ({
+      role: msg.role,
+      content: msg.content,
+    }));
 
-    if (!isAutonomousAgentMode) {
+    // Add user message to chat
+    const userMsgId = `user-${Date.now()}`;
+    addChatMessage({
+      id: userMsgId,
+      role: 'user',
+      content: prompt,
+      timestamp: Date.now(),
+    });
+
+    // Check if user specifically requested agent or chat mode
+    const isAutonomousAgent =
+      agentMode === 'agent' ||
+      prompt.startsWith('/agent ') ||
+      prompt.startsWith('/autonomous ') ||
+      prompt.startsWith('/plan ');
+
+    const cleanPrompt = prompt.replace(/^\/(?:agent|autonomous|plan)\s+/, '');
+
+    // 1. Autonomous Agent Execution Path (/v1/agent/run)
+    if (isAutonomousAgent) {
       try {
-        const statusTimer = setTimeout(() => {
-          if (useAIWorkspaceStore.getState().currentState === 'running') {
-            useAIWorkspaceStore.getState().setAgentPhase('working');
-          }
-        }, 1200);
+        useAIWorkspaceStore.getState().setAgentPhase('planning', 'Initializing autonomous agent...');
+        const runRes = await agentService.run(cleanPrompt, rootPath);
 
-        const response = await coremindClient.chatWithTools(prompt, rootPath, historyToSend);
-        clearTimeout(statusTimer);
+        if (runRes?.agent_id) {
+          setAgentId(runRes.agent_id);
+        }
 
         if (abortController.signal.aborted) {
           return;
         }
-
-        if (response.status === 'ok') {
-          const rawResponse = response.response || 'Success, but no response provided.';
-          const { toolCalls, formattedText } = extractToolCalls(rawResponse);
-          const filesChangedDetails: FileChangeInfo[] = [];
-
-          if (toolCalls.length > 0) {
-            useAIWorkspaceStore.getState().setAgentPhase('working', 'Writing files...');
-            await executeToolCalls(toolCalls, rootPath);
-            for (const tc of toolCalls) {
-              if (tc.path && typeof tc.content === 'string') {
-                const cleanPath = tc.path.replace(/^\/+/, '').trim();
-                filesChangedDetails.push({
-                  file: cleanPath,
-                  action: 'created',
-                  lines: tc.content.split('\n').length,
-                });
-              }
-            }
-          }
-
-          // Handle files modified or created on disk by backend agent
-          const backendFiles: string[] = Array.isArray(response.files_changed) ? response.files_changed : [];
-          if (backendFiles.length > 0 && rootPath) {
-            try {
-              await useFilesStore.getState().loadWorkspaceTree(rootPath);
-            } catch (e) {
-              console.warn('Failed to refresh workspace tree:', e);
-            }
-
-            const tabsState = useTabsStore.getState();
-            for (const relPath of backendFiles) {
-              const cleanPath = relPath.replace(/^\/+/, '').trim();
-              const fullPath = relPath.startsWith('/') ? relPath : `${rootPath}/${cleanPath}`;
-              const fileName = cleanPath.split('/').pop() || cleanPath;
-
-              try {
-                if (window.coreMindAPI?.readFile) {
-                  const readRes = await window.coreMindAPI.readFile(fullPath, rootPath);
-                  if (readRes.success && typeof readRes.data === 'string') {
-                    const lineCount = readRes.data.split('\n').length;
-                    const existingIdx = filesChangedDetails.findIndex((f) => f.file === cleanPath);
-                    if (existingIdx >= 0) {
-                      filesChangedDetails[existingIdx].lines = lineCount;
-                    } else {
-                      filesChangedDetails.push({
-                        file: cleanPath,
-                        action: 'created',
-                        lines: lineCount,
-                      });
-                    }
-
-                    const existingTab = tabsState.tabs.find((t) => t.filePath === fullPath || t.id === fullPath);
-                    if (existingTab) {
-                      tabsState.updateTabContent(existingTab.id, readRes.data);
-                      useTabsStore.setState((state) => ({
-                        tabs: state.tabs.map((t) =>
-                          t.id === existingTab.id
-                            ? { ...t, content: readRes.data, savedContent: readRes.data, isDirty: false }
-                            : t
-                        ),
-                      }));
-                    } else {
-                      await tabsState.openFile(fullPath, fileName, rootPath);
-                      tabsState.updateTabContent(fullPath, readRes.data);
-                    }
-                  }
-                }
-              } catch (err) {
-                console.error('[AI Workspace] Failed to reload changed file:', fullPath, err);
-              }
-            }
-          }
-
-          if (Array.isArray(response.files_details)) {
-            for (const fd of response.files_details) {
-              if (fd && fd.file) {
-                const clean = fd.file.replace(/^\/+/, '').trim();
-                const existing = filesChangedDetails.find((f) => f.file === clean);
-                if (!existing) {
-                  filesChangedDetails.push({
-                    file: clean,
-                    action: fd.action || 'created',
-                    lines: fd.lines,
-                  });
-                } else if (!existing.lines && fd.lines) {
-                  existing.lines = fd.lines;
-                }
-              }
-            }
-          }
-
-          const hasWebFiles = filesChangedDetails.some(
-            (f) =>
-              f.file.endsWith('index.html') ||
-              f.file.endsWith('index.htm') ||
-              f.file === 'index.html' ||
-              f.file.endsWith('.html')
-          );
-
-          const isWin = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isWindows : false;
-          const autoTerminalCmd = isWin ? 'python -m http.server 3000' : 'python3 -m http.server 3000';
-
-          if (hasWebFiles) {
-            try {
-              await useTerminalStore.getState().runCommand(autoTerminalCmd);
-            } catch (tErr) {
-              console.warn('[AI Workspace] Auto-running terminal server failed:', tErr);
-            }
-          }
-
-          const detectedUrl =
-            response.local_url ||
-            (rawResponse.match(/https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i)?.[0]) ||
-            (hasWebFiles ? 'http://localhost:3000' : undefined);
-
-          addChatMessage({
-            id: Date.now().toString(),
-            role: 'assistant',
-            content: formattedText,
-            timestamp: Date.now(),
-            filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
-            localUrl: detectedUrl,
-            terminalCommand: hasWebFiles ? autoTerminalCmd : undefined,
-          });
-          setState('completed');
-          return;
-        }
-      } catch (err) {
-        // Fall through to agent task if backend was unreachable
-        console.warn('[AI Workspace] Fast backend path unavailable, using agent fallback', err);
-      }
-    }
-
-    // Secondary / Autonomous Agent Path:
-    if (window.coreMindAPI?.runAgentTask) {
-      const assistantMsgId = `asst-${Date.now()}`;
-      let explanationReceived = false;
-      const filesChangedDetails: FileChangeInfo[] = [];
-
-      const unsubEvents = window.coreMindAPI.onAgentStreamEvent?.((streamEvent) => {
-        if (streamEvent.type === 'explanation') {
-          explanationReceived = true;
-          addChatMessage({
-            id: assistantMsgId,
-            role: 'assistant',
-            content: streamEvent.text,
-            timestamp: Date.now(),
-          });
-        } else if (streamEvent.type === 'status') {
-          const txt = (streamEvent.text || '').toLowerCase();
-          if (/search|find|grep|scan|inspect/i.test(txt)) {
-            useAIWorkspaceStore.getState().setAgentPhase('searching', streamEvent.text);
-          } else if (/think|plan|reason/i.test(txt)) {
-            useAIWorkspaceStore.getState().setAgentPhase('thinking', streamEvent.text);
-          } else {
-            useAIWorkspaceStore.getState().setAgentPhase('working', streamEvent.text);
-          }
-          useAIWorkspaceStore.getState().addEvent({
-            id: `thought-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            type: 'ThoughtEvent',
-            summary: streamEvent.text,
-            durationMs: 0,
-            timestamp: Date.now(),
-          });
-        } else if (streamEvent.type === 'terminal_output') {
-          useAIWorkspaceStore.getState().setAgentPhase('working', 'Running command...');
-          useAIWorkspaceStore.getState().addEvent({
-            id: `term-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            type: 'TerminalEvent',
-            command: streamEvent.command,
-            output: streamEvent.data,
-            status: 'running',
-            timestamp: Date.now(),
-          });
-        } else if (streamEvent.type === 'file_change') {
-          const changedFileName = (streamEvent.file || '').split('/').pop();
-          useAIWorkspaceStore.getState().setAgentPhase('working', changedFileName ? `Writing ${changedFileName}...` : 'Writing files...');
-          const cleanPath = streamEvent.file.replace(/^\/+/, '').trim();
-          const existing = filesChangedDetails.find((f) => f.file === cleanPath);
-          if (existing) {
-            existing.lines = streamEvent.lines;
-            existing.action = streamEvent.action;
-          } else {
-            filesChangedDetails.push({
-              file: cleanPath,
-              action: streamEvent.action || 'created',
-              lines: streamEvent.lines,
-            });
-          }
-
-          useAIWorkspaceStore.getState().addEvent({
-            id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-            type: 'FileChangedEvent',
-            file: cleanPath,
-            action: streamEvent.action || 'created',
-            lines: streamEvent.lines,
-            timestamp: Date.now(),
-          });
-
-          // Refresh workspace tree & open the file in tab editor
-          useFilesStore.getState().loadWorkspaceTree(rootPath).catch(() => {});
-          const fullPath = streamEvent.file.startsWith('/') ? streamEvent.file : `${rootPath}/${cleanPath}`;
-          const targetFileName: string = cleanPath.split('/').pop() || cleanPath;
-          useTabsStore.getState().openFile(fullPath, targetFileName, rootPath).catch(() => {});
-        } else if (streamEvent.type === 'complete') {
-          if (!explanationReceived) {
-            addChatMessage({
-              id: assistantMsgId,
-              role: 'assistant',
-              content: streamEvent.summary,
-              timestamp: Date.now(),
-              filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
-            });
-          } else {
-            useAIWorkspaceStore.setState((state) => ({
-              chatHistory: state.chatHistory.map((m) =>
-                m.id === assistantMsgId
-                  ? {
-                      ...m,
-                      content: `${m.content}\n\n---\n\n${streamEvent.summary}`,
-                      filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
-                    }
-                  : m
-              ),
-            }));
-          }
-          setState('completed');
-        }
-      });
-
-      try {
-        const result = await window.coreMindAPI.runAgentTask({
-          prompt,
-          workspacePath: rootPath,
-          model: useAIWorkspaceStore.getState().selectedModel,
-          history: historyToSend,
-        });
-
-        if (abortController.signal.aborted) {
-          setState('stopped');
-          return;
-        }
-
-        if (!result.success) {
-          addChatMessage({
-            id: `err-${Date.now()}`,
-            role: 'assistant',
-            content: `**Execution Error:** ${result.error.message}`,
-            timestamp: Date.now(),
-          });
-          setState('error');
-        }
-      } catch (err: any) {
+      } catch (agentErr: any) {
         if (!abortController.signal.aborted) {
-          addChatMessage({
-            id: `err-${Date.now()}`,
-            role: 'assistant',
-            content: `**Execution Error:** ${err.message || 'Execution failed.'}`,
-            timestamp: Date.now(),
-          });
-          setState('error');
+          // If agent service fails (e.g. backend fallback), try streaming chat
+          console.warn('Agent start error, falling back to streaming chat:', agentErr);
+          await runStreamingChat(cleanPrompt, historyToSend, abortController);
         }
-      } finally {
-        unsubEvents?.();
       }
       return;
     }
 
+    // 2. Direct Streaming Assistant Chat Path (/v1/ai/chat/stream SSE)
+    await runStreamingChat(cleanPrompt, historyToSend, abortController);
+  }, [currentState, rootPath, chatHistory, agentMode, addChatMessage, setAbortController, setState, setAgentId]);
+
+  const runStreamingChat = async (
+    promptText: string,
+    history: any[],
+    abortController: AbortController
+  ) => {
+    const assistantMsgId = `asst-${Date.now()}`;
+    useAIWorkspaceStore.getState().setAgentPhase('thinking', 'Streaming AI response...');
+
     try {
-      const response = await coremindClient.chatWithTools(prompt, rootPath, historyToSend);
+      const fullResponse = await coremindClient.streamChat(
+        promptText,
+        rootPath || '.',
+        history,
+        (token) => {
+          appendStreamChunk(assistantMsgId, token);
+        },
+        abortController.signal
+      );
 
-      
-      if (abortController.signal.aborted) {
-        return;
+      if (abortController.signal.aborted) return;
+
+      // Extract and execute tool calls in response if present
+      const { toolCalls, formattedText } = extractToolCalls(fullResponse);
+      const filesChangedDetails: any[] = [];
+
+      if (toolCalls.length > 0 && rootPath) {
+        useAIWorkspaceStore.getState().setAgentPhase('working', 'Executing code updates...');
+        await executeToolCalls(toolCalls, rootPath);
+        for (const tc of toolCalls) {
+          if (tc.path && typeof tc.content === 'string') {
+            const cleanPath = tc.path.replace(/^\/+/, '').trim();
+            filesChangedDetails.push({
+              file: cleanPath,
+              action: 'created',
+              lines: tc.content.split('\n').length,
+            });
+            recordFileChange(cleanPath, 'created', tc.content.split('\n').length);
+          }
+        }
+        if (filesChangedDetails.length > 0) {
+          void safeRefreshEditorBuffers(filesChangedDetails.map((f) => f.file), rootPath);
+        }
       }
 
-      if (response.status === 'ok') {
-        const rawResponse = response.response || 'Success, but no response provided.';
-        const { toolCalls, formattedText } = extractToolCalls(rawResponse);
-        const filesChangedDetails: FileChangeInfo[] = [];
-
-        if (toolCalls.length > 0) {
-          await executeToolCalls(toolCalls, rootPath);
-          for (const tc of toolCalls) {
-            if (tc.path && typeof tc.content === 'string') {
-              const cleanPath = tc.path.replace(/^\/+/, '').trim();
-              filesChangedDetails.push({
-                file: cleanPath,
-                action: 'created',
-                lines: tc.content.split('\n').length,
-              });
-            }
-          }
-        }
-
-        // Handle files modified or created on disk by backend agent
-        const backendFiles: string[] = Array.isArray(response.files_changed) ? response.files_changed : [];
-        if (backendFiles.length > 0 && rootPath) {
-          try {
-            await useFilesStore.getState().loadWorkspaceTree(rootPath);
-          } catch (e) {
-            console.warn('Failed to refresh workspace tree:', e);
-          }
-
-          const tabsState = useTabsStore.getState();
-          for (const relPath of backendFiles) {
-            const cleanPath = relPath.replace(/^\/+/, '').trim();
-            const fullPath = relPath.startsWith('/') ? relPath : `${rootPath}/${cleanPath}`;
-            const fileName = cleanPath.split('/').pop() || cleanPath;
-
-            try {
-              if (window.coreMindAPI?.readFile) {
-                const readRes = await window.coreMindAPI.readFile(fullPath, rootPath);
-                if (readRes.success && typeof readRes.data === 'string') {
-                  const lineCount = readRes.data.split('\n').length;
-                  const existingIdx = filesChangedDetails.findIndex((f) => f.file === cleanPath);
-                  if (existingIdx >= 0) {
-                    filesChangedDetails[existingIdx].lines = lineCount;
-                  } else {
-                    filesChangedDetails.push({
-                      file: cleanPath,
-                      action: 'created',
-                      lines: lineCount,
-                    });
-                  }
-
-                  const existingTab = tabsState.tabs.find((t) => t.filePath === fullPath || t.id === fullPath);
-                  if (existingTab) {
-                    tabsState.updateTabContent(existingTab.id, readRes.data);
-                    useTabsStore.setState((state) => ({
-                      tabs: state.tabs.map((t) =>
-                        t.id === existingTab.id
-                          ? { ...t, content: readRes.data, savedContent: readRes.data, isDirty: false }
-                          : t
-                      ),
-                    }));
-                  } else {
-                    await tabsState.openFile(fullPath, fileName, rootPath);
-                    tabsState.updateTabContent(fullPath, readRes.data);
-                  }
-
-                  // If public/index.html was created/modified, and a root index.html exists and is empty, copy content to it
-                  if (cleanPath === 'public/index.html' && window.coreMindAPI.writeFile) {
-                    const rootIndexPath = `${rootPath}/index.html`;
-                    const rootRead = await window.coreMindAPI.readFile(rootIndexPath, rootPath);
-                    if (rootRead.success && (!rootRead.data || rootRead.data.trim().length === 0)) {
-                      await window.coreMindAPI.writeFile(rootIndexPath, readRes.data, rootPath);
-                      const rootTab = tabsState.tabs.find((t) => t.filePath === rootIndexPath || t.id === rootIndexPath);
-                      if (rootTab) {
-                        tabsState.updateTabContent(rootTab.id, readRes.data);
-                      }
-                    }
-                  }
-                }
+      // Update message with formatted text & file changes
+      useAIWorkspaceStore.setState((s) => ({
+        chatHistory: s.chatHistory.map((m) =>
+          m.id === assistantMsgId
+            ? {
+                ...m,
+                content: formattedText || m.content,
+                filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
               }
-            } catch (err) {
-              console.error('[AI Workspace] Failed to reload changed file:', fullPath, err);
-            }
-          }
+            : m
+        ),
+      }));
 
-          // Reload whichever tab is currently active to reflect any changes
-          const activeTabId = tabsState.activeTabId;
-          if (activeTabId && window.coreMindAPI?.readFile) {
-            try {
-              const activeRead = await window.coreMindAPI.readFile(activeTabId, rootPath);
-              if (activeRead.success && typeof activeRead.data === 'string') {
-                tabsState.updateTabContent(activeTabId, activeRead.data);
-              }
-            } catch {
-              // ignore
-            }
-          }
-        }
-
-        // Also merge any backend files_details
-        if (Array.isArray(response.files_details)) {
-          for (const fd of response.files_details) {
-            if (fd && fd.file) {
-              const clean = fd.file.replace(/^\/+/, '').trim();
-              const existing = filesChangedDetails.find((f) => f.file === clean);
-              if (!existing) {
-                filesChangedDetails.push({
-                  file: clean,
-                  action: fd.action || 'created',
-                  lines: fd.lines,
-                });
-              } else if (!existing.lines && fd.lines) {
-                existing.lines = fd.lines;
-              }
-            }
-          }
-        }
-
-        // Detect if web files are present
-        const hasWebFiles = filesChangedDetails.some(
-          (f) =>
-            f.file.endsWith('index.html') ||
-            f.file.endsWith('index.htm') ||
-            f.file === 'index.html' ||
-            f.file.endsWith('.html')
-        );
-
-        const isWin = window.coreMindAPI?.platform
-          ? window.coreMindAPI.platform.isWindows
-          : false;
-        const autoTerminalCmd = isWin
-          ? 'python -m http.server 3000'
-          : 'python3 -m http.server 3000';
-
-        // Auto-run local web server in terminal if web files were created/modified
-        if (hasWebFiles) {
-          try {
-            await useTerminalStore.getState().runCommand(autoTerminalCmd);
-          } catch (tErr) {
-            console.warn('[AI Workspace] Auto-running terminal server failed:', tErr);
-          }
-        }
-
-        const detectedUrl =
-          response.local_url ||
-          (rawResponse.match(/https?:\/\/(?:localhost|127\.0\.0\.1)(?::\d+)?/i)?.[0]) ||
-          (hasWebFiles ? 'http://localhost:3000' : undefined);
-
-        addChatMessage({
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: formattedText,
-          timestamp: Date.now(),
-          filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
-          localUrl: detectedUrl,
-          terminalCommand: hasWebFiles ? autoTerminalCmd : undefined,
-        });
-        setState('completed');
-      } else {
-        addChatMessage({
-          id: Date.now().toString(),
-          role: 'assistant',
-          content: `**Error:** ${response.error || 'Something went wrong.'}`,
-          timestamp: Date.now()
-        });
-        setState('error');
-      }
-    } catch (error: any) {
+      setState('completed');
+    } catch (streamErr: any) {
       if (!abortController.signal.aborted) {
+        console.error('Streaming chat failed:', streamErr);
         addChatMessage({
-          id: Date.now().toString(),
+          id: `err-${Date.now()}`,
           role: 'assistant',
-          content: `**Connection Error:** ${error.message || 'Could not reach CoreMind backend.'}`,
-          timestamp: Date.now()
+          content: `**Error:** ${streamErr.message || 'Failed to complete AI request.'}`,
+          timestamp: Date.now(),
         });
         setState('error');
       }
     }
-  }, [rootPath, chatHistory, addChatMessage, setState, setAbortController]);
+  };
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      height: '100%',
-      backgroundColor: 'var(--bg-app)',
-      color: 'var(--text-primary)',
-      fontFamily: 'var(--font-sans)',
-      overflow: 'hidden',
-      transition: 'background-color 0.2s ease, color 0.2s ease',
-      position: 'relative',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        backgroundColor: 'var(--bg-app)',
+        color: 'var(--text-primary)',
+        fontFamily: 'var(--font-sans)',
+        overflow: 'hidden',
+        position: 'relative',
+        transition: 'background-color 0.2s ease, color 0.2s ease',
+      }}
+    >
+      {/* Header with View Tabs */}
       <WorkspaceHeader />
-      
+
+      {/* Main Active Panel View */}
       <div style={{ flex: 1, overflowY: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
-        <ChatThread />
-        
-        {currentState === 'stopped' && (
-          <div style={{
-            margin: '16px 14px',
-            padding: '12px',
-            border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'}`,
-            borderRadius: '8px',
-            fontSize: '12px',
-            color: 'var(--text-secondary)'
-          }}>
-            <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>Stopped</strong>
-            The AI operation was cancelled by the user.
+        {activeView === 'chat' && <ChatThread />}
+        {activeView === 'plan' && <ImplementationPlan />}
+        {activeView === 'activity' && <ActivityTimeline />}
+        {activeView === 'changes' && <DiffViewer />}
+
+        {currentState === 'stopped' && activeView === 'chat' && (
+          <div
+            style={{
+              margin: '12px 14px',
+              padding: '10px 12px',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #E2E8F0',
+              borderRadius: '8px',
+              fontSize: '12px',
+              color: 'var(--text-secondary)',
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
+            }}
+          >
+            <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '2px' }}>
+              Execution Stopped
+            </strong>
+            The active operation was cancelled.
           </div>
         )}
       </div>
-      
-      <div style={{
-        padding: '0 14px 14px 14px',
-        backgroundColor: 'var(--bg-app)',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '8px',
-        transition: 'background-color 0.2s ease'
-      }}>
-        <PromptComposer onSubmit={handleStartMock} />
+
+      {/* Bottom Composer */}
+      <div
+        style={{
+          padding: '0 12px 12px 12px',
+          backgroundColor: 'var(--bg-app)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '8px',
+          flexShrink: 0,
+        }}
+      >
+        <PromptComposer onSubmit={handlePromptSubmit} />
       </div>
 
-      {/* History overlay panel */}
+      {/* History Drawer Overlay */}
       <ChatHistory />
     </div>
   );

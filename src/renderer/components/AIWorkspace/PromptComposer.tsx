@@ -1,5 +1,15 @@
 import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
-import { Plus, ArrowRight, Square, ChevronDown, Check, Folder, FileCode, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  Square,
+  ChevronDown,
+  Check,
+  Folder,
+  FileCode,
+  Bot,
+  MessageSquare,
+  Sparkles,
+} from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useThemeStore } from '../../stores/themeStore';
@@ -17,6 +27,8 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
     currentState,
     selectedModel,
     setSelectedModel,
+    agentMode,
+    setAgentMode,
     cancelRequest,
     draftPrompt,
     setDraftPrompt,
@@ -35,7 +47,6 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
 
   const isRunning = currentState === 'running' || currentState === 'waiting';
 
-  // Sync draftPrompt with input when it changes
   useEffect(() => {
     if (draftPrompt) {
       setInput(draftPrompt);
@@ -44,7 +55,6 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
     }
   }, [draftPrompt, setDraftPrompt]);
 
-  // Close model menu on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
@@ -63,13 +73,19 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!isRunning && input.trim()) {
-        onSubmit(input);
-        setInput('');
+        handleSubmit();
       }
     } else if (e.key === 'Escape' && isRunning) {
       e.preventDefault();
       cancelRequest();
     }
+  };
+
+  const handleSubmit = () => {
+    if (isRunning || !input.trim()) return;
+    const textToSend = input.trim();
+    setInput('');
+    onSubmit(textToSend);
   };
 
   // Auto-resize textarea
@@ -88,7 +104,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
   return (
     <div
       style={{
-        backgroundColor: isDark ? '#1C1C1C' : '#ffffff',
+        backgroundColor: isDark ? '#1C1C1C' : '#FFFFFF',
         border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
         borderRadius: '12px',
         padding: '10px 12px',
@@ -119,16 +135,15 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                 alignItems: 'center',
                 gap: '4px',
                 fontSize: '11px',
-                padding: '2px 7px',
-                borderRadius: '6px',
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
                 color: 'var(--text-secondary)',
-                fontWeight: 500,
               }}
               title={rootPath}
             >
-              <Folder size={11} color="#60A5FA" />
-              {rootName || 'Workspace'}
+              <Folder size={11} />
+              <span>{rootName || 'workspace'}</span>
             </span>
           )}
 
@@ -139,160 +154,195 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                 alignItems: 'center',
                 gap: '4px',
                 fontSize: '11px',
-                padding: '2px 7px',
-                borderRadius: '6px',
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9',
-                color: 'var(--text-secondary)',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                color: 'var(--accent, #3B82F6)',
                 fontWeight: 500,
               }}
-              title={activeFileName}
+              title="Active editor file context"
             >
-              <FileCode size={11} color="#A78BFA" />
-              {activeFileName}
+              <FileCode size={11} />
+              <span>{activeFileName}</span>
             </span>
           )}
+
+          <button
+            type="button"
+            onClick={() => setIncludeContext(!includeContext)}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '10px',
+              marginLeft: 'auto',
+              padding: '2px 4px',
+            }}
+            title="Toggle context attachment"
+          >
+            {includeContext ? 'Detach' : 'Attach'}
+          </button>
         </div>
       )}
 
-      {/* Main Multiline Input */}
-      <textarea
-        ref={textareaRef}
-        rows={1}
-        placeholder="Ask anything... e.g. Create a Flutter login page with validation and run tests"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        style={{
-          width: '100%',
-          resize: 'none',
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          color: 'var(--text-primary)',
-          fontSize: '13px',
-          fontFamily: 'inherit',
-          padding: 0,
-          maxHeight: '220px',
-          overflowY: 'auto',
-          lineHeight: 1.5,
-        }}
-      />
+      {/* Multiline Prompt Input */}
+      <div style={{ display: 'flex', position: 'relative' }}>
+        <textarea
+          ref={textareaRef}
+          value={input}
+          disabled={isRunning}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder={
+            isRunning
+              ? 'Agent is currently executing... Click Stop to cancel.'
+              : agentMode === 'agent'
+              ? 'Ask CoreMind Agent to implement features, fix bugs, or edit files...'
+              : 'Ask a question about your code or codebase (Shift+Enter for newline)...'
+          }
+          rows={2}
+          style={{
+            width: '100%',
+            backgroundColor: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--text-primary)',
+            fontFamily: 'var(--font-sans)',
+            fontSize: '13px',
+            lineHeight: 1.5,
+            resize: 'none',
+            maxHeight: '220px',
+            opacity: isRunning ? 0.6 : 1,
+          }}
+        />
+      </div>
 
-      {/* Controls Bar: Context Toggle, Model Selector, Send / Stop Button */}
+      {/* Bottom Controls Bar */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          position: 'relative',
+          paddingTop: '2px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <button
-            onClick={() => setIncludeContext((prev) => !prev)}
+        {/* Left: Mode selector & Model Picker */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {/* Mode toggle */}
+          <div
             style={{
-              ...actionBtnStyle,
-              backgroundColor: includeContext ? (isDark ? 'rgba(255, 255, 255, 0.08)' : '#EFF6FF') : 'transparent',
-              color: includeContext ? 'var(--accent)' : 'var(--text-secondary)',
+              display: 'inline-flex',
+              padding: '2px',
               borderRadius: '6px',
-              padding: '4px 6px',
-              fontSize: '11px',
-              display: 'flex',
-              gap: '4px',
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9',
             }}
-            title={includeContext ? 'Context attached (click to toggle)' : 'Attach workspace context'}
           >
-            <Plus size={13} />
-            <span>Context</span>
-          </button>
+            <button
+              onClick={() => setAgentMode('agent')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 7px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: agentMode === 'agent' ? 600 : 500,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: agentMode === 'agent' ? (isDark ? '#2E2E2E' : '#FFFFFF') : 'transparent',
+                color: agentMode === 'agent' ? 'var(--accent)' : 'var(--text-secondary)',
+              }}
+              title="Autonomous multi-step agent"
+            >
+              <Bot size={12} />
+              <span>Agent</span>
+            </button>
+            <button
+              onClick={() => setAgentMode('chat')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '3px 7px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                fontWeight: agentMode === 'chat' ? 600 : 500,
+                border: 'none',
+                cursor: 'pointer',
+                backgroundColor: agentMode === 'chat' ? (isDark ? '#2E2E2E' : '#FFFFFF') : 'transparent',
+                color: agentMode === 'chat' ? 'var(--accent)' : 'var(--text-secondary)',
+              }}
+              title="Fast conversational assistant"
+            >
+              <MessageSquare size={12} />
+              <span>Chat</span>
+            </button>
+          </div>
 
-          {/* Model Selector Dropdown Trigger */}
+          {/* Model Selector Dropdown */}
           <div style={{ position: 'relative' }} ref={modelMenuRef}>
             <button
-              onClick={() => setIsModelMenuOpen((prev) => !prev)}
+              onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
               style={{
-                ...actionBtnStyle,
-                fontSize: '11px',
-                display: 'flex',
+                display: 'inline-flex',
                 alignItems: 'center',
-                gap: '5px',
-                padding: '4px 8px',
+                gap: '4px',
+                padding: '3px 8px',
                 borderRadius: '6px',
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC',
-                border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#E2E8F0'}`,
-                color: 'var(--text-primary)',
+                border: 'none',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9',
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
                 fontWeight: 500,
+                cursor: 'pointer',
               }}
               title="Select AI Model"
             >
               <Sparkles size={11} color="var(--accent)" />
               <span>{selectedModel}</span>
-              <ChevronDown size={11} color="var(--text-muted)" />
+              <ChevronDown size={11} />
             </button>
 
-            {/* Model Selector Popup Menu */}
             {isModelMenuOpen && (
               <div
                 style={{
                   position: 'absolute',
-                  bottom: '32px',
+                  bottom: '100%',
                   left: 0,
+                  marginBottom: '6px',
                   width: '240px',
-                  backgroundColor: isDark ? '#232323' : '#FFFFFF',
-                  border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0'}`,
-                  borderRadius: '10px',
-                  padding: '6px',
-                  boxShadow: isDark ? '0 10px 25px rgba(0, 0, 0, 0.5)' : '0 10px 25px rgba(0, 0, 0, 0.12)',
-                  zIndex: 50,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '2px',
+                  backgroundColor: isDark ? '#222222' : '#FFFFFF',
+                  border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid #E2E8F0',
+                  borderRadius: '8px',
+                  padding: '4px',
+                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+                  zIndex: 100,
                 }}
               >
-                <div
-                  style={{
-                    padding: '4px 8px',
-                    fontSize: '10px',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    color: 'var(--text-muted)',
-                    letterSpacing: '0.05em',
-                  }}
-                >
-                  Configured AI Models
-                </div>
                 {AVAILABLE_MODELS.map((m) => {
-                  const isSelected = selectedModel === m.name;
+                  const isSelected = selectedModel === m.name || selectedModel === m.id;
                   return (
-                    <button
+                    <div
                       key={m.id}
                       onClick={() => handleSelectModel(m.name)}
                       style={{
-                        display: 'flex',
-                        alignItems: 'flex-start',
-                        justifyContent: 'space-between',
                         padding: '6px 8px',
                         borderRadius: '6px',
-                        border: 'none',
-                        backgroundColor: isSelected
-                          ? (isDark ? 'rgba(255, 255, 255, 0.08)' : '#EFF6FF')
-                          : 'transparent',
-                        color: 'var(--text-primary)',
                         cursor: 'pointer',
-                        textAlign: 'left',
-                        transition: 'background-color 0.15s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: isSelected ? (isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF') : 'transparent',
+                        color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
                       }}
                     >
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontSize: '12px', fontWeight: isSelected ? 600 : 400 }}>
-                          {m.name}
-                        </span>
-                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                          {m.desc}
-                        </span>
+                      <div>
+                        <div style={{ fontSize: '12px', fontWeight: 600 }}>{m.name}</div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>{m.desc}</div>
                       </div>
-                      {isSelected && <Check size={14} color="var(--accent)" style={{ marginTop: '2px' }} />}
-                    </button>
+                      {isSelected && <Check size={13} color="var(--accent)" />}
+                    </div>
                   );
                 })}
               </div>
@@ -300,39 +350,54 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
           </div>
         </div>
 
-        {/* Send / Stop Buttons */}
+        {/* Right: Send / Red Stop Button */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {isRunning ? (
             <button
               onClick={cancelRequest}
-              title="Stop (Esc)"
+              title="Stop Generation (Esc)"
               style={{
-                ...primaryBtnStyle,
+                height: '28px',
+                padding: '0 12px',
+                borderRadius: '7px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '5px',
+                border: 'none',
+                cursor: 'pointer',
                 backgroundColor: '#DC2626',
                 color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: 600,
+                boxShadow: '0 2px 6px rgba(220, 38, 38, 0.4)',
               }}
             >
-              <Square size={10} fill="currentColor" style={{ marginRight: '5px' }} />
-              Stop
+              <Square size={11} fill="currentColor" />
+              <span>Stop</span>
             </button>
           ) : (
             <button
-              onClick={() => {
-                if (input.trim()) {
-                  onSubmit(input);
-                  setInput('');
-                }
-              }}
-              title="Send (Enter)"
+              onClick={handleSubmit}
+              disabled={!input.trim()}
+              title="Submit prompt (Enter)"
               style={{
-                ...primaryBtnStyle,
-                backgroundColor: input.trim()
-                  ? 'var(--accent)'
-                  : isDark
-                  ? 'rgba(255, 255, 255, 0.1)'
-                  : 'rgba(0, 0, 0, 0.05)',
-                color: input.trim() ? '#FFFFFF' : 'var(--text-muted)',
+                height: '28px',
+                minWidth: '28px',
+                padding: '0 10px',
+                borderRadius: '7px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                border: 'none',
                 cursor: input.trim() ? 'pointer' : 'default',
+                backgroundColor: input.trim()
+                  ? 'var(--accent, #3B82F6)'
+                  : isDark
+                  ? 'rgba(255, 255, 255, 0.08)'
+                  : 'rgba(0, 0, 0, 0.06)',
+                color: input.trim() ? '#FFFFFF' : 'var(--text-muted)',
+                transition: 'all 0.15s ease',
               }}
             >
               <ArrowRight size={14} />
@@ -342,32 +407,4 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
       </div>
     </div>
   );
-};
-
-const actionBtnStyle = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--text-secondary)',
-  cursor: 'pointer',
-  padding: '4px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: '4px',
-  transition: 'background-color 0.15s, color 0.15s',
-};
-
-const primaryBtnStyle = {
-  height: '28px',
-  minWidth: '28px',
-  padding: '0 10px',
-  borderRadius: '7px',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '12px',
-  fontWeight: 500,
-  transition: 'all 0.2s ease',
 };
