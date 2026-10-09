@@ -25,6 +25,13 @@ export const AIWorkspace: React.FC = () => {
     coremindWs.connect();
 
     const unsubTool = coremindWs.on('tool.started', (event) => {
+      const toolName = (event.data?.tool || '').toLowerCase();
+      if (/search|grep|find|read|scan|list/i.test(toolName)) {
+        useAIWorkspaceStore.getState().setAgentPhase('searching', event.data?.args?.query || event.data?.tool);
+      } else {
+        useAIWorkspaceStore.getState().setAgentPhase('working', event.data?.tool);
+      }
+
       useAIWorkspaceStore.getState().addEvent({
         id: `tool-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         type: 'ToolCallEvent',
@@ -35,6 +42,7 @@ export const AIWorkspace: React.FC = () => {
     });
 
     const unsubThinking = coremindWs.on('agent.thinking', (event) => {
+      useAIWorkspaceStore.getState().setAgentPhase('thinking', event.data?.phase || event.data?.summary);
       useAIWorkspaceStore.getState().addEvent({
         id: `thought-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         type: 'ThoughtEvent',
@@ -45,6 +53,7 @@ export const AIWorkspace: React.FC = () => {
     });
 
     const unsubFileChanged = coremindWs.on('file.changed', async (event) => {
+      useAIWorkspaceStore.getState().setAgentPhase('working', 'Updating files...');
       if (event.data?.file && rootPath) {
         const filePath = event.data.file;
         let linesCount = event.data.lines;
@@ -111,8 +120,13 @@ export const AIWorkspace: React.FC = () => {
       timestamp: Date.now()
     });
     
-    // Reset events for this execution turn
-    useAIWorkspaceStore.setState({ events: [] });
+    // Reset events for this execution turn and set initial Antigravity phase
+    const isSearchIntent = /\b(search|find|grep|look for|where is|locate|scan)\b/i.test(prompt);
+    useAIWorkspaceStore.setState({
+      events: [],
+      agentPhase: isSearchIntent ? 'searching' : 'thinking',
+      agentPhaseDetail: isSearchIntent ? 'Searching workspace...' : undefined,
+    });
     const abortController = new AbortController();
     setAbortController(abortController);
     setState('running');
@@ -122,7 +136,14 @@ export const AIWorkspace: React.FC = () => {
 
     if (!isAutonomousAgentMode) {
       try {
+        const statusTimer = setTimeout(() => {
+          if (useAIWorkspaceStore.getState().currentState === 'running') {
+            useAIWorkspaceStore.getState().setAgentPhase('working');
+          }
+        }, 1200);
+
         const response = await coremindClient.chatWithTools(prompt, rootPath, historyToSend);
+        clearTimeout(statusTimer);
 
         if (abortController.signal.aborted) {
           return;
@@ -134,6 +155,7 @@ export const AIWorkspace: React.FC = () => {
           const filesChangedDetails: FileChangeInfo[] = [];
 
           if (toolCalls.length > 0) {
+            useAIWorkspaceStore.getState().setAgentPhase('working', 'Writing files...');
             await executeToolCalls(toolCalls, rootPath);
             for (const tc of toolCalls) {
               if (tc.path && typeof tc.content === 'string') {
@@ -276,6 +298,14 @@ export const AIWorkspace: React.FC = () => {
             timestamp: Date.now(),
           });
         } else if (streamEvent.type === 'status') {
+          const txt = (streamEvent.text || '').toLowerCase();
+          if (/search|find|grep|scan|inspect/i.test(txt)) {
+            useAIWorkspaceStore.getState().setAgentPhase('searching', streamEvent.text);
+          } else if (/think|plan|reason/i.test(txt)) {
+            useAIWorkspaceStore.getState().setAgentPhase('thinking', streamEvent.text);
+          } else {
+            useAIWorkspaceStore.getState().setAgentPhase('working', streamEvent.text);
+          }
           useAIWorkspaceStore.getState().addEvent({
             id: `thought-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             type: 'ThoughtEvent',
@@ -284,6 +314,7 @@ export const AIWorkspace: React.FC = () => {
             timestamp: Date.now(),
           });
         } else if (streamEvent.type === 'terminal_output') {
+          useAIWorkspaceStore.getState().setAgentPhase('working', 'Running command...');
           useAIWorkspaceStore.getState().addEvent({
             id: `term-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             type: 'TerminalEvent',
@@ -293,6 +324,8 @@ export const AIWorkspace: React.FC = () => {
             timestamp: Date.now(),
           });
         } else if (streamEvent.type === 'file_change') {
+          const changedFileName = (streamEvent.file || '').split('/').pop();
+          useAIWorkspaceStore.getState().setAgentPhase('working', changedFileName ? `Writing ${changedFileName}...` : 'Writing files...');
           const cleanPath = streamEvent.file.replace(/^\/+/, '').trim();
           const existing = filesChangedDetails.find((f) => f.file === cleanPath);
           if (existing) {
@@ -318,8 +351,8 @@ export const AIWorkspace: React.FC = () => {
           // Refresh workspace tree & open the file in tab editor
           useFilesStore.getState().loadWorkspaceTree(rootPath).catch(() => {});
           const fullPath = streamEvent.file.startsWith('/') ? streamEvent.file : `${rootPath}/${cleanPath}`;
-          const fileName = cleanPath.split('/').pop() || cleanPath;
-          useTabsStore.getState().openFile(fullPath, fileName, rootPath).catch(() => {});
+          const targetFileName: string = cleanPath.split('/').pop() || cleanPath;
+          useTabsStore.getState().openFile(fullPath, targetFileName, rootPath).catch(() => {});
         } else if (streamEvent.type === 'complete') {
           if (!explanationReceived) {
             addChatMessage({

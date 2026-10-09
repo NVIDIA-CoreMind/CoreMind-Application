@@ -7,6 +7,7 @@ import { useTabsStore } from '../../stores/tabsStore';
 import { Copy, Edit2, Check, RotateCcw, ArrowDownRight, FileCheck } from 'lucide-react';
 import { extractToolCalls } from '../../services/aiToolExecution';
 import { FileChangesCard } from './FileChangesCard';
+import { RunningIndicator } from './RunningIndicator';
 
 
 const streamedMessages = new Set<string>();
@@ -507,15 +508,21 @@ export const ChatThread: React.FC = () => {
       })}
 
       
-      {currentState === 'running' && realtimeFiles.length > 0 && (
+      {currentState === 'running' && (
         <div style={{
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
-          maxWidth: '90%',
-          alignSelf: 'flex-start'
+          alignSelf: 'flex-start',
+          paddingLeft: '4px',
+          animation: 'antigravity-fade-in 0.15s ease-out',
         }}>
-          <FileChangesCard files={realtimeFiles} isRealtime={true} />
+          {realtimeFiles.length > 0 && (
+            <div style={{ maxWidth: '90%' }}>
+              <FileChangesCard files={realtimeFiles} isRealtime={true} />
+            </div>
+          )}
+          <RunningIndicator />
         </div>
       )}
       
