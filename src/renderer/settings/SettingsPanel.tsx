@@ -177,6 +177,33 @@ export const SettingsPanel: React.FC = () => {
               <span>Platform:</span>
               <span style={{ color: 'var(--text-primary)', fontWeight: 500 }}>{platformLabel}</span>
             </div>
+            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    localStorage.removeItem('coremind:onboarding_completed');
+                    localStorage.removeItem('coremind:dev_bypass');
+                    window.location.reload();
+                  } catch {
+                    // ignore
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  padding: '6px 10px',
+                  borderRadius: '4px',
+                  backgroundColor: 'var(--bg-hover)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  fontSize: '11px',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                Reset & Replay Onboarding
+              </button>
+            </div>
           </div>
         </div>
       </div>

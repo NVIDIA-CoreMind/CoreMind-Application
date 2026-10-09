@@ -1,8 +1,64 @@
 import { createRequire } from 'node:module';
 import os from 'node:os';
 import fs from 'node:fs';
+import { spawn } from 'node:child_process';
 import { logger } from './logger';
-import { TerminalSpawnOptions } from '../../shared/types/ipc';
+import { TerminalSpawnOptions, ExecuteCommandOptions, ExecuteCommandResult } from '../../shared/types/ipc';
+
+export interface CommandValidationResult {
+  allowed: boolean;
+  requiresApproval?: boolean;
+  reason?: string;
+}
+
+export function validateCommand(command: string): CommandValidationResult {
+  const trimmed = command.trim();
+  if (!trimmed) {
+    return { allowed: false, reason: 'Command cannot be empty.' };
+  }
+
+  // Check for destructive root/system wiping commands
+  const dangerousPatterns = [
+    /\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*|-f[a-zA-Z]*r[a-zA-Z]*)\s+(\/|~|\$HOME|\*)/i,
+    /\brm\s+(-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*|-f[a-zA-Z]*r[a-zA-Z]*)\s+\/.*(?:\b|$)/i,
+    /\bmkfs\b/i,
+    /\bdd\s+if=.*of=\/dev\/(?:sd|hd|nvme|disk)/i,
+    /:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:/, // fork bomb
+    />\s*\/dev\/(?:sd|hd|nvme|disk)/i,
+    /\bchmod\s+(-[a-zA-Z]*R[a-zA-Z]*\s+)?777\s+\//i,
+  ];
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(trimmed)) {
+      return {
+        allowed: false,
+        requiresApproval: false,
+        reason: 'Command blocked: potentially destructive system operation detected.',
+      };
+    }
+  }
+
+  // Check for commands requiring explicit user approval (privilege escalation, system modification)
+  const approvalPatterns = [
+    /\bsudo\b/i,
+    /\bsu\b(?:\s+|$)/i,
+    /\bcurl\s+.*\|\s*(?:bash|sh)\b/i,
+    /\bwget\s+.*\|\s*(?:bash|sh)\b/i,
+  ];
+
+  for (const pattern of approvalPatterns) {
+    if (pattern.test(trimmed)) {
+      return {
+        allowed: false,
+        requiresApproval: true,
+        reason: 'Elevated privileges or remote pipe execution requires explicit user approval.',
+      };
+    }
+  }
+
+  return { allowed: true };
+}
+
 
 const require = createRequire(import.meta.url);
 
@@ -191,6 +247,152 @@ export class TerminalService {
     }
     this.sessions.clear();
   }
+
+  /**
+   * Execute a command with streaming output, cancellation, timeout, and output bounding.
+   */
+  public async executeCommand(
+    options: ExecuteCommandOptions & {
+      onData?: (data: string, stream: 'stdout' | 'stderr') => void;
+      signal?: AbortSignal;
+    }
+  ): Promise<ExecuteCommandResult> {
+    const {
+      command,
+      cwd = process.cwd(),
+      env = {},
+      timeoutMs = 120000,
+      maxBufferBytes = 1024 * 1024,
+      onData,
+      signal,
+    } = options;
+
+    const validation = validateCommand(command);
+    if (!validation.allowed) {
+      logger.warn('Blocked command attempt', { command, reason: validation.reason });
+      return {
+        exitCode: 126,
+        stdout: '',
+        stderr: validation.reason || 'Command execution was blocked by security policy.',
+        timedOut: false,
+        killed: false,
+      };
+    }
+
+    if (signal?.aborted) {
+      return {
+        exitCode: 130,
+        stdout: '',
+        stderr: 'Command was aborted before execution.',
+        timedOut: false,
+        killed: true,
+      };
+    }
+
+    return new Promise<ExecuteCommandResult>((resolve) => {
+      let stdout = '';
+      let stderr = '';
+      let timedOut = false;
+      let killed = false;
+      let timer: NodeJS.Timeout | null = null;
+
+      const isWin = process.platform === 'win32';
+      const shellExecutable = isWin ? (process.env.ComSpec || 'cmd.exe') : (process.env.SHELL || '/bin/sh');
+      const shellArgs = isWin ? ['/d', '/s', '/c', command] : ['-c', command];
+
+      const mergedEnv = {
+        ...process.env,
+        ...platformTerminal.getTerminalEnv(),
+        ...env,
+      };
+
+      const workingDir = fs.existsSync(cwd) ? cwd : process.cwd();
+      logger.info('Executing command', { command, cwd: workingDir, timeoutMs });
+
+      const child = spawn(shellExecutable, shellArgs, {
+        cwd: workingDir,
+        env: mergedEnv,
+        windowsHide: true,
+      });
+
+      if (timeoutMs > 0) {
+        timer = setTimeout(() => {
+          timedOut = true;
+          logger.warn('Command timed out', { command, timeoutMs });
+          try {
+            child.kill('SIGTERM');
+            setTimeout(() => {
+              if (!child.killed) child.kill('SIGKILL');
+            }, 1000);
+          } catch {
+            // ignore
+          }
+        }, timeoutMs);
+      }
+
+      const abortHandler = () => {
+        killed = true;
+        logger.info('Command execution cancelled by abort signal', { command });
+        if (timer) clearTimeout(timer);
+        try {
+          child.kill('SIGTERM');
+          setTimeout(() => {
+            if (!child.killed) child.kill('SIGKILL');
+          }, 1000);
+        } catch {
+          // ignore
+        }
+      };
+
+      if (signal) {
+        signal.addEventListener('abort', abortHandler, { once: true });
+      }
+
+      child.stdout?.on('data', (chunk: Buffer | string) => {
+        const text = chunk.toString();
+        if (stdout.length < maxBufferBytes) {
+          stdout += text.slice(0, maxBufferBytes - stdout.length);
+        }
+        onData?.(text, 'stdout');
+      });
+
+      child.stderr?.on('data', (chunk: Buffer | string) => {
+        const text = chunk.toString();
+        if (stderr.length < maxBufferBytes) {
+          stderr += text.slice(0, maxBufferBytes - stderr.length);
+        }
+        onData?.(text, 'stderr');
+      });
+
+      child.on('error', (err) => {
+        if (timer) clearTimeout(timer);
+        if (signal) signal.removeEventListener('abort', abortHandler);
+        logger.error('Command process error', { command, message: err.message });
+        resolve({
+          exitCode: (err as any).code === 'ENOENT' ? 127 : 1,
+          stdout,
+          stderr: (stderr ? stderr + '\n' : '') + err.message,
+          timedOut,
+          killed,
+        });
+      });
+
+      child.on('close', (code) => {
+        if (timer) clearTimeout(timer);
+        if (signal) signal.removeEventListener('abort', abortHandler);
+        const finalExitCode = timedOut ? 124 : killed ? 130 : (code ?? 0);
+        logger.info('Command execution finished', { command, exitCode: finalExitCode, timedOut, killed });
+        resolve({
+          exitCode: finalExitCode,
+          stdout,
+          stderr,
+          timedOut,
+          killed,
+        });
+      });
+    });
+  }
 }
 
 export const terminalService = new TerminalService();
+

@@ -213,6 +213,9 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
         if (abortController) {
           abortController.abort();
         }
+        if (window.coreMindAPI?.cancelAgentTask) {
+          window.coreMindAPI.cancelAgentTask().catch(() => {});
+        }
         set({ currentState: 'stopped', abortController: null });
       }
     },

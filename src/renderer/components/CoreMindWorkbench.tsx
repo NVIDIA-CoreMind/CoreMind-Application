@@ -43,7 +43,7 @@ import { sortedChanges } from '../services/aiChanges';
 
 const FILE_SCHEME = 'coremind';
 
-function userConfigurationJson(theme: 'dark' | 'light'): string {
+function userConfigurationJson(theme: import('../stores/themeStore').ThemeMode): string {
   return JSON.stringify({ ...buildEditorConfiguration(theme), 'workbench.iconTheme': MATERIAL_ICON_THEME_ID });
 }
 

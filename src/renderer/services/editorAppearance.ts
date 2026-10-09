@@ -1,4 +1,6 @@
-import type { ThemeMode } from "../stores/themeStore";
+import { resolveEffectiveTheme, type ThemeMode } from "../stores/themeStore";
+
+type ConcreteTheme = 'dark' | 'light';
 
 interface Palette {
   colorTheme: string;
@@ -12,7 +14,7 @@ interface Palette {
   statusText: string;
 }
 
-const PALETTES: Record<ThemeMode, Palette> = {
+const PALETTES: Record<ConcreteTheme, Palette> = {
   dark: {
     colorTheme: "Dark Modern",
     surface: "#1f1f1f",
@@ -39,7 +41,7 @@ const PALETTES: Record<ThemeMode, Palette> = {
 
 // Antigravity-style editor look: one continuous surface shared with the agent panel, quiet chrome,
 // comfortable code typography. Built per theme so Dark/Light switch the whole Workbench.
-const TOKEN_COLORS: Record<ThemeMode, Record<string, string>> = {
+const TOKEN_COLORS: Record<ConcreteTheme, Record<string, string>> = {
   dark: {
     comment: "#6a9955",
     keyword: "#c586c0",
@@ -75,7 +77,8 @@ const TOKEN_COLORS: Record<ThemeMode, Record<string, string>> = {
 };
 
 function tokenColorRules(theme: ThemeMode) {
-  const c = TOKEN_COLORS[theme];
+  const concreteTheme = resolveEffectiveTheme(theme);
+  const c = TOKEN_COLORS[concreteTheme];
   const rule = (scope: string[], foreground: string, fontStyle?: string) => ({
     scope,
     settings: fontStyle ? { foreground, fontStyle } : { foreground },
@@ -136,7 +139,8 @@ function tokenColorRules(theme: ThemeMode) {
 export function buildEditorConfiguration(
   theme: ThemeMode,
 ): Record<string, unknown> {
-  const p = PALETTES[theme];
+  const concreteTheme = resolveEffectiveTheme(theme);
+  const p = PALETTES[concreteTheme];
   return {
     "workbench.colorTheme": p.colorTheme,
     "window.title": "${rootName}${separator}CoreMind${separator}${activeEditorShort}",

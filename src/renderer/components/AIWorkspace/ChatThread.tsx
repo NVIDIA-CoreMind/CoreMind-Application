@@ -2,11 +2,129 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAIWorkspaceStore, FileChangeInfo } from '../../services/aiWorkspaceService';
 import ReactMarkdown from 'react-markdown';
 import { useThemeStore } from '../../stores/themeStore';
-import { Copy, Edit2, Check } from 'lucide-react';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useTabsStore } from '../../stores/tabsStore';
+import { Copy, Edit2, Check, RotateCcw, ArrowDownRight, FileCheck } from 'lucide-react';
 import { extractToolCalls } from '../../services/aiToolExecution';
 import { FileChangesCard } from './FileChangesCard';
 
+
 const streamedMessages = new Set<string>();
+
+const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, value }) => {
+  const [copied, setCopied] = useState(false);
+  const [applied, setApplied] = useState(false);
+  const [inserted, setInserted] = useState(false);
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleInsert = () => {
+    useTabsStore.getState().insertSnippetToActiveTab(value);
+    setInserted(true);
+    setTimeout(() => setInserted(false), 2000);
+  };
+
+  const handleApply = async () => {
+    const tabsState = useTabsStore.getState();
+    const activeTab = tabsState.tabs.find((t) => t.id === tabsState.activeTabId);
+    if (activeTab && rootPath && window.coreMindAPI?.writeFile) {
+      await window.coreMindAPI.writeFile(activeTab.filePath, value, rootPath);
+      tabsState.updateTabContent(activeTab.id, value);
+      setApplied(true);
+      setTimeout(() => setApplied(false), 2000);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        margin: '10px 0',
+        borderRadius: '8px',
+        overflow: 'hidden',
+        border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid #E2E8F0',
+        backgroundColor: isDark ? '#141414' : '#F8FAFC',
+        fontSize: '12px',
+        fontFamily: 'var(--font-mono, monospace)',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '6px 10px',
+          backgroundColor: isDark ? '#1F1F1F' : '#F1F5F9',
+          borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
+          fontSize: '11px',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        <span style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          {language || 'code'}
+        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <button
+            onClick={handleCopy}
+            style={codeActionBtnStyle}
+            title="Copy code"
+          >
+            {copied ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
+            <span>{copied ? 'Copied' : 'Copy'}</span>
+          </button>
+          <button
+            onClick={handleInsert}
+            style={codeActionBtnStyle}
+            title="Insert into active editor tab"
+          >
+            {inserted ? <Check size={12} color="#10B981" /> : <ArrowDownRight size={12} />}
+            <span>{inserted ? 'Inserted' : 'Insert'}</span>
+          </button>
+          <button
+            onClick={handleApply}
+            style={codeActionBtnStyle}
+            title="Apply changes to active file"
+          >
+            {applied ? <Check size={12} color="#10B981" /> : <FileCheck size={12} />}
+            <span>{applied ? 'Applied' : 'Apply'}</span>
+          </button>
+        </div>
+      </div>
+      <pre
+        style={{
+          margin: 0,
+          padding: '10px 12px',
+          overflowX: 'auto',
+          lineHeight: 1.5,
+          color: isDark ? '#E2E8F0' : '#1E293B',
+        }}
+      >
+        <code>{value}</code>
+      </pre>
+    </div>
+  );
+};
+
+const codeActionBtnStyle = {
+  background: 'transparent',
+  border: 'none',
+  color: 'var(--text-secondary)',
+  cursor: 'pointer',
+  padding: '3px 6px',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: '4px',
+  borderRadius: '4px',
+  fontSize: '11px',
+  fontWeight: 500,
+  transition: 'background-color 0.15s, color 0.15s',
+};
 
 function renderWithToggles(rawText: string) {
   const { formattedText: text } = extractToolCalls(rawText);
@@ -31,6 +149,33 @@ function renderWithToggles(rawText: string) {
   }
 
   const markdownComponents = {
+    code: ({ node, inline, className, children, ...props }: any) => {
+      const match = /language-(\w+)/.exec(className || '');
+      const codeString = String(children).replace(/\n$/, '');
+      if (!inline && (match || codeString.includes('\n'))) {
+        return (
+          <CodeBlock
+            language={match ? match[1] : ''}
+            value={codeString}
+          />
+        );
+      }
+      return (
+        <code
+          style={{
+            backgroundColor: 'var(--bg-input, rgba(255, 255, 255, 0.08))',
+            padding: '2px 5px',
+            borderRadius: '4px',
+            fontFamily: 'var(--font-mono, monospace)',
+            fontSize: '12px',
+          }}
+          className={className}
+          {...props}
+        >
+          {children}
+        </code>
+      );
+    },
     a: ({ href, children, ...props }: any) => {
       const isLocal = href && (href.includes('localhost') || href.includes('127.0.0.1'));
       return (
@@ -79,6 +224,7 @@ function renderWithToggles(rawText: string) {
   if (parts.length === 0) {
     return <ReactMarkdown components={markdownComponents}>{text}</ReactMarkdown>;
   }
+
 
   return (
     <>
@@ -371,6 +517,40 @@ export const ChatThread: React.FC = () => {
                       isLastGenerating={isGenerating} 
                       onUpdate={() => scrollToBottom('auto')}
                     />
+                    {!isGenerating && (
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          marginTop: '8px',
+                          paddingTop: '6px',
+                          borderTop: '1px solid var(--border-color, rgba(255, 255, 255, 0.06))',
+                        }}
+                      >
+                        <button
+                          onClick={() => navigator.clipboard.writeText(msg.content)}
+                          style={codeActionBtnStyle}
+                          title="Copy response"
+                        >
+                          <Copy size={12} />
+                          <span>Copy</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            const prevUser = chatHistory.slice(0, index).reverse().find((m) => m.role === 'user');
+                            if (prevUser) {
+                              useAIWorkspaceStore.getState().setDraftPrompt(prevUser.content);
+                            }
+                          }}
+                          style={codeActionBtnStyle}
+                          title="Regenerate prompt"
+                        >
+                          <RotateCcw size={12} />
+                          <span>Regenerate</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -378,6 +558,7 @@ export const ChatThread: React.FC = () => {
           </div>
         );
       })}
+
       
       {currentState === 'running' && (
         <div style={{

@@ -10,11 +10,16 @@ import {
   AgentResponse,
   AgentStatus,
   AgentToolAction,
+  AgentTaskRequest,
+  AgentTaskSummary,
+  AgentStreamEvent,
+  ExecuteCommandResult,
 } from '../../shared/types/ipc';
 import { FileNode, FileSearchResult } from '../../shared/types/file';
 import { fileSystemService } from '../services/fileSystemService';
 import { terminalService } from '../services/terminalService';
 import { agentService } from '../services/agentService';
+import { executionEngine } from '../services/executionEngine';
 import { gitService } from '../services/gitService';
 import { logger } from '../services/logger';
 import { getMainWindow } from '../windows/mainWindow';
@@ -22,6 +27,9 @@ import { startWorkspaceWatch } from '../services/workspaceWatcher';
 import { authorizeWorkspace, getAuthorizedWorkspace, restoreWorkspace } from '../services/workspaceAuthorization';
 import { isMac, getPlatform, getPlatformInfo } from '../platform/platform';
 import { platformWindow } from '../platform/window/platformWindow';
+
+const activeTasks = new Map<number, AbortController>();
+
 
 function getWorkspaceForSender(senderId: number): string | null {
   const mainWindow = getMainWindow();
@@ -350,6 +358,25 @@ export function registerIpcHandlers(): void {
     }
   );
 
+  // 13c. Terminal Execute Command
+  ipcMain.handle(
+    IPC_CHANNELS.TERMINAL_EXECUTE_COMMAND,
+    async (
+      event,
+      { command, options }: { command: string; options?: { timeoutMs?: number; cwd?: string } }
+    ): Promise<IpcResult<ExecuteCommandResult>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      const cwd = options?.cwd || rootPath || process.cwd();
+      const res = await terminalService.executeCommand({
+        command,
+        cwd,
+        timeoutMs: options?.timeoutMs,
+      });
+      return { success: true, data: res };
+    }
+  );
+
+
   // Git Handlers
   ipcMain.handle(
     IPC_CHANNELS.GIT_STATUS,
@@ -476,6 +503,75 @@ export function registerIpcHandlers(): void {
     }
   );
 
+  // 18. AI Agent - Autonomous Run Task
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_RUN_TASK,
+    async (
+      event,
+      request: AgentTaskRequest
+    ): Promise<IpcResult<AgentTaskSummary>> => {
+      const senderId = event.sender.id;
+      const rootPath = getWorkspaceForSender(senderId);
+      if (!rootPath) {
+        return noWorkspaceError();
+      }
+
+      // Security restriction: enforce workspace path to authorized workspace
+      request.workspacePath = rootPath;
+
+      // Abort any currently running task for this sender
+      activeTasks.get(senderId)?.abort();
+      const abortController = new AbortController();
+      activeTasks.set(senderId, abortController);
+
+      try {
+        logger.info('Starting autonomous agent task', { prompt: request.prompt, rootPath });
+        const summary = await executionEngine.runTask(
+          request,
+          {
+            signal: abortController.signal,
+            onEvent: (streamEvent: AgentStreamEvent) => {
+              if (!event.sender.isDestroyed()) {
+                event.sender.send(IPC_CHANNELS.AGENT_STREAM_EVENT, streamEvent);
+              }
+            },
+          }
+        );
+        return { success: true, data: summary };
+      } catch (err: unknown) {
+        const error = err as Error;
+        logger.error('Agent task execution error', { message: error.message });
+        return {
+          success: false,
+          error: {
+            code: 'AGENT_TASK_FAILED',
+            message: error.message || 'Execution failed.',
+          },
+        };
+      } finally {
+        if (activeTasks.get(senderId) === abortController) {
+          activeTasks.delete(senderId);
+        }
+      }
+    }
+  );
+
+  // 19. AI Agent - Cancel Task
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_CANCEL_TASK,
+    async (event): Promise<IpcResult<void>> => {
+      const senderId = event.sender.id;
+      const controller = activeTasks.get(senderId);
+      if (controller) {
+        controller.abort();
+        activeTasks.delete(senderId);
+        logger.info('Cancelled agent task for sender', { senderId });
+      }
+      return { success: true, data: undefined };
+    }
+  );
+
+
   // Window Controls
   ipcMain.handle(IPC_CHANNELS.APP_WINDOW_MINIMIZE, () => {
     const win = BrowserWindow.getFocusedWindow();
@@ -543,19 +639,27 @@ export function registerIpcHandlers(): void {
           authWin.show();
         });
 
-        authWin.webContents.on('will-navigate', (event, navUrl) => {
+        const handleAuthNavigation = (event: Electron.Event, navUrl: string) => {
           try {
             const callbackUrl = new URL(navUrl);
-            if (callbackUrl.origin === initialUrl.origin && callbackUrl.pathname === '/v1/auth/google/callback') {
+            const isCallback =
+              (callbackUrl.origin === initialUrl.origin || callbackUrl.hostname === 'localhost' || callbackUrl.hostname === '127.0.0.1') &&
+              (callbackUrl.pathname === '/v1/auth/google/callback' || callbackUrl.pathname.endsWith('/auth/google/callback'));
+            if (isCallback) {
               event.preventDefault();
-              resolved = true;
-              authWin.close();
-              resolve({ success: true, data: Object.fromEntries(callbackUrl.searchParams) });
+              if (!resolved) {
+                resolved = true;
+                authWin.close();
+                resolve({ success: true, data: Object.fromEntries(callbackUrl.searchParams) });
+              }
             }
           } catch {
-            event.preventDefault();
+            // ignore non-URL navigations
           }
-        });
+        };
+
+        authWin.webContents.on('will-navigate', handleAuthNavigation);
+        authWin.webContents.on('will-redirect', handleAuthNavigation);
 
         authWin.on('closed', () => {
           if (!resolved) {

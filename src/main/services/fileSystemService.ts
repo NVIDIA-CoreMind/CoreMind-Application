@@ -190,6 +190,8 @@ export class FileSystemService {
         };
       }
 
+      const parentDir = path.dirname(filePath);
+      await fs.mkdir(parentDir, { recursive: true });
       await fs.writeFile(filePath, content, 'utf-8');
       logger.info('File saved successfully', { filePath });
       return { success: true, data: undefined };

@@ -1,5 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { IDELayout } from './layouts/IDELayout';
+import { OnboardingWindow } from '../features/onboarding/OnboardingWindow';
+import { onboardingService } from '../features/onboarding/onboarding.service';
 import { useTabsStore } from './stores/tabsStore';
 import { useWorkspaceStore } from './stores/workspaceStore';
 import { useUiStore } from './stores/uiStore';
@@ -8,6 +10,9 @@ import { useAuthStore } from './stores/authStore';
 import { isMacClient } from '../shared/utils/shortcuts';
 
 export const App: React.FC = () => {
+  const [isOnboardingCompleted, setIsOnboardingCompleted] = useState<boolean>(() =>
+    onboardingService.isOnboardingCompleted()
+  );
   const { saveActiveTab, closeTab, activeTabId } = useTabsStore();
   const { rootPath, openFolderDialog, openWorkspacePath, restoreLastWorkspace } = useWorkspaceStore();
   const {
@@ -160,6 +165,17 @@ export const App: React.FC = () => {
     isCommandPaletteOpen,
     isQuickOpenOpen,
   ]);
+
+  if (!isOnboardingCompleted) {
+    return (
+      <OnboardingWindow
+        onComplete={() => {
+          setIsOnboardingCompleted(true);
+          restoreLastWorkspace();
+        }}
+      />
+    );
+  }
 
   return <IDELayout />;
 };
