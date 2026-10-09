@@ -56,13 +56,13 @@ export const OnboardingLayout: React.FC<OnboardingLayoutProps> = ({
               fontWeight: 500,
               backgroundColor: 'var(--bg-card, rgba(255, 255, 255, 0.04))',
               border: '1px solid var(--border-color, rgba(128, 128, 128, 0.2))',
-              color: 'var(--accent, #10B981)',
+              color: 'var(--accent, #3B82F6)',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = 'var(--accent-bg, rgba(16, 185, 129, 0.12))';
-              e.currentTarget.style.borderColor = 'var(--accent, #10B981)';
+              e.currentTarget.style.backgroundColor = 'var(--accent-bg, rgba(59, 130, 246, 0.12))';
+              e.currentTarget.style.borderColor = 'var(--accent, #3B82F6)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.backgroundColor = 'var(--bg-card, rgba(255, 255, 255, 0.04))';

@@ -88,8 +88,8 @@ export const TerminalPanel: React.FC = () => {
       theme: {
         background: '#181818',
         foreground: '#E6E6E6',
-        cursor: '#10B981',
-        selectionBackground: 'rgba(16, 185, 129, 0.3)',
+        cursor: '#3B82F6',
+        selectionBackground: 'rgba(59, 130, 246, 0.3)',
         black: '#181818',
         red: '#EF4444',
         green: '#10B981',

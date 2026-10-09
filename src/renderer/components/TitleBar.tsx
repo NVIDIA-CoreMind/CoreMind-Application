@@ -14,6 +14,7 @@ import { useThemeStore } from '../stores/themeStore';
 import { useUiStore } from '../stores/uiStore';
 import coreMindLogo from '../assets/icon.png';
 import { TitleBarMenu } from './TitleBarMenu';
+import { UserProfileButton } from './UserProfileButton';
 
 export const TitleBar: React.FC = () => {
   const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
@@ -112,6 +113,17 @@ export const TitleBar: React.FC = () => {
       >
         <Bot size={14} />
       </button>
+
+      <div
+        style={{
+          width: '1px',
+          height: '14px',
+          backgroundColor: 'var(--border-color, rgba(255, 255, 255, 0.12))',
+          margin: '0 4px',
+        }}
+      />
+
+      <UserProfileButton />
     </div>
   );
 

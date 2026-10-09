@@ -116,7 +116,7 @@ export const EmptyState: React.FC = () => {
               width: '100%',
               height: '36px',
               borderRadius: '6px',
-              backgroundColor: '#10b981',
+              backgroundColor: 'var(--accent, #3B82F6)',
               color: '#ffffff',
               fontSize: '13px',
               fontWeight: 500,
@@ -126,11 +126,11 @@ export const EmptyState: React.FC = () => {
               gap: '8px',
               cursor: 'pointer',
               border: 'none',
-              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)',
+              boxShadow: '0 2px 8px rgba(59, 130, 246, 0.3)',
               transition: 'background-color 0.15s ease',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#059669')}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = '#10b981')}
+            onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--accent-hover, #60A5FA)')}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--accent, #3B82F6)')}
           >
             <FolderOpen size={16} />
             <span>{isLoading ? 'Opening Folder...' : 'Open Folder'}</span>

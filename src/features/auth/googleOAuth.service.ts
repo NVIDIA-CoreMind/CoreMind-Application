@@ -32,6 +32,24 @@ export class GoogleOAuthService {
   }
 
   /**
+   * Opens the Google OAuth consent URL directly in Google Chrome.
+   */
+  public async openInGoogleChrome(redirectUri?: string): Promise<{ success: boolean; authUrl: string; state?: string }> {
+    const authData = await this.getAuthorizationUrl(redirectUri);
+    if (typeof window !== 'undefined' && window.coreMindAPI?.openInChrome) {
+      const res = await window.coreMindAPI.openInChrome(authData.auth_url);
+      if (res.success) {
+        return { success: true, authUrl: authData.auth_url, state: authData.state };
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.open(authData.auth_url, '_blank');
+      return { success: true, authUrl: authData.auth_url, state: authData.state };
+    }
+    return { success: false, authUrl: authData.auth_url };
+  }
+
+  /**
    * Starts the Google OAuth 2.0 authorization code / token flow in a secure desktop window.
    */
   public async startOAuthFlow(redirectUri?: string): Promise<OAuthResult> {

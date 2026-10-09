@@ -38,7 +38,7 @@ export const OnboardingProgress: React.FC<OnboardingProgressProps> = ({
               width: isActive ? '24px' : '6px',
               borderRadius: '3px',
               backgroundColor: isActive
-                ? 'var(--accent, #10B981)'
+                ? 'var(--accent, #3B82F6)'
                 : isPast
                 ? 'var(--text-secondary, #9A9A9A)'
                 : 'var(--border-color, #333333)',

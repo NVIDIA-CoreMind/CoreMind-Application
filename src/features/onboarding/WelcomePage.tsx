@@ -12,13 +12,13 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
       title: 'AI-Powered Development',
       description: 'Generate code, understand projects, and solve programming problems.',
       icon: Sparkles,
-      color: '#10B981',
+      color: '#3B82F6',
     },
     {
       title: 'Intelligent Coding Workspace',
       description: 'Work with your code, files, and integrated terminal in one place.',
       icon: Terminal,
-      color: '#3B82F6',
+      color: '#60A5FA',
     },
     {
       title: 'Developer Productivity',
@@ -57,7 +57,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
             position: 'absolute',
             inset: '-6px',
             borderRadius: '20px',
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.18) 0%, transparent 70%)',
             filter: 'blur(8px)',
             zIndex: 0,
           }}
@@ -181,7 +181,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
             width: '100%',
             height: '44px',
             borderRadius: '8px',
-            backgroundColor: 'var(--accent, #10B981)',
+            backgroundColor: 'var(--accent, #3B82F6)',
             color: '#FFFFFF',
             fontSize: '14px',
             fontWeight: 500,
@@ -189,24 +189,24 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
             border: 'none',
             cursor: 'pointer',
             transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
             outline: 'none',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--accent-hover, #34D399)';
+            e.currentTarget.style.backgroundColor = 'var(--accent-hover, #60A5FA)';
             e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.35)';
+            e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.35)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--accent, #10B981)';
+            e.currentTarget.style.backgroundColor = 'var(--accent, #3B82F6)';
             e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.25)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.25)';
           }}
           onFocus={(e) => {
-            e.currentTarget.style.outline = '2px solid var(--accent, #10B981)';
+            e.currentTarget.style.outline = '2px solid var(--accent, #3B82F6)';
             e.currentTarget.style.outlineOffset = '2px';
           }}
           onBlur={(e) => {

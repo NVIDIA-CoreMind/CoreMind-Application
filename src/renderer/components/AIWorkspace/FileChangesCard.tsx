@@ -102,7 +102,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                     width: '6px',
                     height: '6px',
                     borderRadius: '50%',
-                    backgroundColor: '#10B981',
+                    backgroundColor: '#3B82F6',
                     animation: 'pulse 1.5s infinite',
                     display: 'inline-block',
                     flexShrink: 0,

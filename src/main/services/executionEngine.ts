@@ -48,104 +48,25 @@ export class ExecutionEngine {
     const initialExplanation = this.getInitialExplanation(prompt);
     emit({ type: 'explanation', text: initialExplanation });
 
-    // Step 2: Inspect the environment
-    emit({ type: 'status', text: 'Checking the environment...', step: 'inspect' });
-
     const isFlutterTask = /flutter|dart|pubspec/i.test(prompt);
-    let flutterInstalled = false;
 
-    if (isFlutterTask) {
-      emit({ type: 'status', text: 'Checking the Flutter environment...', step: 'inspect' });
-      const versionResult = await this.runTerminalCommand(
-        'flutter --version',
-        workspacePath,
-        emit,
-        signal,
-        executedCommands
-      );
-      flutterInstalled = versionResult.exitCode === 0;
+    // Fast check for existing project configuration
+    const projectCheck = await this.detectExistingProject(workspacePath, isFlutterTask);
 
-      if (!flutterInstalled) {
-        emit({
-          type: 'status',
-          text: 'Flutter command not detected in current PATH. Checking environment and project files...',
-          step: 'inspect',
-        });
-      } else {
-        emit({
-          type: 'status',
-          text: 'Flutter SDK verified. Inspecting project structure...',
-          step: 'inspect',
-        });
-      }
-    } else {
+    if (isFlutterTask && projectCheck.exists) {
       emit({
         type: 'status',
-        text: 'Inspecting workspace files and structure...',
-        step: 'inspect',
+        text: 'Existing Flutter project detected. Reusing existing project configuration...',
+        step: 'setup',
       });
     }
 
-    if (signal?.aborted) {
-      emit({ type: 'status', text: 'Task stopped by user.' });
-      throw new Error('Task cancelled by user.');
-    }
-
-    // Step 3: Set up the project
-    // Detect whether project already exists in workspace
-    const projectCheck = await this.detectExistingProject(workspacePath, isFlutterTask);
-
-    if (isFlutterTask) {
-      if (projectCheck.exists) {
-        emit({
-          type: 'status',
-          text: 'Existing Flutter project detected. Reusing existing project configuration...',
-          step: 'setup',
-        });
-      } else {
-        emit({
-          type: 'status',
-          text: 'Creating the Flutter project...',
-          step: 'setup',
-        });
-
-        if (flutterInstalled) {
-          const createResult = await this.runTerminalCommand(
-            'flutter create --project-name coremind_app --platforms=web,macos,linux,windows .',
-            workspacePath,
-            emit,
-            signal,
-            executedCommands
-          );
-
-          if (createResult.exitCode !== 0) {
-            // Fallback to basic flutter create .
-            await this.runTerminalCommand(
-              'flutter create .',
-              workspacePath,
-              emit,
-              signal,
-              executedCommands
-            );
-          }
-        } else {
-          // If flutter binary not in PATH, create base pubspec & structure directly
-          await this.createBaseFlutterProject(workspacePath, emit, changedFiles);
-        }
-      }
-    }
-
-    if (signal?.aborted) {
-      emit({ type: 'status', text: 'Task stopped by user.' });
-      throw new Error('Task cancelled by user.');
-    }
-
-    // Step 4: Create and generate code
+    // Step 2: Immediate File Creation and Code Generation
     emit({
       type: 'status',
       text: isFlutterTask
-        ? 'Flutter is ready. Creating the login screen...'
-        : 'Generating implementation files...',
+        ? 'Creating Flutter implementation files...'
+        : 'Generating code files...',
       step: 'codegen',
     });
 
@@ -174,9 +95,32 @@ export class ExecutionEngine {
 
       emit({
         type: 'status',
-        text: `Writing ${path.basename(file.path)}...`,
+        text: `Created ${path.basename(file.path)}`,
         step: 'codegen',
       });
+    }
+
+    // Step 3: Inspect environment and validate in background
+    let flutterInstalled = false;
+
+    if (isFlutterTask) {
+      const versionResult = await this.runTerminalCommand(
+        'flutter --version',
+        workspacePath,
+        emit,
+        signal,
+        executedCommands
+      );
+      flutterInstalled = versionResult.exitCode === 0;
+    }
+
+    if (signal?.aborted) {
+      emit({ type: 'status', text: 'Task stopped by user.' });
+      throw new Error('Task cancelled by user.');
+    }
+
+    if (isFlutterTask && !projectCheck.exists && !flutterInstalled) {
+      await this.createBaseFlutterProject(workspacePath, emit, changedFiles);
     }
 
     emit({

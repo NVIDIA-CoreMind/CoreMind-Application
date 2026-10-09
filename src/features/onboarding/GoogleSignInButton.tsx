@@ -39,7 +39,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
       onMouseEnter={(e) => {
         if (!disabled && !isLoading) {
           e.currentTarget.style.backgroundColor = 'var(--bg-hover, #262626)';
-          e.currentTarget.style.borderColor = 'var(--accent, #10B981)';
+          e.currentTarget.style.borderColor = 'var(--accent, #3B82F6)';
           e.currentTarget.style.transform = 'translateY(-1px)';
           e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.12)';
         }
@@ -53,7 +53,7 @@ export const GoogleSignInButton: React.FC<GoogleSignInButtonProps> = ({
         }
       }}
       onFocus={(e) => {
-        e.currentTarget.style.outline = '2px solid var(--accent, #10B981)';
+        e.currentTarget.style.outline = '2px solid var(--accent, #3B82F6)';
         e.currentTarget.style.outlineOffset = '2px';
       }}
       onBlur={(e) => {

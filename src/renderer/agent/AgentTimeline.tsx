@@ -60,7 +60,7 @@ function useNow(active: boolean): number {
 }
 
 const StepIcon: React.FC<{ item: TimelineItem }> = ({ item }) => {
-  if (item.state === 'running') return <Loader2 size={12} color="#10B981" className="animate-spin" />;
+  if (item.state === 'running') return <Loader2 size={12} color="#3B82F6" className="animate-spin" />;
   if (item.state === 'failed') return <AlertTriangle size={12} color="#EF4444" />;
   return <span style={{ color: 'var(--text-muted)', display: 'flex' }}>{KIND_ICON[item.kind]}</span>;
 };
@@ -89,10 +89,10 @@ export const AgentTimeline: React.FC = () => {
   const elapsed = runStartedAt ? formatDuration((runEndedAt ?? now) - runStartedAt) : '';
   const failed = lifecycleStage === 'failed';
   const title = isLoading
-    ? `Thinking${elapsed ? ` for ${elapsed}` : ''}…`
+    ? `Task in progress${elapsed ? ` (${elapsed})` : ''}…`
     : failed
     ? `Stopped after ${elapsed}`
-    : `Thought for ${elapsed}`;
+    : `Completed in ${elapsed}`;
 
   const openFile = (filePath?: string) => {
     const resolved = filePath ? resolveWorkspacePath(filePath, rootPath) : null;
@@ -112,7 +112,7 @@ export const AgentTimeline: React.FC = () => {
           gap: '6px',
           cursor: 'pointer',
           fontSize: '12px',
-          color: isLoading ? '#10B981' : 'var(--text-secondary)',
+          color: isLoading ? '#3B82F6' : 'var(--text-secondary)',
         }}
       >
         {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
@@ -129,7 +129,7 @@ export const AgentTimeline: React.FC = () => {
         <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-body)' }}>
           {isLoading && (
             <div style={{ color: 'var(--text-secondary)', marginBottom: '6px' }}>
-              {STAGE_LABEL[lifecycleStage] ?? 'Thinking'}…
+              {STAGE_LABEL[lifecycleStage] ?? 'Processing'}…
             </div>
           )}
 
@@ -145,9 +145,9 @@ export const AgentTimeline: React.FC = () => {
                   <div key={task.id} style={{ display: 'flex', gap: '7px', padding: '2px 0', alignItems: 'flex-start' }}>
                     <span style={{ marginTop: '3px', display: 'flex' }}>
                       {done ? (
-                        <Check size={12} color="#10B981" />
+                        <Check size={12} color="#3B82F6" />
                       ) : running ? (
-                        <Loader2 size={12} color="#10B981" className="animate-spin" />
+                        <Loader2 size={12} color="#3B82F6" className="animate-spin" />
                       ) : task.status === 'failed' ? (
                         <AlertTriangle size={12} color="#EF4444" />
                       ) : (

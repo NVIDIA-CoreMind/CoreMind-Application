@@ -132,7 +132,7 @@ export const ThemeSelectionPage: React.FC<ThemeSelectionPageProps> = ({
             e.currentTarget.style.backgroundColor = 'transparent';
           }}
           onFocus={(e) => {
-            e.currentTarget.style.outline = '2px solid var(--accent, #10B981)';
+            e.currentTarget.style.outline = '2px solid var(--accent, #3B82F6)';
             e.currentTarget.style.outlineOffset = '2px';
           }}
           onBlur={(e) => {
@@ -152,31 +152,31 @@ export const ThemeSelectionPage: React.FC<ThemeSelectionPageProps> = ({
             height: '42px',
             padding: '0 24px',
             borderRadius: '8px',
-            backgroundColor: 'var(--accent, #10B981)',
+            backgroundColor: 'var(--accent, #3B82F6)',
             color: '#FFFFFF',
             fontSize: '13px',
             fontWeight: 500,
             display: 'inline-flex',
             alignItems: 'center',
             gap: '8px',
-            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
+            boxShadow: '0 2px 8px rgba(59, 130, 246, 0.25)',
             border: 'none',
             cursor: 'pointer',
             transition: 'all 0.18s cubic-bezier(0.16, 1, 0.3, 1)',
             outline: 'none',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--accent-hover, #34D399)';
+            e.currentTarget.style.backgroundColor = 'var(--accent-hover, #60A5FA)';
             e.currentTarget.style.transform = 'translateY(-1px)';
-            e.currentTarget.style.boxShadow = '0 4px 14px rgba(16, 185, 129, 0.35)';
+            e.currentTarget.style.boxShadow = '0 4px 14px rgba(59, 130, 246, 0.35)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--accent, #10B981)';
+            e.currentTarget.style.backgroundColor = 'var(--accent, #3B82F6)';
             e.currentTarget.style.transform = 'translateY(0)';
-            e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.25)';
+            e.currentTarget.style.boxShadow = '0 2px 8px rgba(59, 130, 246, 0.25)';
           }}
           onFocus={(e) => {
-            e.currentTarget.style.outline = '2px solid var(--accent, #10B981)';
+            e.currentTarget.style.outline = '2px solid var(--accent, #3B82F6)';
             e.currentTarget.style.outlineOffset = '2px';
           }}
           onBlur={(e) => {

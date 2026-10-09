@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowLeft, AlertCircle, HelpCircle, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, AlertCircle, HelpCircle, X, ExternalLink, RefreshCw, CheckCircle2 } from 'lucide-react';
 import coreMindLogo from '@/assets/icon.png';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { GoogleLoginPageProps } from './onboarding.types';
@@ -11,14 +11,56 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
   onDevBypass,
 }) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [isWaitingChrome, setIsWaitingChrome] = useState(false);
+  const [isCheckingSession, setIsCheckingSession] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [showHelpModal, setShowHelpModal] = useState(false);
+  const pollTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const authStateRef = useRef<string | undefined>(undefined);
+
+  const cleanupPolling = () => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      cleanupPolling();
+    };
+  }, []);
 
   const handleSignIn = async () => {
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
+      // 1. Attempt opening in Google Chrome
+      const chromeResult = await featureAuthService.openInGoogleChrome();
+
+      if (chromeResult.success) {
+        authStateRef.current = chromeResult.state;
+        setIsWaitingChrome(true);
+        setIsLoading(false);
+
+        // Start polling for OAuth completion from backend
+        cleanupPolling();
+        pollTimerRef.current = setInterval(async () => {
+          try {
+            const authed = await featureAuthService.checkPendingSession(authStateRef.current);
+            if (authed) {
+              cleanupPolling();
+              onSuccess();
+            }
+          } catch {
+            // keep polling silently
+          }
+        }, 1500);
+        return;
+      }
+
+      // Fallback: standard desktop oauth window if Chrome could not be opened
       const result = await featureAuthService.signInWithGoogle();
       if (result.success) {
         onSuccess();
@@ -30,6 +72,24 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
       setErrorMessage(error.message || 'Authentication could not be completed.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleManualCheck = async () => {
+    setIsCheckingSession(true);
+    try {
+      const authed = await featureAuthService.checkPendingSession(authStateRef.current);
+      if (authed) {
+        cleanupPolling();
+        onSuccess();
+      } else {
+        setErrorMessage('Authentication not yet detected. Please ensure you finished logging in in Chrome.');
+      }
+    } catch (err: unknown) {
+      const error = err as Error;
+      setErrorMessage(error.message || 'Failed to verify session.');
+    } finally {
+      setIsCheckingSession(false);
     }
   };
 
@@ -68,7 +128,7 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
             position: 'absolute',
             inset: '-6px',
             borderRadius: '20px',
-            background: 'radial-gradient(circle, rgba(16, 185, 129, 0.15) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%)',
             filter: 'blur(8px)',
             zIndex: 0,
           }}
@@ -107,11 +167,13 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
           fontSize: '14px',
           color: 'var(--text-secondary)',
           lineHeight: 1.5,
-          marginBottom: '32px',
+          marginBottom: '28px',
           maxWidth: '380px',
         }}
       >
-        Sign in to continue to your AI-powered workspace.
+        {isWaitingChrome
+          ? 'Google Chrome opened. Complete sign-in in your browser.'
+          : 'Sign in to continue to your AI-powered workspace.'}
       </p>
 
       {/* Error Message Alert */}
@@ -155,14 +217,105 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
         </div>
       )}
 
-      {/* Primary Authentication Button */}
-      <div style={{ width: '100%', marginBottom: '20px' }}>
-        <GoogleSignInButton
-          onClick={handleSignIn}
-          isLoading={isLoading}
-          disabled={isLoading}
-        />
-      </div>
+      {/* Waiting Chrome State */}
+      {isWaitingChrome ? (
+        <div
+          style={{
+            width: '100%',
+            padding: '20px',
+            borderRadius: '12px',
+            backgroundColor: 'var(--bg-surface, #1e1e1e)',
+            border: '1px solid var(--border-color, rgba(255, 255, 255, 0.1))',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
+            marginBottom: '24px',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '16px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span
+              style={{
+                width: '10px',
+                height: '10px',
+                borderRadius: '50%',
+                backgroundColor: '#3B82F6',
+                boxShadow: '0 0 10px #3B82F6',
+                animation: 'coremind-pulse 1.5s infinite ease-in-out',
+              }}
+            />
+            <span style={{ fontSize: '13px', fontWeight: 500, color: 'var(--text-primary)' }}>
+              Waiting for sign-in in Google Chrome...
+            </span>
+          </div>
+
+          <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+            Once you sign in to Google in Chrome, CoreMind IDE will automatically connect and continue.
+          </p>
+
+          <div style={{ display: 'flex', gap: '10px', width: '100%', marginTop: '4px' }}>
+            <button
+              type="button"
+              onClick={handleManualCheck}
+              disabled={isCheckingSession}
+              style={{
+                flex: 1,
+                height: '38px',
+                borderRadius: '8px',
+                backgroundColor: 'var(--accent, #3B82F6)',
+                color: '#FFFFFF',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: isCheckingSession ? 'not-allowed' : 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              {isCheckingSession ? (
+                <RefreshCw size={14} className="animate-spin" />
+              ) : (
+                <CheckCircle2 size={14} />
+              )}
+              <span>Check Status</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleSignIn}
+              style={{
+                height: '38px',
+                padding: '0 14px',
+                borderRadius: '8px',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--border-color, rgba(255, 255, 255, 0.15))',
+                color: 'var(--text-primary)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <ExternalLink size={14} />
+              <span>Re-open Chrome</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* Primary Authentication Button */
+        <div style={{ width: '100%', marginBottom: '20px' }}>
+          <GoogleSignInButton
+            onClick={handleSignIn}
+            isLoading={isLoading}
+            disabled={isLoading}
+          />
+        </div>
+      )}
 
       {/* Additional Help Link */}
       <div style={{ marginBottom: '32px' }}>
@@ -202,7 +355,10 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
       >
         <button
           type="button"
-          onClick={onBack}
+          onClick={() => {
+            cleanupPolling();
+            onBack();
+          }}
           disabled={isLoading}
           aria-label="Back to theme selection"
           style={{
@@ -229,7 +385,7 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
             if (!isLoading) e.currentTarget.style.backgroundColor = 'transparent';
           }}
           onFocus={(e) => {
-            e.currentTarget.style.outline = '2px solid var(--accent, #10B981)';
+            e.currentTarget.style.outline = '2px solid var(--accent, #3B82F6)';
             e.currentTarget.style.outlineOffset = '2px';
           }}
           onBlur={(e) => {
@@ -274,7 +430,7 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
           >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <HelpCircle size={18} color="var(--accent, #10B981)" />
+                <HelpCircle size={18} color="var(--accent, #3B82F6)" />
                 <h3 style={{ fontSize: '15px', fontWeight: 600, color: 'var(--text-primary)' }}>
                   Authentication Assistance
                 </h3>
@@ -296,13 +452,13 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
             </div>
 
             <p style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '16px' }}>
-              CoreMind IDE connects with Google OAuth to verify developer credentials. Ensure that:
+              CoreMind IDE connects with Google OAuth to verify developer credentials:
             </p>
 
             <ul style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, paddingLeft: '18px', marginBottom: '18px' }}>
-              <li>The local or remote CoreMind service is running (default port: 43110).</li>
-              <li>Your device has internet connectivity to reach Google authentication servers.</li>
-              <li>No browser firewall or proxy is blocking the desktop authorization callback.</li>
+              <li>Google Chrome opens the official Google Sign-In consent portal.</li>
+              <li>The local CoreMind backend service is active at 127.0.0.1:43110.</li>
+              <li>You can also click &ldquo;Use Dev Bypass&rdquo; to jump directly into the workspace.</li>
             </ul>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
@@ -310,6 +466,7 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
                 <button
                   type="button"
                   onClick={() => {
+                    cleanupPolling();
                     setShowHelpModal(false);
                     onDevBypass();
                   }}
@@ -319,7 +476,7 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
                     borderRadius: '6px',
                     backgroundColor: 'transparent',
                     border: '1px solid var(--border-color, #444)',
-                    color: 'var(--accent, #10B981)',
+                    color: 'var(--accent, #3B82F6)',
                     cursor: 'pointer',
                   }}
                 >
@@ -333,7 +490,7 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
                   padding: '6px 14px',
                   fontSize: '12px',
                   borderRadius: '6px',
-                  backgroundColor: 'var(--accent, #10B981)',
+                  backgroundColor: 'var(--accent, #3B82F6)',
                   color: '#FFFFFF',
                   border: 'none',
                   cursor: 'pointer',
@@ -346,6 +503,13 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
           </div>
         </div>
       )}
+
+      <style>{`
+        @keyframes coremind-pulse {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.4; transform: scale(0.85); }
+        }
+      `}</style>
     </div>
   );
 };

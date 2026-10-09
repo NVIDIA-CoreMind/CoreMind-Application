@@ -10,8 +10,8 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTerminalStore } from '../stores/terminalStore';
 
 const THEMES = {
-  dark: { background: '#181818', foreground: '#d4d4d4', cursor: '#10b981', selectionBackground: '#264f7888' },
-  light: { background: '#ffffff', foreground: '#1f2328', cursor: '#059669', selectionBackground: '#add6ff88' },
+  dark: { background: '#181818', foreground: '#d4d4d4', cursor: '#3B82F6', selectionBackground: '#264f7888' },
+  light: { background: '#ffffff', foreground: '#1f2328', cursor: '#2563EB', selectionBackground: '#add6ff88' },
 };
 
 interface TerminalViewProps {
