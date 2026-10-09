@@ -14,6 +14,7 @@ interface AuthStore {
 
   initAuth: () => Promise<void>;
   loginWithGoogle: () => Promise<boolean>;
+  loginDevBypass: () => void;
   setAuthTokens: (tokens: AuthTokens) => Promise<void>;
   updateUserProfile: (data: { name?: string; avatar_url?: string }) => Promise<boolean>;
   logout: () => Promise<void>;
@@ -85,21 +86,82 @@ export const useAuthStore = create<AuthStore>((set, get) => ({
     }
   },
 
+  loginDevBypass: () => {
+    const devUser: User = {
+      id: 'coremind-dev-user',
+      email: 'developer@coremind.internal',
+      name: 'CoreMind Developer',
+      provider: 'local-dev',
+      role: 'developer',
+      created_at: new Date().toISOString(),
+    };
+    const devTokens: AuthTokens = {
+      access_token: 'coremind-dev-token-bypass',
+      refresh_token: 'coremind-dev-refresh-bypass',
+      token_type: 'Bearer',
+      expires_in: 86400 * 30,
+      user: devUser,
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY_AUTH, JSON.stringify(devTokens));
+    } catch {
+      // ignore
+    }
+    coremindClient.setTokens({
+      accessToken: devTokens.access_token,
+      refreshToken: devTokens.refresh_token,
+    });
+    set({
+      user: devUser,
+      tokens: devTokens,
+      isAuthenticated: true,
+      isLoading: false,
+      error: null,
+    });
+  },
+
   loginWithGoogle: async (): Promise<boolean> => {
     set({ isLoading: true, error: null });
     try {
-      const authUrlData = await authService.getGoogleAuthUrl();
+      let authUrlData;
+      try {
+        authUrlData = await authService.getGoogleAuthUrl();
+      } catch (fetchErr: unknown) {
+        const error = fetchErr as Error;
+        const msg = error.message.includes('Failed to fetch') || error.message.includes('ECONNREFUSED')
+          ? 'Cannot reach CoreMind backend at 127.0.0.1:43110. Ensure backend service is running or use Development Bypass.'
+          : error.message;
+        throw new Error(msg);
+      }
+
       if (!authUrlData?.auth_url) {
-        throw new Error('Backend did not return a valid Google OAuth URL.');
+        throw new Error('Google OAuth is not configured on the backend. Please check GOOGLE_CLIENT_ID configuration.');
       }
 
       // Check if Electron popup window is available
       if (window.coreMindAPI?.openAuthWindow) {
         const res = await window.coreMindAPI.openAuthWindow(authUrlData.auth_url);
-        if (res.success && res.data?.access_token) {
-          await get().setAuthTokens(res.data);
-          set({ isLoading: false });
-          return true;
+        if (res.success && res.data) {
+          if (res.data.error) {
+            throw new Error(res.data.error_description || res.data.error || 'Google authentication was rejected.');
+          }
+
+          if (res.data.access_token) {
+            await get().setAuthTokens(res.data as any);
+            set({ isLoading: false });
+            return true;
+          }
+
+          if (res.data.code) {
+            const tokens = await authService.loginWithGoogle({
+              code: res.data.code,
+            });
+            await get().setAuthTokens(tokens);
+            set({ isLoading: false });
+            return true;
+          }
+
+          throw new Error('No authorization tokens or authorization code received from provider.');
         } else if (!res.success) {
           set({
             isLoading: false,

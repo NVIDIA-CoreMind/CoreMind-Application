@@ -72,6 +72,52 @@ export interface AgentStatus {
   instructions?: string;
 }
 
+// Execution Engine Interfaces
+export interface ExecuteCommandOptions {
+  command: string;
+  cwd?: string;
+  env?: Record<string, string>;
+  timeoutMs?: number;
+  maxBufferBytes?: number;
+}
+
+export interface ExecuteCommandResult {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  timedOut: boolean;
+  killed: boolean;
+}
+
+export interface AgentTaskRequest {
+  prompt: string;
+  workspacePath: string;
+  model?: string;
+  context?: AgentContext;
+  history?: Array<{ role: string; content: string }>;
+}
+
+export interface AgentTaskSummary {
+  implemented: string;
+  filesChanged: Array<{ file: string; action?: 'created' | 'modified'; lines?: number }>;
+  commandsExecuted: string[];
+  testsPassed: boolean;
+  notes?: string;
+}
+
+export type AgentStreamEvent =
+  | { type: 'explanation'; text: string }
+  | { type: 'status'; text: string; step?: string }
+  | { type: 'thought'; text: string }
+  | { type: 'tool_start'; tool: string; args: Record<string, unknown> }
+  | { type: 'tool_end'; tool: string; result: unknown }
+  | { type: 'terminal_output'; command: string; data: string; stream: 'stdout' | 'stderr' }
+  | { type: 'terminal_command_end'; command: string; exitCode: number }
+  | { type: 'file_change'; file: string; action: 'created' | 'modified' | 'deleted'; lines?: number; additions?: number; deletions?: number }
+  | { type: 'test_result'; testName: string; passed: boolean; message?: string }
+  | { type: 'error'; message: string; fatal?: boolean }
+  | { type: 'complete'; summary: string; filesChanged: Array<{ file: string; action?: 'created' | 'modified'; lines?: number }>; commandsExecuted: string[]; success: boolean };
+
 export const IPC_CHANNELS = {
   // File System
   FILE_OPEN_DIRECTORY_DIALOG: 'file:open-directory-dialog',
@@ -108,11 +154,15 @@ export const IPC_CHANNELS = {
   TERMINAL_DATA: 'terminal:data',
   TERMINAL_EXIT: 'terminal:exit',
   TERMINAL_GET_SHELLS: 'terminal:get-shells',
+  TERMINAL_EXECUTE_COMMAND: 'terminal:execute-command',
 
   // AI Agent
   AGENT_SEND_MESSAGE: 'agent:send-message',
   AGENT_GET_STATUS: 'agent:get-status',
   AGENT_EXECUTE_TOOL: 'agent:execute-tool',
+  AGENT_RUN_TASK: 'agent:run-task',
+  AGENT_CANCEL_TASK: 'agent:cancel-task',
+  AGENT_STREAM_EVENT: 'agent:stream-event',
 
   // App & Window
   APP_GET_SYSTEM_INFO: 'app:get-system-info',
@@ -126,4 +176,5 @@ export const IPC_CHANNELS = {
   AUTH_OPEN_WINDOW: 'auth:open-window',
   OPEN_EXTERNAL_URL: 'app:open-external-url',
 } as const;
+
 

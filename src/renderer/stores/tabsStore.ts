@@ -12,6 +12,7 @@ interface TabsStore {
   saveActiveTab: (rootPath: string) => Promise<boolean>;
   saveTab: (tabId: string, rootPath: string) => Promise<boolean>;
   createUntitledTab: () => void;
+  insertSnippetToActiveTab: (snippet: string) => void;
 }
 
 export function detectLanguage(fileName: string): string {
@@ -208,4 +209,14 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
     });
     useWorkspaceStore.getState().setActiveFileName(fileName);
   },
+
+  insertSnippetToActiveTab: (snippet: string) => {
+    const { activeTabId, tabs, updateTabContent } = get();
+    if (!activeTabId) return;
+    const tab = tabs.find((t) => t.id === activeTabId);
+    if (!tab) return;
+    const newContent = tab.content ? `${tab.content}\n\n${snippet}` : snippet;
+    updateTabContent(activeTabId, newContent);
+  },
 }));
+

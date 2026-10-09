@@ -4,7 +4,7 @@ import { FitAddon } from 'xterm-addon-fit';
 import 'xterm/css/xterm.css';
 import { Plus, X, Terminal as TerminalIcon } from 'lucide-react';
 import { useUiStore } from '../stores/uiStore';
-import { useThemeStore } from '../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../stores/themeStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 
 import { useTerminalStore } from '../stores/terminalStore';
@@ -36,7 +36,7 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, onExit }) => {
       cursorBlink: true,
       scrollback: 5000,
       allowProposedApi: true,
-      theme: THEMES[useThemeStore.getState().theme],
+      theme: THEMES[resolveEffectiveTheme(useThemeStore.getState().theme)],
     });
     const fit = new FitAddon();
     term.loadAddon(fit);
@@ -80,7 +80,7 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, onExit }) => {
   }, [id, onExit]);
 
   useEffect(() => {
-    if (termRef.current) termRef.current.options.theme = THEMES[theme];
+    if (termRef.current) termRef.current.options.theme = THEMES[resolveEffectiveTheme(theme)];
   }, [theme]);
 
   useEffect(() => {

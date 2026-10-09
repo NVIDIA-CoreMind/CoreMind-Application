@@ -10,6 +10,10 @@ import {
   AgentResponse,
   AgentStatus,
   AgentToolAction,
+  AgentTaskRequest,
+  AgentTaskSummary,
+  AgentStreamEvent,
+  ExecuteCommandResult,
   WorkspaceFileChange,
 } from '../shared/types/ipc';
 import { FileNode, FileSearchResult, FileStat } from '../shared/types/file';
@@ -45,6 +49,7 @@ export interface CoreMindTerminalAPI {
   onData: (callback: (payload: { id: string; data: string }) => void) => () => void;
   onExit: (callback: (payload: { id: string; exitCode: number }) => void) => () => void;
   getAvailableShells: () => Promise<IpcResult<ShellInfo[]>>;
+  executeCommand: (command: string, options?: { timeoutMs?: number; cwd?: string }) => Promise<IpcResult<ExecuteCommandResult>>;
 }
 
 export interface CoreMindGitAPI {
@@ -82,11 +87,16 @@ export interface CoreMindAPI extends CoreMindFilesAPI {
   onTerminalData: (callback: (payload: { id: string; data: string }) => void) => () => void;
   onTerminalExit: (callback: (payload: { id: string; exitCode: number }) => void) => () => void;
   getAvailableShells: () => Promise<IpcResult<ShellInfo[]>>;
+  executeCommand: (command: string, options?: { timeoutMs?: number; cwd?: string }) => Promise<IpcResult<ExecuteCommandResult>>;
 
   // AI Agent
   sendAgentMessage: (messages: AgentMessage[], context?: AgentContext) => Promise<IpcResult<AgentResponse>>;
   getAgentStatus: () => Promise<IpcResult<AgentStatus>>;
   executeAgentTool: (action: AgentToolAction, rootPath: string) => Promise<IpcResult<unknown>>;
+  runAgentTask: (request: AgentTaskRequest) => Promise<IpcResult<AgentTaskSummary>>;
+  cancelAgentTask: () => Promise<IpcResult<void>>;
+  onAgentStreamEvent: (callback: (event: AgentStreamEvent) => void) => () => void;
+
 
   // Workspace events
   onOpenWorkspacePath: (callback: (path: string) => void) => () => void;
@@ -160,6 +170,8 @@ const terminalAPI: CoreMindTerminalAPI = {
     return () => ipcRenderer.removeListener(IPC_CHANNELS.TERMINAL_EXIT, handler);
   },
   getAvailableShells: () => ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_GET_SHELLS),
+  executeCommand: (command, options) =>
+    ipcRenderer.invoke(IPC_CHANNELS.TERMINAL_EXECUTE_COMMAND, { command, options }),
 };
 
 const gitAPI: CoreMindGitAPI = {
@@ -199,6 +211,7 @@ const api: CoreMindAPI = {
   onTerminalData: terminalAPI.onData,
   onTerminalExit: terminalAPI.onExit,
   getAvailableShells: terminalAPI.getAvailableShells,
+  executeCommand: terminalAPI.executeCommand,
 
   // AI Agent
   sendAgentMessage: (messages, context) =>
@@ -207,6 +220,16 @@ const api: CoreMindAPI = {
     ipcRenderer.invoke(IPC_CHANNELS.AGENT_GET_STATUS),
   executeAgentTool: (action, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.AGENT_EXECUTE_TOOL, { action, rootPath }),
+  runAgentTask: (request) =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENT_RUN_TASK, request),
+  cancelAgentTask: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENT_CANCEL_TASK),
+  onAgentStreamEvent: (callback) => {
+    const handler = (_event: unknown, streamEvent: AgentStreamEvent) => callback(streamEvent);
+    ipcRenderer.on(IPC_CHANNELS.AGENT_STREAM_EVENT, handler);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.AGENT_STREAM_EVENT, handler);
+  },
+
 
   // Workspace events
   onOpenWorkspacePath: (callback) => {

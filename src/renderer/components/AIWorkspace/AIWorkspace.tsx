@@ -113,13 +113,137 @@ export const AIWorkspace: React.FC = () => {
     
     // Reset events for this execution turn
     useAIWorkspaceStore.setState({ events: [] });
-    setState('running');
-    
     const abortController = new AbortController();
     setAbortController(abortController);
-    
+    setState('running');
+
+    // If CoreMind Autonomous Agent IPC API is available in Electron, run execution engine directly
+    if (window.coreMindAPI?.runAgentTask) {
+      const assistantMsgId = `asst-${Date.now()}`;
+      let explanationReceived = false;
+      const filesChangedDetails: FileChangeInfo[] = [];
+
+      const unsubEvents = window.coreMindAPI.onAgentStreamEvent?.((streamEvent) => {
+        if (streamEvent.type === 'explanation') {
+          explanationReceived = true;
+          addChatMessage({
+            id: assistantMsgId,
+            role: 'assistant',
+            content: streamEvent.text,
+            timestamp: Date.now(),
+          });
+        } else if (streamEvent.type === 'status') {
+          useAIWorkspaceStore.getState().addEvent({
+            id: `thought-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            type: 'ThoughtEvent',
+            summary: streamEvent.text,
+            durationMs: 0,
+            timestamp: Date.now(),
+          });
+        } else if (streamEvent.type === 'terminal_output') {
+          useAIWorkspaceStore.getState().addEvent({
+            id: `term-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            type: 'TerminalEvent',
+            command: streamEvent.command,
+            output: streamEvent.data,
+            status: 'running',
+            timestamp: Date.now(),
+          });
+        } else if (streamEvent.type === 'file_change') {
+          const cleanPath = streamEvent.file.replace(/^\/+/, '').trim();
+          const existing = filesChangedDetails.find((f) => f.file === cleanPath);
+          if (existing) {
+            existing.lines = streamEvent.lines;
+            existing.action = streamEvent.action;
+          } else {
+            filesChangedDetails.push({
+              file: cleanPath,
+              action: streamEvent.action || 'created',
+              lines: streamEvent.lines,
+            });
+          }
+
+          useAIWorkspaceStore.getState().addEvent({
+            id: `file-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            type: 'FileChangedEvent',
+            file: cleanPath,
+            action: streamEvent.action || 'created',
+            lines: streamEvent.lines,
+            timestamp: Date.now(),
+          });
+
+          // Refresh workspace tree & open the file in tab editor
+          useFilesStore.getState().loadWorkspaceTree(rootPath).catch(() => {});
+          const fullPath = streamEvent.file.startsWith('/') ? streamEvent.file : `${rootPath}/${cleanPath}`;
+          const fileName = cleanPath.split('/').pop() || cleanPath;
+          useTabsStore.getState().openFile(fullPath, fileName, rootPath).catch(() => {});
+        } else if (streamEvent.type === 'complete') {
+          if (!explanationReceived) {
+            addChatMessage({
+              id: assistantMsgId,
+              role: 'assistant',
+              content: streamEvent.summary,
+              timestamp: Date.now(),
+              filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
+            });
+          } else {
+            useAIWorkspaceStore.setState((state) => ({
+              chatHistory: state.chatHistory.map((m) =>
+                m.id === assistantMsgId
+                  ? {
+                      ...m,
+                      content: `${m.content}\n\n---\n\n${streamEvent.summary}`,
+                      filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
+                    }
+                  : m
+              ),
+            }));
+          }
+          setState('completed');
+        }
+      });
+
+      try {
+        const result = await window.coreMindAPI.runAgentTask({
+          prompt,
+          workspacePath: rootPath,
+          model: useAIWorkspaceStore.getState().selectedModel,
+          history: historyToSend,
+        });
+
+        if (abortController.signal.aborted) {
+          setState('stopped');
+          return;
+        }
+
+        if (!result.success) {
+          addChatMessage({
+            id: `err-${Date.now()}`,
+            role: 'assistant',
+            content: `**Execution Error:** ${result.error.message}`,
+            timestamp: Date.now(),
+          });
+          setState('error');
+        }
+      } catch (err: any) {
+        if (!abortController.signal.aborted) {
+          addChatMessage({
+            id: `err-${Date.now()}`,
+            role: 'assistant',
+            content: `**Execution Error:** ${err.message || 'Execution failed.'}`,
+            timestamp: Date.now(),
+          });
+          setState('error');
+        }
+      } finally {
+        unsubEvents?.();
+      }
+      return;
+    }
+
     try {
       const response = await coremindClient.chatWithTools(prompt, rootPath, historyToSend);
+
       
       if (abortController.signal.aborted) {
         return;
