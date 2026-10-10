@@ -1,16 +1,19 @@
 import React, { useEffect } from 'react';
 import {
-  PanelLeft,
-  Terminal,
-  Sun,
-  Moon,
-  Bot,
+  Search,
+  Settings,
 } from 'lucide-react';
+import {
+  LayoutCustomizeIcon,
+  LayoutLeftPanelIcon,
+  LayoutBottomPanelIcon,
+  LayoutRightPanelIcon,
+  ChromeCodicon,
+} from './Codicons';
 import { isMacClient, isWindowsClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
 import { formatIdeTitle } from '../../shared/utils/title';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTabsStore } from '../stores/tabsStore';
-import { useThemeStore } from '../stores/themeStore';
 import { useUiStore } from '../stores/uiStore';
 import coreMindLogo from '../assets/icon.png';
 import { TitleBarMenu } from './TitleBarMenu';
@@ -22,7 +25,6 @@ export const TitleBar: React.FC = () => {
 
   const { rootName } = useWorkspaceStore();
   const { tabs, activeTabId } = useTabsStore();
-  const { theme, toggleTheme } = useThemeStore();
   const {
     isSidebarOpen,
     toggleSidebar,
@@ -30,6 +32,10 @@ export const TitleBar: React.FC = () => {
     toggleTerminal,
     isRightPanelOpen,
     toggleRightPanel,
+    activeSidebarTab,
+    setActiveSidebarTab,
+    isCommandPaletteOpen,
+    setCommandPaletteOpen,
   } = useUiStore();
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -44,88 +50,177 @@ export const TitleBar: React.FC = () => {
     }
   }, [displayTitle]);
 
-  const renderRightControls = (macPlatform: boolean) => (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-      <button
-        onClick={toggleSidebar}
-        title={`Toggle Primary Sidebar (${getShortcutDisplay('toggleSidebar', macPlatform)})`}
-        style={{
-          padding: '4px',
-          borderRadius: '4px',
-          color: isSidebarOpen ? 'var(--text-primary)' : 'var(--text-muted)',
-          backgroundColor: isSidebarOpen ? 'var(--bg-active)' : 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        <PanelLeft size={14} />
-      </button>
+  const renderRightControls = (macPlatform: boolean) => {
+    const btnStyle = (isActive: boolean) => ({
+      width: '24px',
+      height: '24px',
+      borderRadius: '5px',
+      color: isActive ? 'var(--text-primary, #FFFFFF)' : 'var(--text-secondary, #9CA3AF)',
+      backgroundColor: isActive ? 'rgba(255, 255, 255, 0.16)' : 'transparent',
+      border: 'none',
+      cursor: 'pointer',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: 0,
+      transition: 'all 0.15s ease',
+    });
 
-      <button
-        onClick={toggleTerminal}
-        title={`Toggle Terminal (${getShortcutDisplay('toggleTerminal', macPlatform)})`}
-        style={{
-          padding: '4px',
-          borderRadius: '4px',
-          color: isTerminalOpen ? 'var(--text-primary)' : 'var(--text-muted)',
-          backgroundColor: isTerminalOpen ? 'var(--bg-active)' : 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        <Terminal size={14} />
-      </button>
+    const handleOpenChrome = async () => {
+      try {
+        if (window.coreMindAPI?.openInChrome) {
+          await window.coreMindAPI.openInChrome('http://localhost:5173');
+        } else {
+          window.open('http://localhost:5173', '_blank');
+        }
+      } catch {
+        window.open('http://localhost:5173', '_blank');
+      }
+    };
 
-      <button
-        onClick={toggleTheme}
-        title={theme === 'dark' ? 'Switch to Light theme' : 'Switch to Dark theme'}
-        style={{
-          padding: '4px',
-          borderRadius: '4px',
-          color: 'var(--text-secondary)',
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
-      </button>
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+        {/* 1. Layout / Editor Grid */}
+        <button
+          onClick={() => setCommandPaletteOpen(!isCommandPaletteOpen)}
+          title="Customize Layout"
+          aria-label="Customize Layout"
+          style={btnStyle(false)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-secondary, #9CA3AF)';
+          }}
+        >
+          <LayoutCustomizeIcon size={15} />
+        </button>
 
-      <button
-        onClick={toggleRightPanel}
-        title="Toggle CoreMind AI Agent"
-        style={{
-          padding: '4px',
-          borderRadius: '4px',
-          color: isRightPanelOpen ? 'var(--accent)' : 'var(--text-muted)',
-          backgroundColor: isRightPanelOpen ? 'var(--accent-bg)' : 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        <Bot size={14} />
-      </button>
+        {/* 2. Primary Sidebar */}
+        <button
+          onClick={toggleSidebar}
+          title={`Toggle Primary Sidebar (${getShortcutDisplay('toggleSidebar', macPlatform)})`}
+          aria-label="Toggle Primary Sidebar"
+          style={btnStyle(isSidebarOpen)}
+          onMouseEnter={(e) => {
+            if (!isSidebarOpen) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            if (!isSidebarOpen) e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = isSidebarOpen ? 'var(--text-primary, #FFFFFF)' : 'var(--text-secondary, #9CA3AF)';
+          }}
+        >
+          <LayoutLeftPanelIcon size={15} />
+        </button>
 
-      <div
-        style={{
-          width: '1px',
-          height: '14px',
-          backgroundColor: 'var(--border-color, rgba(255, 255, 255, 0.12))',
-          margin: '0 4px',
-        }}
-      />
+        {/* 3. Bottom Panel / Terminal */}
+        <button
+          onClick={toggleTerminal}
+          title={`Toggle Bottom Panel (${getShortcutDisplay('toggleTerminal', macPlatform)})`}
+          aria-label="Toggle Bottom Panel"
+          style={btnStyle(isTerminalOpen)}
+          onMouseEnter={(e) => {
+            if (!isTerminalOpen) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            if (!isTerminalOpen) e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = isTerminalOpen ? 'var(--text-primary, #FFFFFF)' : 'var(--text-secondary, #9CA3AF)';
+          }}
+        >
+          <LayoutBottomPanelIcon size={15} />
+        </button>
 
-      <UserProfileButton />
-    </div>
-  );
+        {/* 4. Secondary / Right Panel (AI Workspace) */}
+        <button
+          onClick={toggleRightPanel}
+          title="Toggle Secondary / AI Panel"
+          aria-label="Toggle Secondary / AI Panel"
+          style={btnStyle(isRightPanelOpen)}
+          onMouseEnter={(e) => {
+            if (!isRightPanelOpen) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            if (!isRightPanelOpen) e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = isRightPanelOpen ? 'var(--text-primary, #FFFFFF)' : 'var(--text-secondary, #9CA3AF)';
+          }}
+        >
+          <LayoutRightPanelIcon size={15} />
+        </button>
+
+        {/* 5. Search in Files */}
+        <button
+          onClick={() => setActiveSidebarTab('search')}
+          title="Search in Files"
+          aria-label="Search in Files"
+          style={btnStyle(isSidebarOpen && activeSidebarTab === 'search')}
+          onMouseEnter={(e) => {
+            if (!(isSidebarOpen && activeSidebarTab === 'search')) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            if (!(isSidebarOpen && activeSidebarTab === 'search')) e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = (isSidebarOpen && activeSidebarTab === 'search') ? 'var(--text-primary, #FFFFFF)' : 'var(--text-secondary, #9CA3AF)';
+          }}
+        >
+          <Search size={14} strokeWidth={1.8} />
+        </button>
+
+        {/* 6. Divider */}
+        <div
+          style={{
+            width: '1px',
+            height: '14px',
+            backgroundColor: 'var(--border-color, rgba(255, 255, 255, 0.16))',
+            margin: '0 2px',
+          }}
+        />
+
+        {/* 7. Chrome / Web Preview */}
+        <button
+          onClick={handleOpenChrome}
+          title="Open Web Preview in Chrome"
+          aria-label="Open Web Preview in Chrome"
+          style={btnStyle(false)}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = 'var(--text-secondary, #9CA3AF)';
+          }}
+        >
+          <ChromeCodicon size={15} />
+        </button>
+
+        {/* 8. Settings */}
+        <button
+          onClick={() => setActiveSidebarTab('settings')}
+          title="Settings"
+          aria-label="Settings"
+          style={btnStyle(isSidebarOpen && activeSidebarTab === 'settings')}
+          onMouseEnter={(e) => {
+            if (!(isSidebarOpen && activeSidebarTab === 'settings')) e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+            e.currentTarget.style.color = '#FFFFFF';
+          }}
+          onMouseLeave={(e) => {
+            if (!(isSidebarOpen && activeSidebarTab === 'settings')) e.currentTarget.style.backgroundColor = 'transparent';
+            e.currentTarget.style.color = (isSidebarOpen && activeSidebarTab === 'settings') ? 'var(--text-primary, #FFFFFF)' : 'var(--text-secondary, #9CA3AF)';
+          }}
+        >
+          <Settings size={14} strokeWidth={1.8} />
+        </button>
+
+        {/* 9. User Profile (Green Avatar with M + Chevron) */}
+        <UserProfileButton />
+      </div>
+    );
+  };
 
   // 1. macOS TITLE BAR (Unchanged - native traffic lights, centered logo + dynamic title, right toggles)
   if (isMac) {

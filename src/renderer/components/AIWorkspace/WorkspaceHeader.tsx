@@ -3,7 +3,7 @@ import {
   Plus,
   History,
   X,
-  MessageSquare,
+  Bot,
   ListTodo,
   Activity,
   GitCompare,
@@ -54,8 +54,8 @@ export const WorkspaceHeader: React.FC = () => {
   }> = [
     {
       id: 'chat',
-      label: 'Chat',
-      icon: <MessageSquare size={13} />,
+      label: 'Agent',
+      icon: <Bot size={13} />,
     },
     {
       id: 'plan',

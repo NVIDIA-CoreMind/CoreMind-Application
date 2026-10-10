@@ -97,3 +97,106 @@ export const EllipsisCodicon: React.FC<CodiconProps> = ({ size = 16, style, clas
     <path d="M5 8C5 8.55229 4.55228 9 4 9C3.44772 9 3 8.55229 3 8C3 7.44772 3.44772 7 4 7C4.55228 7 5 7.44772 5 8ZM9 8C9 8.55229 8.55229 9 8 9C7.44772 9 7 8.55229 7 8C7 7.44772 7.44772 7 8 7C8.55229 7 9 7.44772 9 8ZM12 9C12.5523 9 13 8.55229 13 8C13 7.44772 12.5523 7 12 7C11.4477 7 11 7.44772 11 8C11 8.55229 11.4477 9 12 9Z" />
   </svg>
 );
+
+/**
+ * Editor / Customize Layout Codicon:
+ * Left column divided into two small stacked boxes, right column is a tall box
+ */
+export const LayoutCustomizeIcon: React.FC<CodiconProps> = ({ size = 16, style, className }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0, ...style }}
+    className={className}
+    aria-hidden="true"
+  >
+    <rect x="2" y="2" width="4.5" height="4.8" rx="1.2" stroke="currentColor" strokeWidth="1.3" fill="none" />
+    <rect x="2" y="9.2" width="4.5" height="4.8" rx="1.2" stroke="currentColor" strokeWidth="1.3" fill="none" />
+    <rect x="8.5" y="2" width="5.5" height="12" rx="1.5" stroke="currentColor" strokeWidth="1.3" fill="none" />
+  </svg>
+);
+
+/**
+ * Primary Sidebar Layout Codicon:
+ * Outer rounded rectangle with left side filled solid
+ */
+export const LayoutLeftPanelIcon: React.FC<CodiconProps> = ({ size = 16, style, className }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0, ...style }}
+    className={className}
+    aria-hidden="true"
+  >
+    <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none" />
+    <rect x="2.5" y="2.5" width="4" height="11" rx="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+/**
+ * Bottom Panel (Terminal) Layout Codicon:
+ * Outer rounded rectangle with bottom side filled solid
+ */
+export const LayoutBottomPanelIcon: React.FC<CodiconProps> = ({ size = 16, style, className }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0, ...style }}
+    className={className}
+    aria-hidden="true"
+  >
+    <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none" />
+    <rect x="2.5" y="9.5" width="11" height="4" rx="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+/**
+ * Secondary / Right Panel Layout Codicon:
+ * Outer rounded rectangle with right side filled solid
+ */
+export const LayoutRightPanelIcon: React.FC<CodiconProps> = ({ size = 16, style, className }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 16 16"
+    fill="none"
+    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0, ...style }}
+    className={className}
+    aria-hidden="true"
+  >
+    <rect x="2" y="2" width="12" height="12" rx="2" stroke="currentColor" strokeWidth="1.3" fill="none" />
+    <rect x="9.5" y="2.5" width="4" height="11" rx="1" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+/**
+ * Google Chrome Outline Codicon
+ */
+export const ChromeCodicon: React.FC<CodiconProps> = ({ size = 16, style, className }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0, ...style }}
+    className={className}
+    aria-hidden="true"
+  >
+    <circle cx="12" cy="12" r="10" />
+    <circle cx="12" cy="12" r="4" />
+    <line x1="21.17" y1="8" x2="12" y2="8" />
+    <line x1="3.95" y1="6.06" x2="8.54" y2="14" />
+    <line x1="10.88" y1="21.94" x2="15.46" y2="14" />
+  </svg>
+);
+
