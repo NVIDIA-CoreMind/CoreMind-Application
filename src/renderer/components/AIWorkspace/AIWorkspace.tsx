@@ -8,12 +8,15 @@ import { DiffViewer } from './DiffViewer';
 import { ChatHistory } from './ChatHistory';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useTabsStore } from '../../stores/tabsStore';
+import { useFilesStore } from '../../stores/filesStore';
+import { useUiStore } from '../../stores/uiStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { coremindClient } from '../../services/coremind/client';
 import { coremindWs } from '../../services/coremind/websocket';
 import { agentService } from '../../services/coremind/agent';
-import { extractToolCalls, executeToolCalls } from '../../services/aiToolExecution';
-import { TaskNode } from '../../types/aiWorkspace';
+import { extractToolCalls } from '../../services/aiToolExecution';
+import { TaskNode, TerminalEvent } from '../../types/aiWorkspace';
 
 export const AIWorkspace: React.FC = () => {
   const {
@@ -391,6 +394,201 @@ export const AIWorkspace: React.FC = () => {
     };
   }, [rootPath, setTaskGraph, updateTaskNode, recordFileChange, setChangeId, setPendingQuestion, setPendingApproval, safeRefreshEditorBuffers, addEvent, updateEvent, appendStreamChunk]);
 
+  // Desktop Execution Engine Stream Events via IPC
+  useEffect(() => {
+    if (!window.coreMindAPI?.onAgentStreamEvent) return;
+
+    const unsub = window.coreMindAPI.onAgentStreamEvent((event) => {
+      const store = useAIWorkspaceStore.getState();
+      const now = Date.now();
+
+      switch (event.type) {
+        case 'explanation': {
+          store.setAgentPhase('thinking', event.text);
+          const asstId = store.streamMessageId || `asst-stream-${now}`;
+          store.appendStreamChunk(asstId, event.text + '\n\n');
+          store.addEvent({
+            id: `evt-thought-${now}`,
+            type: 'ThoughtEvent',
+            summary: event.text,
+            durationMs: 0,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'thought': {
+          store.setAgentPhase('thinking', event.text);
+          store.addEvent({
+            id: `evt-thought-${now}`,
+            type: 'ThoughtEvent',
+            summary: event.text,
+            durationMs: 0,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'status': {
+          const step = event.step;
+          const text = event.text;
+          if (/search|grep|find|scan|read|detect/i.test(text)) {
+            store.setAgentPhase('searching', text);
+          } else if (step === 'validate' || /test|analyze|verify/i.test(text)) {
+            store.setAgentPhase('verifying', text);
+          } else if (/think|plan|reason|inspect/i.test(text)) {
+            store.setAgentPhase('thinking', text);
+          } else {
+            store.setAgentPhase('working', text);
+          }
+          break;
+        }
+
+        case 'tool_start': {
+          if (event.tool === 'terminal') {
+            const cmd = (event.args?.command as string) || '';
+            store.setAgentPhase('working', `$ ${cmd}`);
+            store.addEvent({
+              id: `evt-term-${now}`,
+              type: 'TerminalEvent',
+              command: cmd,
+              output: '',
+              status: 'running',
+              timestamp: now,
+            });
+            useUiStore.setState({ isTerminalOpen: true });
+          } else if (/search|grep|find|read|scan/i.test(event.tool)) {
+            store.setAgentPhase('searching', `${event.tool}`);
+          } else {
+            store.setAgentPhase('working', `${event.tool}`);
+          }
+          break;
+        }
+
+        case 'terminal_output': {
+          const currentEvents = useAIWorkspaceStore.getState().events;
+          const lastCmd = [...currentEvents].reverse().find((e) => e.type === 'TerminalEvent') as any;
+          if (lastCmd) {
+            store.updateEvent(lastCmd.id, { output: (lastCmd.output || '') + event.data });
+          }
+          break;
+        }
+
+        case 'terminal_command_end': {
+          const currentEvents = useAIWorkspaceStore.getState().events;
+          const lastCmd = [...currentEvents].reverse().find((e) => e.type === 'TerminalEvent') as any;
+          if (lastCmd) {
+            store.updateEvent(lastCmd.id, {
+              status: event.exitCode === 0 ? 'completed' : 'failed',
+              exitCode: event.exitCode,
+            });
+          }
+          break;
+        }
+
+        case 'file_change': {
+          const filePath = event.file;
+          const action = event.action || 'created';
+          store.setAgentPhase('working', `Created ${filePath.split('/').pop() || filePath}`);
+          store.recordFileChange(filePath, action, event.lines, event.deletions);
+          store.addEvent({
+            id: `evt-file-${now}`,
+            type: 'FileChangedEvent',
+            file: filePath,
+            action,
+            lines: event.lines,
+            additions: event.lines,
+            deletions: event.deletions,
+            timestamp: now,
+          });
+
+          if (rootPath) {
+            void store.safeRefreshEditorBuffers([filePath], rootPath);
+            const fullPath = filePath.startsWith('/') ? filePath : `${rootPath}/${filePath}`;
+            const fileName = filePath.split('/').pop() || filePath;
+            void useTabsStore.getState().openFile(fullPath, fileName, rootPath);
+            void useFilesStore.getState().loadWorkspaceTree(rootPath);
+          }
+          break;
+        }
+
+        case 'file_read': {
+          store.setAgentPhase('searching', `Reading ${event.file.split('/').pop() || event.file}`);
+          store.addEvent({
+            id: `evt-read-${now}`,
+            type: 'FileReadEvent',
+            file: event.file,
+            startLine: event.startLine,
+            endLine: event.endLine,
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'search': {
+          store.setAgentPhase('searching', `Searched ${event.query}`);
+          store.addEvent({
+            id: `evt-search-${now}`,
+            type: 'ToolCallEvent',
+            tool: 'search',
+            args: { query: event.query },
+            result: event.resultsCount !== undefined ? new Array(event.resultsCount).fill(1) : [1],
+            timestamp: now,
+          });
+          break;
+        }
+
+        case 'complete': {
+          store.setState('completed');
+          const currentEvents = useAIWorkspaceStore.getState().events;
+          const startTime = store.activeTurnStartTime || 0;
+          const turnEvents = currentEvents.filter(
+            (e) => e.timestamp >= startTime - 2000
+          );
+          const turnTermEvents = turnEvents.filter(
+            (e): e is TerminalEvent => e.type === 'TerminalEvent'
+          );
+          const streamId = store.streamMessageId;
+          if (streamId) {
+            useAIWorkspaceStore.setState((s) => ({
+              chatHistory: s.chatHistory.map((m) =>
+                m.id === streamId
+                  ? {
+                      ...m,
+                      content: (m.content ? m.content + '\n\n' : '') + event.summary,
+                      filesChanged: event.filesChanged?.map((f) => ({
+                        file: f.file,
+                        action: f.action || 'created',
+                        lines: f.lines,
+                      })),
+                      terminalEvents: turnTermEvents.length > 0 ? turnTermEvents : undefined,
+                      activityEvents: turnEvents.length > 0 ? turnEvents : undefined,
+                    }
+                  : m
+              ),
+            }));
+          }
+          break;
+        }
+
+        case 'error': {
+          store.setState('error');
+          store.addEvent({
+            id: `evt-err-${now}`,
+            type: 'ErrorEvent',
+            error: event.message,
+            timestamp: now,
+          });
+          break;
+        }
+      }
+    });
+
+    return () => {
+      unsub();
+    };
+  }, [rootPath]);
+
   // Main Prompt Submission Handler
   const handlePromptSubmit = useCallback(async (prompt: string) => {
     if (!prompt.trim() || currentState === 'running') return;
@@ -424,11 +622,45 @@ export const AIWorkspace: React.FC = () => {
       agentMode === 'agent' ||
       prompt.startsWith('/agent ') ||
       prompt.startsWith('/autonomous ') ||
-      prompt.startsWith('/plan ');
+      prompt.startsWith('/plan ') ||
+      /create|build|make|generate|test|fix|run|flutter|terminal|setup|implement/i.test(prompt);
 
     const cleanPrompt = prompt.replace(/^\/(?:agent|autonomous|plan)\s+/, '');
+    const turnStartTime = Date.now();
+    useAIWorkspaceStore.getState().setActiveTurnStartTime(turnStartTime);
 
-    // 1. Autonomous Agent Execution Path (/v1/agent/run)
+    // 1. Desktop Execution Engine Path (Primary when in Electron)
+    if (window.coreMindAPI?.runAgentTask && isAutonomousAgent) {
+      const assistantMsgId = `asst-${Date.now()}`;
+      addChatMessage({
+        id: assistantMsgId,
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+      });
+      useAIWorkspaceStore.setState({ streamMessageId: assistantMsgId });
+      useAIWorkspaceStore.getState().setAgentPhase('thinking', 'Analyzing workspace and instructions...');
+
+      try {
+        const taskResult = await window.coreMindAPI.runAgentTask({
+          prompt: cleanPrompt,
+          workspacePath: rootPath,
+        });
+
+        if (taskResult.success) {
+          setState('completed');
+          return;
+        } else if (taskResult.error) {
+          console.warn('Desktop runAgentTask error, attempting agentService fallback:', taskResult.error);
+        }
+      } catch (agentTaskErr: any) {
+        if (!abortController.signal.aborted) {
+          console.warn('Desktop runAgentTask threw, attempting fallback:', agentTaskErr);
+        }
+      }
+    }
+
+    // 2. Autonomous Agent Execution Path (/v1/agent/run HTTP)
     if (isAutonomousAgent) {
       try {
         useAIWorkspaceStore.getState().setAgentPhase('planning', 'Initializing autonomous agent...');
@@ -451,7 +683,7 @@ export const AIWorkspace: React.FC = () => {
       return;
     }
 
-    // 2. Direct Streaming Assistant Chat Path (/v1/ai/chat/stream SSE)
+    // 3. Direct Streaming Assistant Chat Path (/v1/ai/chat/stream SSE)
     await runStreamingChat(cleanPrompt, historyToSend, abortController);
   }, [currentState, rootPath, chatHistory, agentMode, addChatMessage, setAbortController, setState, setAgentId]);
 
@@ -462,6 +694,7 @@ export const AIWorkspace: React.FC = () => {
   ) => {
     const assistantMsgId = `asst-${Date.now()}`;
     useAIWorkspaceStore.getState().setAgentPhase('thinking', 'Streaming AI response...');
+    useAIWorkspaceStore.setState({ streamMessageId: assistantMsgId });
 
     try {
       const fullResponse = await coremindClient.streamChat(
@@ -479,19 +712,61 @@ export const AIWorkspace: React.FC = () => {
       // Extract and execute tool calls in response if present
       const { toolCalls, formattedText } = extractToolCalls(fullResponse);
       const filesChangedDetails: any[] = [];
+      const turnTermEvents: TerminalEvent[] = [];
 
       if (toolCalls.length > 0 && rootPath) {
-        useAIWorkspaceStore.getState().setAgentPhase('working', 'Executing code updates...');
-        await executeToolCalls(toolCalls, rootPath);
         for (const tc of toolCalls) {
           if (tc.path && typeof tc.content === 'string') {
             const cleanPath = tc.path.replace(/^\/+/, '').trim();
+            const fileName = cleanPath.split('/').pop() || cleanPath;
+            useAIWorkspaceStore.getState().setAgentPhase('working', `Creating ${fileName}...`);
+            const lines = tc.content.split('\n').length;
             filesChangedDetails.push({
               file: cleanPath,
               action: 'created',
-              lines: tc.content.split('\n').length,
+              lines,
             });
-            recordFileChange(cleanPath, 'created', tc.content.split('\n').length);
+            recordFileChange(cleanPath, 'created', lines);
+            addEvent({
+              id: `evt-file-${Date.now()}`,
+              type: 'FileChangedEvent',
+              file: cleanPath,
+              action: 'created',
+              lines,
+              timestamp: Date.now(),
+            });
+            const fullPath = cleanPath.startsWith('/') ? cleanPath : `${rootPath}/${cleanPath}`;
+            if (window.coreMindAPI?.writeFile) {
+              await window.coreMindAPI.writeFile(fullPath, tc.content, rootPath);
+            }
+            void useTabsStore.getState().openFile(fullPath, fileName, rootPath);
+            void useFilesStore.getState().loadWorkspaceTree(rootPath);
+          } else if (tc.command || tc.tool.toLowerCase().includes('terminal')) {
+            const cmd = tc.command || tc.content || '';
+            if (cmd) {
+              useAIWorkspaceStore.getState().setAgentPhase('working', `$ ${cmd}`);
+              useUiStore.setState({ isTerminalOpen: true });
+              const termEv: TerminalEvent = {
+                id: `evt-term-${Date.now()}`,
+                type: 'TerminalEvent',
+                command: cmd,
+                output: 'Command executed.\n',
+                status: 'completed',
+                timestamp: Date.now(),
+              };
+              addEvent(termEv);
+              turnTermEvents.push(termEv);
+              if (window.coreMindAPI?.executeCommand) {
+                const res = await window.coreMindAPI.executeCommand(cmd, { cwd: rootPath });
+                if (res.success && res.data) {
+                  updateEvent(termEv.id, {
+                    output: res.data.stdout || res.data.stderr || '',
+                    status: res.data.exitCode === 0 ? 'completed' : 'failed',
+                    exitCode: res.data.exitCode,
+                  });
+                }
+              }
+            }
           }
         }
         if (filesChangedDetails.length > 0) {
@@ -499,7 +774,7 @@ export const AIWorkspace: React.FC = () => {
         }
       }
 
-      // Update message with formatted text & file changes
+      // Update message with formatted text, file changes & terminal events
       useAIWorkspaceStore.setState((s) => ({
         chatHistory: s.chatHistory.map((m) =>
           m.id === assistantMsgId
@@ -507,6 +782,7 @@ export const AIWorkspace: React.FC = () => {
                 ...m,
                 content: formattedText || m.content,
                 filesChanged: filesChangedDetails.length > 0 ? filesChangedDetails : undefined,
+                terminalEvents: turnTermEvents.length > 0 ? turnTermEvents : undefined,
               }
             : m
         ),

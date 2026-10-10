@@ -14,15 +14,16 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
   const { agentPhase, agentPhaseDetail, events } = useAIWorkspaceStore();
   const [dots, setDots] = useState('');
 
-  // Determine active phase: prop -> store -> inferred from latest event
+  // Priority order: propPhase -> store.agentPhase -> inferred from latest event
   let activePhase: AgentPhase = propPhase || agentPhase || 'thinking';
-  let activeDetail = propDetail || agentPhaseDetail;
+  let activeDetail = propDetail ?? agentPhaseDetail;
 
-  if (!propPhase && !agentPhaseDetail && events.length > 0) {
+  // Only fall back to event inference if no explicit phase was set in store
+  if (!propPhase && !agentPhase && events.length > 0) {
     const latestEvent = events[events.length - 1];
     if (latestEvent.type === 'ThoughtEvent') {
       activePhase = 'thinking';
-      if (latestEvent.summary) activeDetail = latestEvent.summary;
+      if (!activeDetail && latestEvent.summary) activeDetail = latestEvent.summary;
     } else if (
       latestEvent.type === 'FileExploredEvent' ||
       latestEvent.type === 'FileReadEvent' ||
@@ -30,8 +31,12 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         /search|grep|find|read|scan|list/i.test(latestEvent.tool))
     ) {
       activePhase = 'searching';
-      if (latestEvent.type === 'ToolCallEvent' && latestEvent.tool) {
-        activeDetail = latestEvent.tool;
+      if (!activeDetail) {
+        activeDetail = latestEvent.type === 'FileReadEvent' && latestEvent.file
+          ? `Reading ${latestEvent.file.split('/').pop()}`
+          : latestEvent.type === 'ToolCallEvent'
+          ? `Searching ${latestEvent.tool}`
+          : 'Searching files';
       }
     } else if (
       latestEvent.type === 'FileChangedEvent' ||
@@ -40,8 +45,12 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         /create|write|edit|run|bash|exec/i.test(latestEvent.tool))
     ) {
       activePhase = 'working';
-      if (latestEvent.type === 'FileChangedEvent' && latestEvent.file) {
-        activeDetail = latestEvent.file.split('/').pop();
+      if (!activeDetail) {
+        if (latestEvent.type === 'FileChangedEvent' && latestEvent.file) {
+          activeDetail = `Created ${latestEvent.file.split('/').pop()}`;
+        } else if (latestEvent.type === 'TerminalEvent' && latestEvent.command) {
+          activeDetail = `$ ${latestEvent.command}`;
+        }
       }
     }
   }
@@ -57,6 +66,7 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
   const getPhaseConfig = () => {
     switch (activePhase) {
       case 'thinking':
+      case 'planning':
         return {
           label: 'Thinking',
           icon: (
@@ -82,13 +92,28 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <Search
               size={13}
               style={{
-                color: 'var(--accent, #3B82F6)',
+                color: '#60A5FA',
                 animation: 'antigravity-search-pulse 1.4s infinite ease-in-out',
                 flexShrink: 0,
               }}
             />
           ),
           accentColor: '#60A5FA',
+        };
+      case 'verifying':
+        return {
+          label: 'Verifying',
+          icon: (
+            <Loader2
+              size={13}
+              style={{
+                color: 'var(--accent, #3B82F6)',
+                animation: 'antigravity-spin 1s linear infinite',
+                flexShrink: 0,
+              }}
+            />
+          ),
+          accentColor: 'var(--accent, #3B82F6)',
         };
       case 'working':
       default:
