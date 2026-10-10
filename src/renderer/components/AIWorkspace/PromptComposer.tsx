@@ -1,14 +1,11 @@
 import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import {
   ArrowRight,
-  Square,
   ChevronDown,
   Check,
   Folder,
   FileCode,
   Bot,
-  MessageSquare,
-  Sparkles,
 } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -28,7 +25,6 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
     selectedModel,
     setSelectedModel,
     agentMode,
-    setAgentMode,
     cancelRequest,
     draftPrompt,
     setDraftPrompt,
@@ -227,57 +223,25 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
           paddingTop: '2px',
         }}
       >
-        {/* Left: Mode selector & Model Picker */}
+        {/* Left: Agent indicator & Model Picker */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Mode toggle */}
+          {/* Agent Badge */}
           <div
             style={{
               display: 'inline-flex',
-              padding: '2px',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '3px 8px',
               borderRadius: '6px',
               backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9',
+              color: 'var(--accent)',
+              fontSize: '11px',
+              fontWeight: 600,
             }}
+            title="Autonomous multi-step agent"
           >
-            <button
-              onClick={() => setAgentMode('agent')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '3px 7px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: agentMode === 'agent' ? 600 : 500,
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: agentMode === 'agent' ? (isDark ? '#2E2E2E' : '#FFFFFF') : 'transparent',
-                color: agentMode === 'agent' ? 'var(--accent)' : 'var(--text-secondary)',
-              }}
-              title="Autonomous multi-step agent"
-            >
-              <Bot size={12} />
-              <span>Agent</span>
-            </button>
-            <button
-              onClick={() => setAgentMode('chat')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '3px 7px',
-                borderRadius: '4px',
-                fontSize: '11px',
-                fontWeight: agentMode === 'chat' ? 600 : 500,
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: agentMode === 'chat' ? (isDark ? '#2E2E2E' : '#FFFFFF') : 'transparent',
-                color: agentMode === 'chat' ? 'var(--accent)' : 'var(--text-secondary)',
-              }}
-              title="Fast conversational assistant"
-            >
-              <MessageSquare size={12} />
-              <span>Chat</span>
-            </button>
+            <Bot size={12} />
+            <span>Agent</span>
           </div>
 
           {/* Model Selector Dropdown */}
@@ -299,7 +263,6 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
               }}
               title="Select AI Model"
             >
-              <Sparkles size={11} color="var(--accent)" />
               <span>{selectedModel}</span>
               <ChevronDown size={11} />
             </button>
@@ -350,57 +313,85 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
           </div>
         </div>
 
-        {/* Right: Send / Red Stop Button */}
+        {/* Right: Circular Send / Red Stop Button */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {isRunning ? (
             <button
               onClick={cancelRequest}
               title="Stop Generation (Esc)"
+              aria-label="Stop generation"
               style={{
+                width: '28px',
                 height: '28px',
-                padding: '0 12px',
-                borderRadius: '7px',
+                borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '5px',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: '#DC2626',
-                color: '#FFFFFF',
-                fontSize: '12px',
-                fontWeight: 600,
-                boxShadow: '0 2px 6px rgba(220, 38, 38, 0.4)',
+                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                transition: 'all 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = isDark
+                  ? 'rgba(255, 255, 255, 0.2)'
+                  : 'rgba(0, 0, 0, 0.14)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = isDark
+                  ? 'rgba(255, 255, 255, 0.12)'
+                  : 'rgba(0, 0, 0, 0.08)';
               }}
             >
-              <Square size={11} fill="currentColor" />
-              <span>Stop</span>
+              <div
+                style={{
+                  width: '10px',
+                  height: '10px',
+                  borderRadius: '2.5px',
+                  backgroundColor: '#EF4444',
+                }}
+              />
             </button>
           ) : (
             <button
               onClick={handleSubmit}
               disabled={!input.trim()}
               title="Submit prompt (Enter)"
+              aria-label="Submit prompt"
               style={{
+                width: '28px',
                 height: '28px',
-                minWidth: '28px',
-                padding: '0 10px',
-                borderRadius: '7px',
+                borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 border: 'none',
                 cursor: input.trim() ? 'pointer' : 'default',
                 backgroundColor: input.trim()
-                  ? 'var(--accent, #3B82F6)'
+                  ? '#0078D4'
                   : isDark
                   ? 'rgba(255, 255, 255, 0.08)'
                   : 'rgba(0, 0, 0, 0.06)',
-                color: input.trim() ? '#FFFFFF' : 'var(--text-muted)',
+                color: input.trim()
+                  ? '#FFFFFF'
+                  : isDark
+                  ? 'rgba(255, 255, 255, 0.3)'
+                  : 'rgba(0, 0, 0, 0.25)',
                 transition: 'all 0.15s ease',
+                boxShadow: input.trim() ? '0 1px 4px rgba(0, 120, 212, 0.35)' : 'none',
+              }}
+              onMouseEnter={(e) => {
+                if (input.trim()) {
+                  e.currentTarget.style.backgroundColor = '#006CBE';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (input.trim()) {
+                  e.currentTarget.style.backgroundColor = '#0078D4';
+                }
               }}
             >
-              <ArrowRight size={14} />
+              <ArrowRight size={14} strokeWidth={2.4} />
             </button>
           )}
         </div>

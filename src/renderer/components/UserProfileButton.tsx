@@ -37,10 +37,10 @@ export const UserProfileButton: React.FC = () => {
     }
   };
 
-  const displayName = user?.name || (isAuthenticated ? 'CoreMind User' : 'Guest');
-  const displayEmail = user?.email || (isAuthenticated ? 'Signed in' : 'Not signed in');
+  const displayName = user?.name || 'Manoj';
+  const displayEmail = user?.email || (isAuthenticated ? 'Signed in' : 'Guest');
   const avatarUrl = user?.avatar_url;
-  const initial = displayName.charAt(0).toUpperCase() || 'U';
+  const initial = user?.name ? user.name.charAt(0).toUpperCase() : 'M';
 
   return (
     <div ref={menuRef} style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
@@ -51,7 +51,7 @@ export const UserProfileButton: React.FC = () => {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
+          gap: '5px',
           padding: '2px 4px',
           borderRadius: '16px',
           backgroundColor: isOpen ? 'var(--bg-active, rgba(255, 255, 255, 0.08))' : 'transparent',
@@ -72,15 +72,14 @@ export const UserProfileButton: React.FC = () => {
         {/* Avatar Circle */}
         <div
           style={{
-            width: '22px',
-            height: '22px',
+            width: '20px',
+            height: '20px',
             borderRadius: '50%',
             overflow: 'hidden',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'var(--accent, #3B82F6)',
-            boxShadow: '0 0 0 1.5px rgba(59, 130, 246, 0.4)',
+            backgroundColor: '#2E7D32',
             flexShrink: 0,
             position: 'relative',
           }}
@@ -113,9 +112,9 @@ export const UserProfileButton: React.FC = () => {
         </div>
 
         <ChevronDown
-          size={11}
+          size={14}
           style={{
-            color: 'var(--text-muted, #888)',
+            color: 'var(--text-secondary, #A0A0A0)',
             transform: isOpen ? 'rotate(180deg)' : 'none',
             transition: 'transform 0.15s ease',
           }}

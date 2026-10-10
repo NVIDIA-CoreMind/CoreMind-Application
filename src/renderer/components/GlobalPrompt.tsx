@@ -308,21 +308,23 @@ export const GlobalPrompt: React.FC = () => {
               onClick={() => handleSend()}
               disabled={!input.trim() || isLoading}
               title="Send"
+              aria-label="Send prompt"
               style={{
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
-                backgroundColor:
-                  input.trim() && !isLoading ? 'var(--text-primary)' : 'var(--ov-6)',
-                color: input.trim() && !isLoading ? 'var(--bg-deep)' : 'var(--text-faint)',
+                backgroundColor: input.trim() && !isLoading ? '#0078D4' : 'var(--ov-6)',
+                color: input.trim() && !isLoading ? '#FFFFFF' : 'var(--text-faint)',
                 cursor: input.trim() && !isLoading ? 'pointer' : 'default',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 border: 'none',
+                boxShadow: input.trim() && !isLoading ? '0 1px 4px rgba(0, 120, 212, 0.35)' : 'none',
+                transition: 'all 0.15s ease',
               }}
             >
-              <ArrowRight size={16} />
+              <ArrowRight size={16} strokeWidth={2.4} />
             </button>
           </div>
         </div>

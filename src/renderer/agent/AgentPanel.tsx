@@ -14,7 +14,6 @@ import {
   Trash2,
   Copy,
   ArrowLeft,
-  Square,
   HelpCircle,
   ShieldAlert,
 } from 'lucide-react';
@@ -664,21 +663,23 @@ export const AgentPanel: React.FC = () => {
                   onClick={() => handleSend()}
                   disabled={!input.trim() || isLoading}
                   title="Send"
+                  aria-label="Send message"
                   style={{
                     width: '28px',
                     height: '28px',
                     borderRadius: '50%',
-                    backgroundColor:
-                      input.trim() && !isLoading ? 'var(--text-primary)' : 'var(--ov-6)',
-                    color: input.trim() && !isLoading ? 'var(--bg-deep)' : 'var(--text-faint)',
+                    backgroundColor: input.trim() && !isLoading ? '#0078D4' : 'var(--ov-6)',
+                    color: input.trim() && !isLoading ? '#FFFFFF' : 'var(--text-faint)',
                     cursor: input.trim() && !isLoading ? 'pointer' : 'default',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     border: 'none',
+                    boxShadow: input.trim() && !isLoading ? '0 1px 4px rgba(0, 120, 212, 0.35)' : 'none',
+                    transition: 'all 0.15s ease',
                   }}
                 >
-                  <ArrowRight size={14} />
+                  <ArrowRight size={14} strokeWidth={2.4} />
                 </button>
               </div>
             </div>
@@ -1148,21 +1149,28 @@ export const AgentPanel: React.FC = () => {
                       type="button"
                       onClick={stopAgent}
                       title="Stop Agent Execution"
+                      aria-label="Stop Agent Execution"
                       style={{
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                        color: '#EF4444',
-                        border: '1px solid rgba(239, 68, 68, 0.3)',
-                        fontSize: '11px',
+                        width: '28px',
+                        height: '28px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--ov-8, rgba(255, 255, 255, 0.12))',
+                        border: 'none',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
+                        justifyContent: 'center',
+                        transition: 'all 0.15s ease',
                       }}
                     >
-                      <Square size={10} fill="#EF4444" />
-                      <span>Stop</span>
+                      <div
+                        style={{
+                          width: '10px',
+                          height: '10px',
+                          borderRadius: '2.5px',
+                          backgroundColor: '#EF4444',
+                        }}
+                      />
                     </button>
                   ) : (
                     <>
@@ -1187,20 +1195,23 @@ export const AgentPanel: React.FC = () => {
                         onClick={() => handleSend()}
                         disabled={!input.trim()}
                         title="Send"
+                        aria-label="Send message"
                         style={{
                           width: '28px',
                           height: '28px',
                           borderRadius: '50%',
-                          backgroundColor: input.trim() ? 'var(--text-primary)' : 'var(--ov-6)',
-                          color: input.trim() ? 'var(--bg-deep)' : 'var(--text-faint)',
+                          backgroundColor: input.trim() ? '#0078D4' : 'var(--ov-6)',
+                          color: input.trim() ? '#FFFFFF' : 'var(--text-faint)',
                           cursor: input.trim() ? 'pointer' : 'default',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
                           border: 'none',
+                          boxShadow: input.trim() ? '0 1px 4px rgba(0, 120, 212, 0.35)' : 'none',
+                          transition: 'all 0.15s ease',
                         }}
                       >
-                        <ArrowRight size={14} />
+                        <ArrowRight size={14} strokeWidth={2.4} />
                       </button>
                     </>
                   )}
