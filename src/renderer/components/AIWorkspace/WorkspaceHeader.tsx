@@ -4,12 +4,9 @@ import {
   History,
   X,
   Bot,
-  ListTodo,
-  Activity,
-  GitCompare,
 } from 'lucide-react';
 import { useUiStore } from '../../stores/uiStore';
-import { useAIWorkspaceStore, WorkspaceViewTab } from '../../services/aiWorkspaceService';
+import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { coremindWs } from '../../services/coremind/websocket';
 import { useThemeStore } from '../../stores/themeStore';
 
@@ -21,9 +18,6 @@ export const WorkspaceHeader: React.FC = () => {
     isHistoryOpen,
     activeView,
     setActiveView,
-    taskGraph,
-    trackedChanges,
-    currentState,
   } = useAIWorkspaceStore();
 
   const theme = useThemeStore((s) => s.theme);
@@ -40,51 +34,18 @@ export const WorkspaceHeader: React.FC = () => {
     return () => unsub();
   }, []);
 
-  const tasks = taskGraph?.tasks || taskGraph?.nodes || [];
-  const completedTasks = tasks.filter((t) => t.status === 'completed').length;
-  const changesCount = Object.keys(trackedChanges).length;
-  const isRunning = currentState === 'running';
-
-  const views: Array<{
-    id: WorkspaceViewTab;
-    label: string;
-    icon: React.ReactNode;
-    badge?: string | number;
-    badgeColor?: string;
-  }> = [
-    {
-      id: 'chat',
-      label: 'Agent',
-      icon: <Bot size={13} />,
-    },
-    {
-      id: 'plan',
-      label: 'Plan',
-      icon: <ListTodo size={13} />,
-      badge: tasks.length > 0 ? `${completedTasks}/${tasks.length}` : undefined,
-      badgeColor: completedTasks === tasks.length && tasks.length > 0 ? '#22C55E' : 'var(--accent)',
-    },
-    {
-      id: 'activity',
-      label: 'Activity',
-      icon: <Activity size={13} />,
-      badge: isRunning ? 'LIVE' : undefined,
-      badgeColor: '#3B82F6',
-    },
-    {
-      id: 'changes',
-      label: 'Changes',
-      icon: <GitCompare size={13} />,
-      badge: changesCount > 0 ? changesCount : undefined,
-      badgeColor: '#22C55E',
-    },
-  ];
+  // Ensure unified chat view is active
+  useEffect(() => {
+    if (activeView !== 'chat') {
+      setActiveView('chat');
+    }
+  }, [activeView, setActiveView]);
 
   return (
     <div
       style={{
         height: '42px',
-        padding: '0 10px',
+        padding: '0 12px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -95,54 +56,19 @@ export const WorkspaceHeader: React.FC = () => {
         gap: '6px',
       }}
     >
-      {/* Left: View Switcher Tabs */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-        {views.map((tab) => {
-          const isActive = activeView === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveView(tab.id)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '4px 8px',
-                borderRadius: '6px',
-                fontSize: '11.5px',
-                fontWeight: isActive ? 600 : 500,
-                border: 'none',
-                cursor: 'pointer',
-                backgroundColor: isActive
-                  ? isDark
-                    ? 'rgba(255, 255, 255, 0.12)'
-                    : '#FFFFFF'
-                  : 'transparent',
-                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                boxShadow: isActive ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              <span style={{ display: 'flex' }}>{tab.icon}</span>
-              <span>{tab.label}</span>
-              {tab.badge !== undefined && (
-                <span
-                  style={{
-                    fontSize: '9.5px',
-                    padding: '0 4px',
-                    borderRadius: '8px',
-                    backgroundColor: `${tab.badgeColor || 'var(--accent)'}25`,
-                    color: tab.badgeColor || 'var(--accent)',
-                    fontWeight: 700,
-                    letterSpacing: '0.02em',
-                  }}
-                >
-                  {tab.badge}
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* Left: Agent Title */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+        <Bot size={15} style={{ color: 'var(--accent)' }} />
+        <span
+          style={{
+            fontSize: '12.5px',
+            fontWeight: 600,
+            color: 'var(--text-primary)',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Agent
+        </span>
       </div>
 
       {/* Right: Status indicator + Actions */}
