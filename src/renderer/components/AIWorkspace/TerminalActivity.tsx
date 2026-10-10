@@ -5,6 +5,7 @@ import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { useUiStore } from '../../stores/uiStore';
 
 export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) => {
   const [expanded, setExpanded] = useState(true);
@@ -95,40 +96,43 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
     return parts;
   };
 
+  const folderName = rootPath ? rootPath.split('/').filter(Boolean).pop() || 'CoreMind-Application' : 'CoreMind-Application';
+  const promptPath = `~/.../${folderName}`;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', margin: '4px 0' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '4px 0' }}>
+      {/* Header matching Image 4: "Ran npm run v" */}
       <div
         onClick={() => setExpanded(!expanded)}
         style={{
-          display: 'flex',
+          display: 'inline-flex',
           alignItems: 'center',
           gap: '6px',
           fontSize: '12.5px',
-          color: isDark ? '#94A3B8' : '#475569',
+          color: isDark ? '#94A3B8' : '#64748B',
           cursor: 'pointer',
-          fontWeight: 500,
+          fontWeight: 400,
           userSelect: 'none',
         }}
       >
-        <Terminal size={13} color="var(--accent)" />
         <span>
-          Ran <strong style={{ color: 'var(--text-primary)', fontFamily: 'var(--font-mono)' }}>{event.command}</strong>
+          Ran <strong style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontWeight: 600 }}>{event.command}</strong>
         </span>
+        {expanded ? <ChevronDown size={13} color="currentColor" /> : <ChevronRight size={13} color="currentColor" />}
         {event.status === 'running' && (
           <span
             style={{
-              width: '7px',
-              height: '7px',
+              width: '6.5px',
+              height: '6.5px',
               borderRadius: '50%',
               backgroundColor: '#3B82F6',
               boxShadow: '0 0 6px #3B82F6',
               animation: 'pulse-dot 1.5s infinite',
               display: 'inline-block',
-              marginLeft: '4px',
+              marginLeft: '2px',
             }}
           />
         )}
-        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
       </div>
 
       {expanded && (
@@ -136,44 +140,60 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
           style={{
             borderRadius: '8px',
             backgroundColor: isDark ? '#141414' : '#FFFFFF',
-            border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #E2E8F0',
+            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             marginTop: '2px',
+            padding: '12px 14px',
+            position: 'relative',
             boxShadow: isDark ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+            fontSize: '12px',
           }}
         >
+          {/* Top-right subtle actions */}
           <div
             style={{
-              padding: '6px 12px',
-              backgroundColor: isDark ? '#1E1E1E' : '#F8FAFC',
-              borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: '11px',
-              color: 'var(--text-secondary)',
-              fontFamily: 'var(--font-mono)',
+              gap: '6px',
+              zIndex: 2,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-              <span>$</span>
-              <span style={{ color: 'var(--text-primary)', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                {event.command}
-              </span>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-              {event.status === 'running' && (
-                <button onClick={handleStop} title="Terminate command" style={iconBtnStyle}>
-                  <Square size={12} fill="#DC2626" color="#DC2626" />
-                </button>
-              )}
-              <button onClick={handleCopy} title="Copy output" style={iconBtnStyle}>
-                {copied ? <Check size={12} color="#22C55E" /> : <Copy size={12} />}
+            {event.status === 'running' && (
+              <button onClick={handleStop} title="Terminate command" style={iconBtnStyle}>
+                <Square size={11} fill="#EF4444" color="#EF4444" />
+                <span style={{ fontSize: '10.5px', color: '#EF4444' }}>Stop</span>
               </button>
-            </div>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                useUiStore.setState({ isTerminalOpen: true });
+              }}
+              title="Open bottom terminal panel"
+              style={iconBtnStyle}
+            >
+              <Terminal size={11} color="var(--accent, #3B82F6)" />
+              <span style={{ fontSize: '10.5px' }}>Terminal</span>
+            </button>
+            <button onClick={handleCopy} title="Copy output" style={iconBtnStyle}>
+              {copied ? <Check size={11} color="#22C55E" /> : <Copy size={11} />}
+            </button>
+          </div>
+
+          {/* Top prompt line matching Image 4: ~/.../CoreMind-Application $ npm run */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '12px' }}>
+            <span style={{ color: '#71717A', fontWeight: 500 }}>
+              {promptPath} $
+            </span>
+            <span style={{ color: '#F59E0B', fontWeight: 600 }}>
+              {event.command}
+            </span>
           </div>
 
           <div

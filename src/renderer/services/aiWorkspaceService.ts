@@ -4,6 +4,7 @@ import {
   AIRequestStatus,
   TaskGraph,
   TaskNode,
+  TerminalEvent,
 } from '../types/aiWorkspace';
 import { agentService } from './coremind/agent';
 import { changesService } from './coremind/changes';
@@ -27,6 +28,9 @@ export interface ChatMessage {
   filesChanged?: FileChangeInfo[];
   localUrl?: string;
   terminalCommand?: string;
+  terminalEvents?: TerminalEvent[];
+  activityEvents?: AIWorkspaceEvent[];
+  thoughtSummary?: string;
 }
 
 export interface ChatSession {
@@ -116,6 +120,7 @@ interface AIWorkspaceStore {
   pendingQuestion: { question_id: string; question: string; options?: string[] } | null;
   pendingApproval: { approval_id: string; tool: string; args: Record<string, any>; description: string } | null;
   streamMessageId: string | null;
+  activeTurnStartTime: number | null;
 
   // Session management
   sessions: ChatSession[];
@@ -130,6 +135,7 @@ interface AIWorkspaceStore {
   updateEvent: (id: string, updates: Partial<AIWorkspaceEvent>) => void;
   setDraftPrompt: (prompt: string) => void;
   setAgentPhase: (phase: AgentPhase, detail?: string) => void;
+  setActiveTurnStartTime: (time: number | null) => void;
   addChatMessage: (msg: ChatMessage) => void;
   appendStreamChunk: (msgId: string, chunk: string) => void;
   setState: (state: AIRequestStatus) => void;
@@ -188,6 +194,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
     pendingQuestion: null,
     pendingApproval: null,
     streamMessageId: null,
+    activeTurnStartTime: null,
 
     sessions: savedSessions,
     activeSessionId: activeSession ? activeSession.id : null,
@@ -204,6 +211,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
 
     setDraftPrompt: (prompt) => set({ draftPrompt: prompt }),
     setAgentPhase: (phase, detail) => set({ agentPhase: phase, agentPhaseDetail: detail }),
+    setActiveTurnStartTime: (time) => set({ activeTurnStartTime: time }),
 
     addChatMessage: (msg) => {
       set((state) => {

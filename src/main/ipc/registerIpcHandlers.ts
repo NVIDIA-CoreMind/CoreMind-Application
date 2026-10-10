@@ -512,7 +512,10 @@ export function registerIpcHandlers(): void {
       request: AgentTaskRequest
     ): Promise<IpcResult<AgentTaskSummary>> => {
       const senderId = event.sender.id;
-      const rootPath = getWorkspaceForSender(senderId);
+      let rootPath = getWorkspaceForSender(senderId);
+      if (!rootPath && request.workspacePath) {
+        rootPath = authorizeWorkspace(senderId, request.workspacePath);
+      }
       if (!rootPath) {
         return noWorkspaceError();
       }

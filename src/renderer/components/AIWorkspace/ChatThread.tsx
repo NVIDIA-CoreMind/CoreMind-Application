@@ -14,11 +14,12 @@ import {
   Bot,
 } from 'lucide-react';
 import { extractToolCalls } from '../../services/aiToolExecution';
-import { FileChangesCard } from './FileChangesCard';
 import { RunningIndicator } from './RunningIndicator';
 import { ImplementationPlan } from './ImplementationPlan';
 import { QuestionCard } from './QuestionCard';
 import { ApprovalCard } from './ApprovalCard';
+import { AntigravityActivityStream } from './AntigravityActivityStream';
+import { TerminalEvent } from '../../types/aiWorkspace';
 
 const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, value }) => {
   const [copied, setCopied] = useState(false);
@@ -196,6 +197,7 @@ export const ChatThread: React.FC = () => {
     trackedChanges,
     pendingQuestion,
     pendingApproval,
+    activeTurnStartTime,
   } = useAIWorkspaceStore();
 
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -203,8 +205,19 @@ export const ChatThread: React.FC = () => {
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
   const setDraftPrompt = useAIWorkspaceStore((s) => s.setDraftPrompt);
+  const agentPhaseDetail = useAIWorkspaceStore((s) => s.agentPhaseDetail);
 
   const realtimeFiles: FileChangeInfo[] = Object.values(trackedChanges);
+
+  const runningTurnEvents = events.filter(
+    (e) => (activeTurnStartTime ? e.timestamp >= activeTurnStartTime - 2000 : true)
+  );
+
+  const runningTurnTerminalEvents = events.filter(
+    (e): e is TerminalEvent =>
+      e.type === 'TerminalEvent' &&
+      (activeTurnStartTime ? e.timestamp >= activeTurnStartTime - 2000 : true)
+  );
 
   const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
     const container = scrollContainerRef.current;
@@ -361,28 +374,34 @@ export const ChatThread: React.FC = () => {
                   <div style={{ whiteSpace: 'pre-wrap' }}>{msg.content}</div>
                 ) : (
                   <div>
-                    {msg.filesChanged && msg.filesChanged.length > 0 && (
-                      <FileChangesCard files={msg.filesChanged} />
-                    )}
+                    {/* Antigravity Activity Stream: Analyzed files, Edited files, Searches, Thoughts, Ran Terminal */}
+                    <AntigravityActivityStream
+                      events={msg.activityEvents}
+                      filesChanged={msg.filesChanged}
+                      terminalEvents={msg.terminalEvents}
+                      thoughtText={msg.thoughtSummary}
+                    />
 
-                    <div className="markdown-body" style={{ color: 'inherit', position: 'relative' }}>
-                      {renderMarkdownContent(msg.content)}
-                      {isGenerating && (
-                        <span
-                          style={{
-                            display: 'inline-block',
-                            width: '8px',
-                            height: '14px',
-                            backgroundColor: 'var(--accent, #3B82F6)',
-                            marginLeft: '4px',
-                            verticalAlign: 'middle',
-                            animation: 'chatgpt-blink 1s step-end infinite',
-                          }}
-                        />
-                      )}
-                    </div>
+                    {msg.content ? (
+                      <div className="markdown-body" style={{ color: 'inherit', position: 'relative' }}>
+                        {renderMarkdownContent(msg.content)}
+                        {isGenerating && (
+                          <span
+                            style={{
+                              display: 'inline-block',
+                              width: '8px',
+                              height: '14px',
+                              backgroundColor: 'var(--accent, #3B82F6)',
+                              marginLeft: '4px',
+                              verticalAlign: 'middle',
+                              animation: 'chatgpt-blink 1s step-end infinite',
+                            }}
+                          />
+                        )}
+                      </div>
+                    ) : null}
 
-                    {!isGenerating && (
+                    {!isGenerating && msg.content && (
                       <div
                         style={{
                           display: 'flex',
@@ -430,11 +449,11 @@ export const ChatThread: React.FC = () => {
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: '10px',
+            gap: '8px',
             width: '100%',
           }}
         >
-          {/* Active Implementation Plan Card */}
+          {/* Active Implementation Plan Card (if available) */}
           {taskGraph && (taskGraph.tasks?.length || taskGraph.nodes?.length) ? (
             <div
               style={{
@@ -447,10 +466,14 @@ export const ChatThread: React.FC = () => {
             </div>
           ) : null}
 
-          {/* Realtime Files Changed Card */}
-          {realtimeFiles.length > 0 && (
-            <FileChangesCard files={realtimeFiles} isRealtime={true} />
-          )}
+          {/* Antigravity Live Activity Stream (Analyzed files, Edited files, Searches, Thinking, Terminal) */}
+          <AntigravityActivityStream
+            events={runningTurnEvents}
+            filesChanged={realtimeFiles}
+            terminalEvents={runningTurnTerminalEvents}
+            thoughtText={agentPhaseDetail}
+            isRunning={true}
+          />
 
           {/* Running Indicator with Active Phase */}
           <RunningIndicator />

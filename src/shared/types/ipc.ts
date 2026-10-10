@@ -114,6 +114,8 @@ export type AgentStreamEvent =
   | { type: 'terminal_output'; command: string; data: string; stream: 'stdout' | 'stderr' }
   | { type: 'terminal_command_end'; command: string; exitCode: number }
   | { type: 'file_change'; file: string; action: 'created' | 'modified' | 'deleted'; lines?: number; additions?: number; deletions?: number }
+  | { type: 'file_read'; file: string; startLine?: number; endLine?: number }
+  | { type: 'search'; query: string; resultsCount?: number }
   | { type: 'test_result'; testName: string; passed: boolean; message?: string }
   | { type: 'error'; message: string; fatal?: boolean }
   | { type: 'complete'; summary: string; filesChanged: Array<{ file: string; action?: 'created' | 'modified'; lines?: number }>; commandsExecuted: string[]; success: boolean };
