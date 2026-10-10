@@ -220,6 +220,18 @@ Follow this flow to demonstrate the full hackathon agentic workflow:
 | `npm run test` | Executes unit test suites using Vitest |
 | `npm run package` | Builds standalone macOS `CoreMind.app` and `CoreMind.dmg` installer |
 
+### Verified Release Artifacts (macOS Apple Silicon)
+
+- **Installer Binary**: `CoreMind-0.1.0-arm64.dmg` (162.1 MB)
+- **SHA-256 Checksum**:
+  ```text
+  232d3d9fc685b369a345c63bae472ce238cf5799e083bd7bda16db233ce49a5a
+  ```
+- **Terminal Verification Command**:
+  ```bash
+  shasum -a 256 release/CoreMind-0.1.0-arm64.dmg
+  ```
+
 ---
 
 ## 9. Technology Stack
