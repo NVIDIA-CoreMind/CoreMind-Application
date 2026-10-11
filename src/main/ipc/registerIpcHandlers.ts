@@ -492,6 +492,23 @@ export function registerIpcHandlers(): void {
     }
   );
 
+  // 16b. AI Agent - Set Configuration
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_SET_CONFIG,
+    async (_event, config: any): Promise<IpcResult<boolean>> => {
+      agentService.setConfig(config);
+      return { success: true, data: true };
+    }
+  );
+
+  // 16c. AI Agent - Get Configuration
+  ipcMain.handle(
+    IPC_CHANNELS.AGENT_GET_CONFIG,
+    async (): Promise<IpcResult<any>> => {
+      return { success: true, data: agentService.getConfig() };
+    }
+  );
+
   // 17. AI Agent - Execute Controlled Tool
   ipcMain.handle(
     IPC_CHANNELS.AGENT_EXECUTE_TOOL,

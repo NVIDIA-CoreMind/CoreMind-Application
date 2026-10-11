@@ -126,9 +126,11 @@ interface AIWorkspaceStore {
   sessions: ChatSession[];
   activeSessionId: string | null;
   isHistoryOpen: boolean;
+  isAiSettingsOpen: boolean;
   draftPrompt: string;
 
   // State setters
+  setIsAiSettingsOpen: (open: boolean) => void;
   setAgentMode: (mode: AgentOperationMode) => void;
   setActiveView: (view: WorkspaceViewTab) => void;
   addEvent: (event: AIWorkspaceEvent) => void;
@@ -182,7 +184,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
     currentState: 'idle',
     agentPhase: 'thinking',
     agentPhaseDetail: undefined,
-    selectedModel: 'Nemotron-3-Ultra',
+    selectedModel: 'NVIDIA Nemotron 3 Ultra',
     agentMode: 'agent',
     activeView: 'chat',
     abortController: null,
@@ -199,8 +201,10 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
     sessions: savedSessions,
     activeSessionId: activeSession ? activeSession.id : null,
     isHistoryOpen: false,
+    isAiSettingsOpen: false,
     draftPrompt: '',
 
+    setIsAiSettingsOpen: (open) => set({ isAiSettingsOpen: open }),
     setAgentMode: (mode) => set({ agentMode: mode }),
     setActiveView: (view) => set({ activeView: view }),
     addEvent: (event) => set((state) => ({ events: [...state.events, event] })),

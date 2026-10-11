@@ -5,6 +5,7 @@ import {
   AgentStatus,
   AgentToolAction,
   IpcResult,
+  AiConfig,
 } from '../../shared/types/ipc';
 import { fileSystemService } from './fileSystemService';
 import { terminalService } from './terminalService';
@@ -15,43 +16,122 @@ export interface AIProvider {
   name: string;
   isConfigured(): boolean;
   getStatus(): AgentStatus;
+  setConfig?(config: AiConfig): void;
+  getConfig?(): AiConfig & { configured: boolean };
   sendMessage(
     messages: AgentMessage[],
-    context?: AgentContext
+    context?: AgentContext,
+    options?: { model?: string; apiKey?: string; provider?: string; baseUrl?: string }
   ): Promise<AgentResponse>;
 }
 
 /**
- * Standard HTTP AI Provider supporting OpenAI / Nebius / Gemini compatible endpoints.
+ * Maps friendly user-selected model names to actual LLM API identifiers.
+ */
+function resolveModelIdentifier(model: string, provider: string): string {
+  const m = model.toLowerCase();
+  if (m.includes('nemotron') || m.includes('nvidia') || provider === 'nebius') {
+    return 'nvidia/llama-3.3-nemotron-super-49b-v1';
+  }
+  if (provider === 'gemini' || m.includes('gemini')) {
+    if (m.includes('pro')) return 'gemini-1.5-pro';
+    if (m.includes('2.0') || m.includes('2.5')) return 'gemini-2.0-flash';
+    return 'gemini-1.5-flash';
+  }
+  if (provider === 'anthropic' || m.includes('claude')) {
+    return 'claude-3-5-sonnet-20241022';
+  }
+  if (m.includes('gpt-4o-mini')) return 'gpt-4o-mini';
+  if (m.includes('gpt-4o') || m.includes('gpt')) return 'gpt-4o';
+  return 'nvidia/llama-3.3-nemotron-super-49b-v1';
+}
+
+/**
+ * Standard Multi-Provider AI Engine supporting Gemini, OpenAI, Claude, Nebius, and Ollama.
  */
 export class StandardAIProvider implements AIProvider {
   public id = 'coremind-standard';
-  public name = 'CoreMind AI Provider';
+  public name = 'CoreMind Multi-Provider AI';
 
-  private getApiKey(): string | undefined {
+  private activeConfig: AiConfig = {};
+
+  public setConfig(config: AiConfig): void {
+    this.activeConfig = { ...this.activeConfig, ...config };
+    if (config.apiKey) {
+      process.env.COREMIND_API_KEY = config.apiKey;
+      if (config.provider === 'gemini' || config.apiKey.startsWith('AIzaSy')) {
+        process.env.GEMINI_API_KEY = config.apiKey;
+      } else if (config.apiKey.startsWith('sk-ant-')) {
+        process.env.ANTHROPIC_API_KEY = config.apiKey;
+      } else if (config.apiKey.startsWith('sk-')) {
+        process.env.OPENAI_API_KEY = config.apiKey;
+      }
+    }
+    if (config.model) {
+      process.env.COREMIND_MODEL = config.model;
+    }
+    if (config.baseUrl) {
+      process.env.COREMIND_API_ENDPOINT = config.baseUrl;
+    }
+  }
+
+  public getConfig(): AiConfig & { configured: boolean } {
+    const key = this.getApiKey();
+    return {
+      apiKey: key ? `${key.slice(0, 4)}...${key.slice(-4)}` : undefined,
+      model: this.getModelName(),
+      provider: this.getProviderName(),
+      baseUrl: this.getBaseUrl(),
+      configured: Boolean(key),
+    };
+  }
+
+  private getApiKey(override?: string): string | undefined {
     return (
+      override ||
+      this.activeConfig.apiKey ||
       process.env.COREMIND_API_KEY ||
-      process.env.NEBIUS_API_KEY ||
+      process.env.GEMINI_API_KEY ||
       process.env.OPENAI_API_KEY ||
-      process.env.GEMINI_API_KEY
+      process.env.NEBIUS_API_KEY ||
+      process.env.ANTHROPIC_API_KEY
     );
   }
 
-  private getBaseUrl(): string {
-    if (process.env.COREMIND_API_ENDPOINT) {
-      return process.env.COREMIND_API_ENDPOINT;
+  private getProviderName(overrideProvider?: string, key?: string): string {
+    if (overrideProvider) return overrideProvider;
+    if (this.activeConfig.provider) return this.activeConfig.provider;
+    const apiKey = key || this.getApiKey() || '';
+    if (apiKey.startsWith('AIzaSy') || this.getModelName().toLowerCase().includes('gemini')) return 'gemini';
+    if (apiKey.startsWith('sk-ant-') || this.getModelName().toLowerCase().includes('claude')) return 'anthropic';
+    if (process.env.NEBIUS_API_KEY) return 'nebius';
+    return 'openai';
+  }
+
+  private getBaseUrl(overrideProvider?: string, overrideBaseUrl?: string): string {
+    if (overrideBaseUrl) return overrideBaseUrl;
+    if (this.activeConfig.baseUrl) return this.activeConfig.baseUrl;
+    if (process.env.COREMIND_API_ENDPOINT) return process.env.COREMIND_API_ENDPOINT;
+
+    const provider = this.getProviderName(overrideProvider);
+    if (provider === 'gemini') {
+      return 'https://generativelanguage.googleapis.com/v1beta/openai';
     }
-    if (process.env.NEBIUS_API_KEY) {
+    if (provider === 'anthropic') {
+      return 'https://api.anthropic.com/v1';
+    }
+    if (provider === 'nebius') {
       return 'https://api.studio.nebius.ai/v1';
     }
     return 'https://api.openai.com/v1';
   }
 
-  private getModelName(): string {
+  private getModelName(overrideModel?: string): string {
     return (
+      overrideModel ||
+      this.activeConfig.model ||
       process.env.COREMIND_MODEL ||
-      process.env.NEBIUS_MODEL ||
-      'meta-llama/Meta-Llama-3.1-70B-Instruct'
+      'NVIDIA Nemotron 3 Ultra'
     );
   }
 
@@ -63,38 +143,38 @@ export class StandardAIProvider implements AIProvider {
     const configured = this.isConfigured();
     return {
       configured,
-      providerName: configured ? 'CoreMind Live AI' : 'CoreMind AI (Unconfigured)',
+      providerName: configured ? 'NVIDIA Nemotron 3 Ultra' : 'CoreMind AI (Unconfigured)',
       modelName: this.getModelName(),
       instructions: configured
         ? undefined
-        : 'To enable live AI inference, set COREMIND_API_KEY, NEBIUS_API_KEY, or OPENAI_API_KEY.',
+        : 'To enable live AI reasoning, set your NVIDIA Nemotron API key in AI Settings or set the COREMIND_API_KEY environment variable.',
     };
   }
 
   public async sendMessage(
     messages: AgentMessage[],
-    context?: AgentContext
+    context?: AgentContext,
+    options?: { model?: string; apiKey?: string; provider?: string; baseUrl?: string }
   ): Promise<AgentResponse> {
-    const apiKey = this.getApiKey();
+    const apiKey = this.getApiKey(options?.apiKey);
+    const provider = this.getProviderName(options?.provider, apiKey);
+    const rawModel = this.getModelName(options?.model);
+    const model = resolveModelIdentifier(rawModel, provider);
+    const baseUrl = this.getBaseUrl(provider, options?.baseUrl);
 
-    // If no API key is provided, respond with clear diagnostic instructions rather than a fake response
+    // If no API key is provided, return diagnostic instructions
     if (!apiKey) {
-      const activeFileNotice = context?.activeFile
-        ? `\nActive file: ${context.activeFile}`
-        : '';
-      const workspaceNotice = context?.workspacePath
-        ? `\nWorkspace: ${context.workspacePath}`
-        : '';
+      const activeFileNotice = context?.activeFile ? `\nActive file: ${context.activeFile}` : '';
+      const workspaceNotice = context?.workspacePath ? `\nWorkspace: ${context.workspacePath}` : '';
 
-      const content = `CoreMind AI Agent is ready, but no API key was detected in the environment.
+      const content = `CoreMind AI Agent is ready, but no API key was detected.
 
-To enable live AI inference, set your API key in the environment or terminal:
-  export COREMIND_API_KEY="your-api-key"
-  (or NEBIUS_API_KEY, OPENAI_API_KEY)
+To enable live cloud AI inference:
+1. Click the AI Settings button in the top right header.
+2. Enter your Google Gemini or OpenAI API Key.
+3. Live AI code generation and autonomous execution will be active immediately.
 
-Real Context Detected by CoreMind:${workspaceNotice}${activeFileNotice}
-
-Once configured, the agent will analyze your workspace and assist with coding, debugging, and refactoring.`;
+Detected Workspace Context:${workspaceNotice}${activeFileNotice}`;
 
       return {
         message: {
@@ -107,43 +187,102 @@ Once configured, the agent will analyze your workspace and assist with coding, d
     }
 
     try {
-      const baseUrl = this.getBaseUrl();
-      const model = this.getModelName();
-
-      // Build system prompt incorporating structured workspace context
+      // Build comprehensive context-aware system prompt
       let systemContent =
-        'You are CoreMind AI, an intelligent coding agent inside the CoreMind desktop IDE. ' +
-        'Help the developer write, refactor, and understand code accurately and concisely.';
+        'You are CoreMind AI, an elite autonomous full-stack software engineer inside the CoreMind desktop IDE. ' +
+        'Help the developer write complete, production-ready, beautiful code. When asked to create or modify code, ' +
+        'provide the full code cleanly.';
 
       if (context) {
-        if (context.workspacePath) {
-          systemContent += `\nCurrent workspace: ${context.workspacePath}`;
-        }
-        if (context.activeFile) {
-          systemContent += `\nCurrently opened file: ${context.activeFile}`;
-        }
+        if (context.workspacePath) systemContent += `\nCurrent workspace: ${context.workspacePath}`;
+        if (context.activeFile) systemContent += `\nActive file: ${context.activeFile}`;
         if (context.activeFileContent) {
-          // Send bounded snippet of active file (up to 8000 characters)
           const truncated =
             context.activeFileContent.length > 8000
               ? context.activeFileContent.slice(0, 8000) + '\n...[content truncated]'
               : context.activeFileContent;
           systemContent += `\n\nContent of ${context.activeFile}:\n\`\`\`\n${truncated}\n\`\`\``;
         }
-        if (context.selectedCode) {
-          systemContent += `\n\nSelected snippet:\n\`\`\`\n${context.selectedCode}\n\`\`\``;
-        }
-        if (context.terminalOutput) {
-          systemContent += `\n\nRecent terminal output:\n\`\`\`\n${context.terminalOutput.slice(-1000)}\n\`\`\``;
-        }
+        if (context.selectedCode) systemContent += `\n\nSelected snippet:\n\`\`\`\n${context.selectedCode}\n\`\`\``;
+        if (context.terminalOutput) systemContent += `\n\nRecent terminal output:\n\`\`\`\n${context.terminalOutput.slice(-1000)}\n\`\`\``;
       }
 
+      // 1. Google Gemini Native Endpoint (if calling generativelanguage directly)
+      if (provider === 'gemini' && !baseUrl.includes('/openai')) {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+        const userPrompt = messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n');
+
+        const geminiRes = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: `${systemContent}\n\n${userPrompt}` }] }],
+            generationConfig: { temperature: 0.2, maxOutputTokens: 8192 },
+          }),
+        });
+
+        if (!geminiRes.ok) {
+          const errText = await geminiRes.text();
+          throw new Error(`Gemini API error ${geminiRes.status}: ${errText}`);
+        }
+
+        const data = (await geminiRes.json()) as any;
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response returned from Gemini.';
+        return {
+          message: {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: text,
+            timestamp: Date.now(),
+          },
+        };
+      }
+
+      // 2. Anthropic Claude Endpoint
+      if (provider === 'anthropic') {
+        const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model,
+            system: systemContent,
+            messages: messages.map((m) => ({
+              role: m.role === 'assistant' ? 'assistant' : 'user',
+              content: m.content,
+            })),
+            max_tokens: 4096,
+            temperature: 0.2,
+          }),
+        });
+
+        if (!claudeRes.ok) {
+          const errText = await claudeRes.text();
+          throw new Error(`Anthropic API error ${claudeRes.status}: ${errText}`);
+        }
+
+        const data = (await claudeRes.json()) as any;
+        const text = data.content?.[0]?.text || 'No response returned from Claude.';
+        return {
+          message: {
+            id: `msg-${Date.now()}`,
+            role: 'assistant',
+            content: text,
+            timestamp: Date.now(),
+          },
+        };
+      }
+
+      // 3. OpenAI-Compatible Endpoint (Gemini OpenAI mode, OpenAI official, Nebius, Groq, Ollama)
       const formattedMessages = [
         { role: 'system', content: systemContent },
         ...messages.map((m) => ({ role: m.role, content: m.content })),
       ];
 
-      logger.info('Calling AI Provider endpoint', { baseUrl, model });
+      logger.info('Calling AI Provider completions endpoint', { baseUrl, model, provider });
 
       const response = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
@@ -155,18 +294,17 @@ Once configured, the agent will analyze your workspace and assist with coding, d
           model,
           messages: formattedMessages,
           temperature: 0.2,
-          max_tokens: 2048,
+          max_tokens: 4096,
         }),
       });
 
       if (!response.ok) {
         const errText = await response.text();
-        throw new Error(`AI Provider HTTP error ${response.status}: ${errText}`);
+        throw new Error(`AI Provider error ${response.status}: ${errText}`);
       }
 
       const json = (await response.json()) as any;
-      const responseText =
-        json.choices?.[0]?.message?.content || 'No response returned from model.';
+      const responseText = json.choices?.[0]?.message?.content || 'No response returned from model.';
 
       return {
         message: {
@@ -183,7 +321,7 @@ Once configured, the agent will analyze your workspace and assist with coding, d
         message: {
           id: `msg-${Date.now()}`,
           role: 'assistant',
-          content: `AI Provider Error: ${error.message}. Please check your network connection and API key configuration.`,
+          content: `AI Provider Error: ${error.message}. Please verify your API key and network connection.`,
           timestamp: Date.now(),
         },
       };
@@ -202,20 +340,34 @@ export class AgentService {
     this.provider = provider;
   }
 
+  public setConfig(config: AiConfig): void {
+    if (this.provider.setConfig) {
+      this.provider.setConfig(config);
+    }
+  }
+
+  public getConfig(): AiConfig & { configured: boolean } {
+    if (this.provider.getConfig) {
+      return this.provider.getConfig();
+    }
+    return { configured: this.provider.isConfigured() };
+  }
+
   public getStatus(): AgentStatus {
     return this.provider.getStatus();
   }
 
   public async sendMessage(
     messages: AgentMessage[],
-    context?: AgentContext
+    context?: AgentContext,
+    options?: { model?: string; apiKey?: string; provider?: string; baseUrl?: string }
   ): Promise<IpcResult<AgentResponse>> {
     try {
       logger.info('AgentService received message request', {
         messageCount: messages.length,
         hasContext: Boolean(context),
       });
-      const response = await this.provider.sendMessage(messages, context);
+      const response = await this.provider.sendMessage(messages, context, options);
       return { success: true, data: response };
     } catch (err: unknown) {
       const error = err as Error;

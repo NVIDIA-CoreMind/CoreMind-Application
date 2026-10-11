@@ -22,6 +22,7 @@ export const AIWorkspace: React.FC = () => {
   const {
     currentState,
     setState,
+    selectedModel,
     setAbortController,
     addChatMessage,
     appendStreamChunk,
@@ -642,9 +643,18 @@ export const AIWorkspace: React.FC = () => {
       useAIWorkspaceStore.getState().setAgentPhase('thinking', 'Analyzing workspace and instructions...');
 
       try {
+        const aiApiKey = localStorage.getItem('coremind:ai-api-key') || '';
+        const aiProvider = (localStorage.getItem('coremind:ai-provider') || 'nebius') as any;
+        const aiBaseUrl = localStorage.getItem('coremind:ai-base-url') || '';
+        const activeModel = selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3 Ultra';
+
         const taskResult = await window.coreMindAPI.runAgentTask({
           prompt: cleanPrompt,
           workspacePath: rootPath,
+          model: activeModel,
+          apiKey: aiApiKey,
+          provider: aiProvider,
+          baseUrl: aiBaseUrl,
         });
 
         if (taskResult.success) {

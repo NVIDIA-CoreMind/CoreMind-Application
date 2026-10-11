@@ -6,17 +6,18 @@ import {
   Folder,
   FileCode,
   Bot,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useThemeStore } from '../../stores/themeStore';
 
 const AVAILABLE_MODELS = [
-  { id: 'Nemotron-3-Ultra', name: 'Nemotron-3-Ultra', desc: 'Fast, high-reasoning coding agent' },
-  { id: 'Gemini 3.8 Flash', name: 'Gemini 3.8 Flash', desc: 'Low-latency multimodal model' },
-  { id: 'Claude 3.5 Sonnet', name: 'Claude 3.5 Sonnet', desc: 'Advanced reasoning & code synthesis' },
-  { id: 'GPT-4o', name: 'GPT-4o', desc: 'Omni software engineering model' },
-  { id: 'Meta Llama 3.1 70B', name: 'Meta Llama 3.1 70B', desc: 'Open-weights high-performance coding' },
+  {
+    id: 'Nemotron-3-Ultra',
+    name: 'NVIDIA Nemotron 3 Ultra',
+    desc: 'NVIDIA Nemotron Super 49B / Ultra Agentic Engine',
+  },
 ];
 
 export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = ({ onSubmit }) => {
@@ -50,6 +51,12 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
       setTimeout(() => textareaRef.current?.focus(), 10);
     }
   }, [draftPrompt, setDraftPrompt]);
+
+  useEffect(() => {
+    if (!selectedModel || !AVAILABLE_MODELS.some((m) => m.name === selectedModel || m.id === selectedModel)) {
+      setSelectedModel('NVIDIA Nemotron 3 Ultra');
+    }
+  }, [selectedModel, setSelectedModel]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -308,6 +315,29 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                     </div>
                   );
                 })}
+
+                <div
+                  onClick={() => {
+                    setIsModelMenuOpen(false);
+                    useAIWorkspaceStore.getState().setIsAiSettingsOpen(true);
+                  }}
+                  style={{
+                    marginTop: '4px',
+                    padding: '7px 8px',
+                    borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    color: 'var(--accent)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: 600,
+                  }}
+                >
+                  <SlidersHorizontal size={12} />
+                  <span>Configure API Keys & Models...</span>
+                </div>
               </div>
             )}
           </div>

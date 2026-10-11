@@ -92,6 +92,8 @@ export interface CoreMindAPI extends CoreMindFilesAPI {
   // AI Agent
   sendAgentMessage: (messages: AgentMessage[], context?: AgentContext) => Promise<IpcResult<AgentResponse>>;
   getAgentStatus: () => Promise<IpcResult<AgentStatus>>;
+  setAiConfig: (config: { apiKey: string; model?: string; provider?: string; baseUrl?: string }) => Promise<IpcResult<boolean>>;
+  getAiConfig: () => Promise<IpcResult<{ apiKey?: string; model?: string; provider?: string; baseUrl?: string; configured: boolean }>>;
   executeAgentTool: (action: AgentToolAction, rootPath: string) => Promise<IpcResult<unknown>>;
   runAgentTask: (request: AgentTaskRequest) => Promise<IpcResult<AgentTaskSummary>>;
   cancelAgentTask: () => Promise<IpcResult<void>>;
@@ -219,6 +221,10 @@ const api: CoreMindAPI = {
     ipcRenderer.invoke(IPC_CHANNELS.AGENT_SEND_MESSAGE, { messages, context }),
   getAgentStatus: () =>
     ipcRenderer.invoke(IPC_CHANNELS.AGENT_GET_STATUS),
+  setAiConfig: (config) =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENT_SET_CONFIG, config),
+  getAiConfig: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.AGENT_GET_CONFIG),
   executeAgentTool: (action, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.AGENT_EXECUTE_TOOL, { action, rootPath }),
   runAgentTask: (request) =>

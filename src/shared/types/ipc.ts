@@ -89,10 +89,20 @@ export interface ExecuteCommandResult {
   killed: boolean;
 }
 
+export interface AiConfig {
+  apiKey?: string;
+  model?: string;
+  provider?: string;
+  baseUrl?: string;
+}
+
 export interface AgentTaskRequest {
   prompt: string;
   workspacePath: string;
   model?: string;
+  apiKey?: string;
+  provider?: string;
+  baseUrl?: string;
   context?: AgentContext;
   history?: Array<{ role: string; content: string }>;
 }
@@ -161,6 +171,8 @@ export const IPC_CHANNELS = {
   // AI Agent
   AGENT_SEND_MESSAGE: 'agent:send-message',
   AGENT_GET_STATUS: 'agent:get-status',
+  AGENT_SET_CONFIG: 'agent:set-config',
+  AGENT_GET_CONFIG: 'agent:get-config',
   AGENT_EXECUTE_TOOL: 'agent:execute-tool',
   AGENT_RUN_TASK: 'agent:run-task',
   AGENT_CANCEL_TASK: 'agent:cancel-task',
