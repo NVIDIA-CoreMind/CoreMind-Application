@@ -255,6 +255,30 @@ export class CoreMindWebSocketService {
     };
     return this.send(payload);
   }
+
+  /**
+   * Stops an active agent execution via WebSocket.
+   */
+  public stop(agentId: string): boolean {
+    return this.send({
+      type: 'agent.stop',
+      action: 'agent.stop',
+      agent_id: agentId,
+      task_id: agentId,
+    });
+  }
+
+  /**
+   * Cancels an active agent execution via WebSocket (alias for stop).
+   */
+  public cancel(agentId: string): boolean {
+    return this.send({
+      type: 'agent.cancel',
+      action: 'agent.cancel',
+      agent_id: agentId,
+      task_id: agentId,
+    });
+  }
 }
 
 export const coremindWs = new CoreMindWebSocketService();

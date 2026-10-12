@@ -118,10 +118,12 @@ export const TerminalPanel: React.FC = () => {
     xtermRef.current = term;
     fitAddonRef.current = fitAddon;
 
-    try {
-      fitAddon.fit();
-    } catch {
-      // ignore
+    if (terminalRef.current.clientWidth > 0 && terminalRef.current.clientHeight > 0) {
+      try {
+        fitAddon.fit();
+      } catch {
+        // ignore
+      }
     }
 
     let isDisposed = false;
@@ -202,7 +204,13 @@ export const TerminalPanel: React.FC = () => {
     if (activeTab !== 'pty') return;
 
     const resizeObserver = new ResizeObserver(() => {
-      if (fitAddonRef.current && xtermRef.current) {
+      if (
+        fitAddonRef.current &&
+        xtermRef.current &&
+        terminalRef.current &&
+        terminalRef.current.clientWidth > 0 &&
+        terminalRef.current.clientHeight > 0
+      ) {
         try {
           fitAddonRef.current.fit();
           const cols = xtermRef.current.cols;

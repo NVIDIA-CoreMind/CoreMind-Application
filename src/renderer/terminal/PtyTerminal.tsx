@@ -174,10 +174,12 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, shell, onExit }
 
     terminalRegistry.set(id, { term, fit });
 
-    try {
-      fit.fit();
-    } catch {
-      // ignore
+    if (hostRef.current.clientWidth > 0 && hostRef.current.clientHeight > 0) {
+      try {
+        fit.fit();
+      } catch {
+        // ignore
+      }
     }
 
     const offData = api.onTerminalData(({ id: sid, data }) => {
@@ -242,11 +244,13 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, shell, onExit }
   useEffect(() => {
     if (active) {
       setTimeout(() => {
-        try {
-          fitRef.current?.fit();
-          termRef.current?.focus();
-        } catch {
-          // ignore
+        if (hostRef.current && hostRef.current.clientWidth > 0 && hostRef.current.clientHeight > 0) {
+          try {
+            fitRef.current?.fit();
+            termRef.current?.focus();
+          } catch {
+            // ignore
+          }
         }
       }, 30);
     }

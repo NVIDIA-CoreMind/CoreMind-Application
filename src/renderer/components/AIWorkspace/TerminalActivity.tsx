@@ -152,41 +152,68 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
             fontSize: '12px',
           }}
         >
-          {/* Top-right subtle actions */}
+          {/* Header row with badge and actions */}
           <div
             style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              zIndex: 2,
+              justifyContent: 'space-between',
+              marginBottom: '8px',
+              paddingBottom: '6px',
+              borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid #F1F5F9',
             }}
           >
-            {event.status === 'running' && (
-              <button onClick={handleStop} title="Terminate command" style={iconBtnStyle}>
-                <Square size={11} fill="#EF4444" color="#EF4444" />
-                <span style={{ fontSize: '10.5px', color: '#EF4444' }}>Stop</span>
+            {/* Agent execution badge distinguishing from interactive terminals */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                style={{
+                  fontSize: '10px',
+                  fontWeight: 600,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.04em',
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+                  color: 'var(--accent, #3B82F6)',
+                  border: isDark ? '1px solid rgba(59, 130, 246, 0.25)' : '1px solid rgba(59, 130, 246, 0.2)',
+                }}
+                title="Agent-managed execution stream (non-interactive sandbox process)"
+              >
+                Agent Execution Stream
+              </span>
+              {typeof event.durationMs === 'number' && event.durationMs > 0 && (
+                <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>
+                  {event.durationMs < 1000 ? `${event.durationMs}ms` : `${(event.durationMs / 1000).toFixed(1)}s`}
+                </span>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {event.status === 'running' && (
+                <button onClick={handleStop} title="Terminate command" style={iconBtnStyle}>
+                  <Square size={11} fill="#EF4444" color="#EF4444" />
+                  <span style={{ fontSize: '10.5px', color: '#EF4444', marginLeft: '3px' }}>Stop</span>
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  useUiStore.setState({ isTerminalOpen: true });
+                }}
+                title="Open user interactive terminal"
+                style={iconBtnStyle}
+              >
+                <Terminal size={11} color="var(--accent, #3B82F6)" />
+                <span style={{ fontSize: '10.5px', marginLeft: '3px' }}>Workbench Terminal</span>
               </button>
-            )}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                useUiStore.setState({ isTerminalOpen: true });
-              }}
-              title="Open bottom terminal panel"
-              style={iconBtnStyle}
-            >
-              <Terminal size={11} color="var(--accent, #3B82F6)" />
-              <span style={{ fontSize: '10.5px' }}>Terminal</span>
-            </button>
-            <button onClick={handleCopy} title="Copy output" style={iconBtnStyle}>
-              {copied ? <Check size={11} color="#22C55E" /> : <Copy size={11} />}
-            </button>
+              <button onClick={handleCopy} title="Copy command output" style={iconBtnStyle}>
+                {copied ? <Check size={11} color="#22C55E" /> : <Copy size={11} />}
+              </button>
+            </div>
           </div>
 
-          {/* Top prompt line matching Image 4: ~/.../CoreMind-Application $ npm run */}
+          {/* Prompt line: ~/.../CoreMind-Application $ npm run ... */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '12px' }}>
             <span style={{ color: '#71717A', fontWeight: 500 }}>
               {promptPath} $
@@ -198,23 +225,25 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
 
           <div
             style={{
-              padding: '12px',
+              padding: '10px 12px',
               fontFamily: 'var(--font-mono)',
               fontSize: '11.5px',
               lineHeight: '1.5',
               color: isDark ? '#E2E8F0' : '#1E293B',
-              backgroundColor: isDark ? '#141414' : '#FFFFFF',
+              backgroundColor: isDark ? '#0D0D0D' : '#F8FAFC',
+              borderRadius: '6px',
               whiteSpace: 'pre-wrap',
               maxHeight: '260px',
               overflowY: 'auto',
+              border: isDark ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid #E2E8F0',
             }}
           >
             {event.output ? (
               renderOutputWithLinks(event.output)
             ) : event.status === 'running' ? (
-              <span style={{ opacity: 0.6 }}>Executing command in workspace...</span>
+              <span style={{ opacity: 0.6 }}>Executing command in workspace sandbox...</span>
             ) : (
-              <span style={{ opacity: 0.6 }}>No output produced.</span>
+              <span style={{ opacity: 0.6 }}>Process exited with no standard output.</span>
             )}
 
             {event.status === 'completed' && (

@@ -81,6 +81,7 @@ export type AgentEventType =
 export interface CoreMindEvent<T = any> {
   type: AgentEventType | string;
   agent_id?: string;
+  task_id?: string;
   session_id?: string;
   timestamp: string;
   data: T;
@@ -256,6 +257,7 @@ export interface AgentRunRequest {
 
 export interface AgentRunResponse {
   agent_id: string;
+  task_id?: string;
   session_id: string;
   status: string;
 }

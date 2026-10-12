@@ -299,13 +299,20 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       const now = Date.now();
 
       // Only process events matching the current agent or general events
-      if (state.agentId && event.agent_id && event.agent_id !== state.agentId) {
+      const eventTaskId = event.agent_id || event.task_id || (event.data as any)?.agent_id || (event.data as any)?.task_id;
+      if (state.agentId && eventTaskId && eventTaskId !== state.agentId) {
+        return;
+      }
+      const eventSessionId = event.session_id || (event.data as any)?.session_id;
+      if (state.currentSessionId && eventSessionId && eventSessionId !== state.currentSessionId) {
         return;
       }
 
       switch (event.type as AgentEventType) {
         case 'agent.started': {
+          const effectiveAgentId = event.agent_id || event.task_id || (event.data as any)?.agent_id || (event.data as any)?.task_id || state.agentId;
           set({
+            agentId: effectiveAgentId,
             lifecycleStage: 'analyzing',
             isLoading: true,
             error: null,
