@@ -2022,11 +2022,11 @@ npx serve .
   ): Array<{ path: string; content: string; action: 'created' | 'modified' }> {
     const files: Array<{ path: string; content: string; action: 'created' | 'modified' }> = [];
 
-    // Pattern 1: ### File: path/to/file or ### path/to/file or // path/to/file followed by code block
-    const fileRegex = /(?:###?\s*(?:File:\s*)?([a-zA-Z0-9_\-./\\]+\.[a-zA-Z0-9]+)|```[a-zA-Z0-9_-]*\s*\n(?:\/\/|#|\/\*)\s*(?:File:\s*)?([a-zA-Z0-9_\-./\\]+\.[a-zA-Z0-9]+))\n([\s\S]*?)```/g;
+    // Pattern 1: Header (### File: path or **File:** path) followed by ```lang\ncode\n```
+    const headerRegex = /(?:###?\s*(?:File:\s*)?([a-zA-Z0-9_\-./\\]+\.[a-zA-Z0-9]+)|\*\*(?:File|Filename):\*\*\s*`?([a-zA-Z0-9_\-./\\]+\.[a-zA-Z0-9]+)`?)\s*\n+```[a-zA-Z0-9_-]*\s*\n([\s\S]*?)```/g;
     let match;
 
-    while ((match = fileRegex.exec(content)) !== null) {
+    while ((match = headerRegex.exec(content)) !== null) {
       const filePath = (match[1] || match[2])?.trim();
       const fileCode = match[3];
       if (filePath && fileCode && !files.some((f) => f.path === filePath)) {
@@ -2038,10 +2038,10 @@ npx serve .
       }
     }
 
-    // Pattern 2: **File:** `path/to/file`
+    // Pattern 2: ```lang\n// File: path or # File: path\ncode\n```
     if (files.length === 0) {
-      const pattern2 = /(?:\*\*File:\*\*|\*\*Filename:\*\*)\s*`?([a-zA-Z0-9_\-./\\]+\.[a-zA-Z0-9]+)`?\s*\n+```[a-zA-Z0-9_-]*\n([\s\S]*?)```/g;
-      while ((match = pattern2.exec(content)) !== null) {
+      const inlineRegex = /```[a-zA-Z0-9_-]*\s*\n(?:\/\/|#|\/\*|<!--)\s*(?:File:\s*)?([a-zA-Z0-9_\-./\\]+\.[a-zA-Z0-9]+)(?:\s*\*\/|-->)?\s*\n([\s\S]*?)```/g;
+      while ((match = inlineRegex.exec(content)) !== null) {
         const filePath = match[1]?.trim();
         const fileCode = match[2];
         if (filePath && fileCode && !files.some((f) => f.path === filePath)) {
@@ -2051,6 +2051,30 @@ npx serve .
             action: 'created',
           });
         }
+      }
+    }
+
+    // Pattern 3: Fallback extraction for isolated single code block
+    if (files.length === 0) {
+      const codeBlockRegex = /```([a-zA-Z0-9_-]*)\s*\n([\s\S]*?)```/g;
+      let blockCount = 0;
+      while ((match = codeBlockRegex.exec(content)) !== null) {
+        blockCount++;
+        const lang = match[1]?.toLowerCase() || '';
+        const code = match[2]?.trim();
+        if (!code) continue;
+        let inferredPath = `src/solution_${blockCount}.${lang || 'txt'}`;
+        if (lang === 'html') inferredPath = 'index.html';
+        else if (lang === 'css') inferredPath = 'styles.css';
+        else if (lang === 'javascript' || lang === 'js') inferredPath = 'app.js';
+        else if (lang === 'python' || lang === 'py') inferredPath = 'main.py';
+        else if (lang === 'typescript' || lang === 'ts') inferredPath = 'src/index.ts';
+        else if (lang === 'dart') inferredPath = 'lib/main.dart';
+        files.push({
+          path: inferredPath,
+          content: code + '\n',
+          action: 'created',
+        });
       }
     }
 

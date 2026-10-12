@@ -184,7 +184,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
     currentState: 'idle',
     agentPhase: 'thinking',
     agentPhaseDetail: undefined,
-    selectedModel: 'NVIDIA Nemotron 3 Ultra',
+    selectedModel: 'NVIDIA Nemotron 3.5 Lightning',
     agentMode: 'agent',
     activeView: 'chat',
     abortController: null,

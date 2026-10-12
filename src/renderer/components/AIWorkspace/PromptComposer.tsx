@@ -1,29 +1,23 @@
 import React, { useState, KeyboardEvent, useRef, useEffect } from 'react';
 import {
   ArrowRight,
-  ChevronDown,
-  Check,
   Folder,
   FileCode,
   Bot,
-  SlidersHorizontal,
 } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useThemeStore } from '../../stores/themeStore';
 
-const AVAILABLE_MODELS = [
-  {
-    id: 'Nemotron-3-Ultra',
-    name: 'NVIDIA Nemotron 3 Ultra',
-    desc: 'NVIDIA Nemotron Super 49B / Ultra Agentic Engine',
-  },
-];
+const BACKEND_MODEL = {
+  id: 'nvidia/Nemotron-3_5-Lightning',
+  name: 'NVIDIA Nemotron 3.5 Lightning',
+  desc: 'CoreMind Backend Model (Nebius Token Factory)',
+};
 
 export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = ({ onSubmit }) => {
   const {
     currentState,
-    selectedModel,
     setSelectedModel,
     agentMode,
     cancelRequest,
@@ -34,13 +28,11 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
   const { rootPath, rootName, activeFileName } = useWorkspaceStore();
 
   const [input, setInput] = useState('');
-  const [isModelMenuOpen, setIsModelMenuOpen] = useState(false);
   const [includeContext, setIncludeContext] = useState(true);
 
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const modelMenuRef = useRef<HTMLDivElement>(null);
 
   const isRunning = currentState === 'running' || currentState === 'waiting';
 
@@ -53,24 +45,8 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
   }, [draftPrompt, setDraftPrompt]);
 
   useEffect(() => {
-    if (!selectedModel || !AVAILABLE_MODELS.some((m) => m.name === selectedModel || m.id === selectedModel)) {
-      setSelectedModel('NVIDIA Nemotron 3 Ultra');
-    }
-  }, [selectedModel, setSelectedModel]);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (modelMenuRef.current && !modelMenuRef.current.contains(e.target as Node)) {
-        setIsModelMenuOpen(false);
-      }
-    };
-    if (isModelMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isModelMenuOpen]);
+    setSelectedModel(BACKEND_MODEL.name);
+  }, [setSelectedModel]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -98,11 +74,6 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 220) + 'px';
     }
   }, [input]);
-
-  const handleSelectModel = (modelName: string) => {
-    setSelectedModel(modelName);
-    setIsModelMenuOpen(false);
-  };
 
   return (
     <div
@@ -251,95 +222,22 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
             <span>Agent</span>
           </div>
 
-          {/* Model Selector Dropdown */}
-          <div style={{ position: 'relative' }} ref={modelMenuRef}>
-            <button
-              onClick={() => setIsModelMenuOpen(!isModelMenuOpen)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '3px 8px',
-                borderRadius: '6px',
-                border: 'none',
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9',
-                color: 'var(--text-secondary)',
-                fontSize: '11px',
-                fontWeight: 500,
-                cursor: 'pointer',
-              }}
-              title="Select AI Model"
-            >
-              <span>{selectedModel}</span>
-              <ChevronDown size={11} />
-            </button>
-
-            {isModelMenuOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '100%',
-                  left: 0,
-                  marginBottom: '6px',
-                  width: '240px',
-                  backgroundColor: isDark ? '#222222' : '#FFFFFF',
-                  border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid #E2E8F0',
-                  borderRadius: '8px',
-                  padding: '4px',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.25)',
-                  zIndex: 100,
-                }}
-              >
-                {AVAILABLE_MODELS.map((m) => {
-                  const isSelected = selectedModel === m.name || selectedModel === m.id;
-                  return (
-                    <div
-                      key={m.id}
-                      onClick={() => handleSelectModel(m.name)}
-                      style={{
-                        padding: '6px 8px',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        backgroundColor: isSelected ? (isDark ? 'rgba(59, 130, 246, 0.15)' : '#EFF6FF') : 'transparent',
-                        color: isSelected ? 'var(--accent)' : 'var(--text-primary)',
-                      }}
-                    >
-                      <div>
-                        <div style={{ fontSize: '12px', fontWeight: 600 }}>{m.name}</div>
-                        <div style={{ fontSize: '10.5px', color: 'var(--text-muted)' }}>{m.desc}</div>
-                      </div>
-                      {isSelected && <Check size={13} color="var(--accent)" />}
-                    </div>
-                  );
-                })}
-
-                <div
-                  onClick={() => {
-                    setIsModelMenuOpen(false);
-                    useAIWorkspaceStore.getState().setIsAiSettingsOpen(true);
-                  }}
-                  style={{
-                    marginTop: '4px',
-                    padding: '7px 8px',
-                    borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    color: 'var(--accent)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    fontWeight: 600,
-                  }}
-                >
-                  <SlidersHorizontal size={12} />
-                  <span>Configure API Keys & Models...</span>
-                </div>
-              </div>
-            )}
+          {/* Active Backend AI Model */}
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '3px 8px',
+              borderRadius: '6px',
+              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9',
+              color: 'var(--text-secondary)',
+              fontSize: '11px',
+              fontWeight: 500,
+            }}
+            title={`Backend AI Model: ${BACKEND_MODEL.name} (${BACKEND_MODEL.id})`}
+          >
+            <span>{BACKEND_MODEL.name}</span>
           </div>
         </div>
 

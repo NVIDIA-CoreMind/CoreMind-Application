@@ -34,11 +34,11 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ isOpen, onClos
   });
 
   const [model, setModel] = useState(() => {
-    return selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3 Ultra';
+    return selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3.5 Lightning';
   });
 
   const [baseUrl, setBaseUrl] = useState(() => {
-    return localStorage.getItem('coremind:ai-base-url') || 'https://api.studio.nebius.ai/v1';
+    return localStorage.getItem('coremind:ai-base-url') || 'https://api.tokenfactory.nebius.com/v1';
   });
 
   const [showKey, setShowKey] = useState(false);
@@ -50,8 +50,8 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ isOpen, onClos
     if (isOpen) {
       const storedKey = localStorage.getItem('coremind:ai-api-key') || '';
       const storedProv = (localStorage.getItem('coremind:ai-provider') as any) || 'nebius';
-      const storedModel = selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3 Ultra';
-      const storedUrl = localStorage.getItem('coremind:ai-base-url') || (storedProv === 'nebius' ? 'https://api.studio.nebius.ai/v1' : '');
+      const storedModel = selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3.5 Lightning';
+      const storedUrl = localStorage.getItem('coremind:ai-base-url') || (storedProv === 'nebius' ? 'https://api.tokenfactory.nebius.com/v1' : '');
 
       setApiKey(storedKey);
       setProvider(storedProv);
@@ -66,9 +66,9 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ isOpen, onClos
   const handleProviderChange = (newProvider: 'gemini' | 'openai' | 'anthropic' | 'nebius' | 'custom') => {
     setProvider(newProvider);
     setTestResult(null);
-    setModel('NVIDIA Nemotron 3 Ultra');
+    setModel('NVIDIA Nemotron 3.5 Lightning');
     if (newProvider === 'nebius') {
-      setBaseUrl('https://api.studio.nebius.ai/v1');
+      setBaseUrl('https://api.tokenfactory.nebius.com/v1');
     } else if (newProvider === 'custom') {
       setBaseUrl('http://localhost:43110');
     } else if (newProvider === 'gemini') {

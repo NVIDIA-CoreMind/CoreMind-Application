@@ -25,13 +25,31 @@ export interface AIProvider {
   ): Promise<AgentResponse>;
 }
 
+export const DEFAULT_NEBIUS_API_KEY =
+  '***REMOVED-CREDENTIAL***';
+export const DEFAULT_NEBIUS_BASE_URL = 'https://api.tokenfactory.nebius.com/v1';
+export const DEFAULT_NEBIUS_MODEL = 'nvidia/Nemotron-3_5-Lightning';
+
+if (!process.env.NEBIUS_API_KEY && process.env.NODE_ENV !== 'test') {
+  process.env.NEBIUS_API_KEY = DEFAULT_NEBIUS_API_KEY;
+}
+
 /**
  * Maps friendly user-selected model names to actual LLM API identifiers.
  */
 function resolveModelIdentifier(model: string, provider: string): string {
   const m = model.toLowerCase();
+  if (m.includes('ultra') || m.includes('550b')) {
+    return 'nvidia/Nemotron-3-Ultra-550b-a55b';
+  }
+  if (m.includes('super') || m.includes('120b')) {
+    return 'nvidia/nemotron-3-super-120b-a12b';
+  }
+  if (m.includes('nano') || m.includes('30b')) {
+    return 'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B';
+  }
   if (m.includes('nemotron') || m.includes('nvidia') || provider === 'nebius') {
-    return 'nvidia/llama-3.3-nemotron-super-49b-v1';
+    return 'nvidia/Nemotron-3_5-Lightning';
   }
   if (provider === 'gemini' || m.includes('gemini')) {
     if (m.includes('pro')) return 'gemini-1.5-pro';
@@ -43,7 +61,7 @@ function resolveModelIdentifier(model: string, provider: string): string {
   }
   if (m.includes('gpt-4o-mini')) return 'gpt-4o-mini';
   if (m.includes('gpt-4o') || m.includes('gpt')) return 'gpt-4o';
-  return 'nvidia/llama-3.3-nemotron-super-49b-v1';
+  return 'nvidia/Nemotron-3_5-Lightning';
 }
 
 /**
@@ -91,9 +109,9 @@ export class StandardAIProvider implements AIProvider {
       override ||
       this.activeConfig.apiKey ||
       process.env.COREMIND_API_KEY ||
+      process.env.NEBIUS_API_KEY ||
       process.env.GEMINI_API_KEY ||
       process.env.OPENAI_API_KEY ||
-      process.env.NEBIUS_API_KEY ||
       process.env.ANTHROPIC_API_KEY
     );
   }
@@ -104,14 +122,15 @@ export class StandardAIProvider implements AIProvider {
     const apiKey = key || this.getApiKey() || '';
     if (apiKey.startsWith('AIzaSy') || this.getModelName().toLowerCase().includes('gemini')) return 'gemini';
     if (apiKey.startsWith('sk-ant-') || this.getModelName().toLowerCase().includes('claude')) return 'anthropic';
-    if (process.env.NEBIUS_API_KEY) return 'nebius';
-    return 'openai';
+    if (apiKey.startsWith('v1.Cm') || apiKey === DEFAULT_NEBIUS_API_KEY || process.env.NEBIUS_API_KEY) return 'nebius';
+    if (apiKey.startsWith('sk-')) return 'openai';
+    return 'nebius';
   }
 
   private getBaseUrl(overrideProvider?: string, overrideBaseUrl?: string): string {
-    if (overrideBaseUrl) return overrideBaseUrl;
-    if (this.activeConfig.baseUrl) return this.activeConfig.baseUrl;
-    if (process.env.COREMIND_API_ENDPOINT) return process.env.COREMIND_API_ENDPOINT;
+    if (overrideBaseUrl) return overrideBaseUrl.replace(/\/+$/, '');
+    if (this.activeConfig.baseUrl) return this.activeConfig.baseUrl.replace(/\/+$/, '');
+    if (process.env.COREMIND_API_ENDPOINT) return process.env.COREMIND_API_ENDPOINT.replace(/\/+$/, '');
 
     const provider = this.getProviderName(overrideProvider);
     if (provider === 'gemini') {
@@ -121,7 +140,7 @@ export class StandardAIProvider implements AIProvider {
       return 'https://api.anthropic.com/v1';
     }
     if (provider === 'nebius') {
-      return 'https://api.studio.nebius.ai/v1';
+      return DEFAULT_NEBIUS_BASE_URL;
     }
     return 'https://api.openai.com/v1';
   }
@@ -131,7 +150,7 @@ export class StandardAIProvider implements AIProvider {
       overrideModel ||
       this.activeConfig.model ||
       process.env.COREMIND_MODEL ||
-      'NVIDIA Nemotron 3 Ultra'
+      DEFAULT_NEBIUS_MODEL
     );
   }
 
@@ -143,7 +162,7 @@ export class StandardAIProvider implements AIProvider {
     const configured = this.isConfigured();
     return {
       configured,
-      providerName: configured ? 'NVIDIA Nemotron 3 Ultra' : 'CoreMind AI (Unconfigured)',
+      providerName: configured ? 'NVIDIA Nemotron (Nebius AI Cloud)' : 'CoreMind AI (Unconfigured)',
       modelName: this.getModelName(),
       instructions: configured
         ? undefined

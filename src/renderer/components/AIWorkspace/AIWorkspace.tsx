@@ -630,7 +630,36 @@ export const AIWorkspace: React.FC = () => {
     const turnStartTime = Date.now();
     useAIWorkspaceStore.getState().setActiveTurnStartTime(turnStartTime);
 
-    // 1. Desktop Execution Engine Path (Primary when in Electron)
+    // 1. Backend Autonomous Agent Execution Path (/v1/agent/run HTTP)
+    const backendOnline = coremindWs.isConnected() || coremindWs.getStatus() === 'connected';
+
+    if (backendOnline && isAutonomousAgent) {
+      try {
+        useAIWorkspaceStore.getState().setAgentPhase('planning', 'Initializing autonomous agent on CoreMind backend...');
+        const runRes = await agentService.run(cleanPrompt, rootPath);
+
+        if (runRes?.agent_id) {
+          setAgentId(runRes.agent_id);
+        }
+
+        if (abortController.signal.aborted) {
+          return;
+        }
+        return;
+      } catch (agentErr: any) {
+        if (!abortController.signal.aborted) {
+          console.warn('Backend agent start error, attempting fallback:', agentErr);
+        }
+      }
+    }
+
+    // 2. Backend Direct Streaming Assistant Chat Path (/v1/ai/chat/stream SSE)
+    if (backendOnline && !isAutonomousAgent) {
+      await runStreamingChat(cleanPrompt, historyToSend, abortController);
+      return;
+    }
+
+    // 3. Desktop Execution Engine Path (Fallback when backend is offline or standalone)
     if (window.coreMindAPI?.runAgentTask && isAutonomousAgent) {
       const assistantMsgId = `asst-${Date.now()}`;
       addChatMessage({
@@ -646,7 +675,7 @@ export const AIWorkspace: React.FC = () => {
         const aiApiKey = localStorage.getItem('coremind:ai-api-key') || '';
         const aiProvider = (localStorage.getItem('coremind:ai-provider') || 'nebius') as any;
         const aiBaseUrl = localStorage.getItem('coremind:ai-base-url') || '';
-        const activeModel = selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3 Ultra';
+        const activeModel = selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3.5 Lightning';
 
         const taskResult = await window.coreMindAPI.runAgentTask({
           prompt: cleanPrompt,
@@ -670,7 +699,7 @@ export const AIWorkspace: React.FC = () => {
       }
     }
 
-    // 2. Autonomous Agent Execution Path (/v1/agent/run HTTP)
+    // 4. Autonomous Agent Direct Fallback
     if (isAutonomousAgent) {
       try {
         useAIWorkspaceStore.getState().setAgentPhase('planning', 'Initializing autonomous agent...');
@@ -683,9 +712,9 @@ export const AIWorkspace: React.FC = () => {
         if (abortController.signal.aborted) {
           return;
         }
+        return;
       } catch (agentErr: any) {
         if (!abortController.signal.aborted) {
-          // If agent service fails (e.g. backend fallback), try streaming chat
           console.warn('Agent start error, falling back to streaming chat:', agentErr);
           await runStreamingChat(cleanPrompt, historyToSend, abortController);
         }
@@ -693,7 +722,7 @@ export const AIWorkspace: React.FC = () => {
       return;
     }
 
-    // 3. Direct Streaming Assistant Chat Path (/v1/ai/chat/stream SSE)
+    // 5. Direct Streaming Assistant Chat Fallback
     await runStreamingChat(cleanPrompt, historyToSend, abortController);
   }, [currentState, rootPath, chatHistory, agentMode, addChatMessage, setAbortController, setState, setAgentId]);
 

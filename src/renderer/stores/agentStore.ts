@@ -265,10 +265,9 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
   isLoading: false,
   status: null,
   error: null,
-  selectedModel: localStorage.getItem(STORAGE_KEY_MODEL) || 'NVIDIA Nemotron 3 Ultra',
+  selectedModel: localStorage.getItem(STORAGE_KEY_MODEL) || 'NVIDIA Nemotron 3.5 Lightning',
   availableModels: [
-    'NVIDIA Nemotron 3 Ultra',
-    'nvidia/llama-3.3-nemotron-super-49b-v1',
+    'NVIDIA Nemotron 3.5 Lightning',
   ],
 
   // Real Agent State
