@@ -120,7 +120,10 @@ export const TerminalPanel: React.FC = () => {
 
     if (terminalRef.current.clientWidth > 0 && terminalRef.current.clientHeight > 0) {
       try {
-        fitAddon.fit();
+        const core = (term as unknown as { _core?: { _renderService?: { _renderer?: { value?: unknown } } } })._core;
+        if (core?._renderService?._renderer?.value) {
+          fitAddon.fit();
+        }
       } catch {
         // ignore
       }
@@ -212,11 +215,14 @@ export const TerminalPanel: React.FC = () => {
         terminalRef.current.clientHeight > 0
       ) {
         try {
-          fitAddonRef.current.fit();
-          const cols = xtermRef.current.cols;
-          const rows = xtermRef.current.rows;
-          if (cols > 0 && rows > 0) {
-            window.coreMindAPI?.terminalResize?.(sessionIdRef.current, cols, rows);
+          const core = (xtermRef.current as unknown as { _core?: { _renderService?: { _renderer?: { value?: unknown } } } })._core;
+          if (core?._renderService?._renderer?.value) {
+            fitAddonRef.current.fit();
+            const cols = xtermRef.current.cols;
+            const rows = xtermRef.current.rows;
+            if (cols > 0 && rows > 0) {
+              window.coreMindAPI?.terminalResize?.(sessionIdRef.current, cols, rows);
+            }
           }
         } catch {
           // ignore

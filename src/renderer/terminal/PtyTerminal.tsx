@@ -137,6 +137,19 @@ const THEMES = {
 // Global map to hold term instances for direct operations (clear, scroll, etc.)
 const terminalRegistry = new Map<string, { term: XTerm; fit: FitAddon }>();
 
+const safeFit = (term?: XTerm | null, fit?: FitAddon | null) => {
+  if (!term || !fit) return;
+  try {
+    const core = (term as unknown as { _core?: { _renderService?: { _renderer?: { value?: unknown } } } })._core;
+    if (!core?._renderService?._renderer?.value) {
+      return;
+    }
+    fit.fit();
+  } catch {
+    // ignore
+  }
+};
+
 interface TerminalViewProps {
   id: string;
   active: boolean;
@@ -175,11 +188,7 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, shell, onExit }
     terminalRegistry.set(id, { term, fit });
 
     if (hostRef.current.clientWidth > 0 && hostRef.current.clientHeight > 0) {
-      try {
-        fit.fit();
-      } catch {
-        // ignore
-      }
+      safeFit(term, fit);
     }
 
     const offData = api.onTerminalData(({ id: sid, data }) => {
@@ -210,9 +219,9 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, shell, onExit }
       });
 
     const observer = new ResizeObserver(() => {
-      if (hostRef.current && hostRef.current.clientHeight > 0) {
+      if (hostRef.current && hostRef.current.clientWidth > 0 && hostRef.current.clientHeight > 0) {
         try {
-          fit.fit();
+          safeFit(term, fit);
           if (term.cols > 0 && term.rows > 0) {
             void api.terminalResize(id, term.cols, term.rows);
           }
@@ -246,7 +255,7 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, shell, onExit }
       setTimeout(() => {
         if (hostRef.current && hostRef.current.clientWidth > 0 && hostRef.current.clientHeight > 0) {
           try {
-            fitRef.current?.fit();
+            safeFit(termRef.current, fitRef.current);
             termRef.current?.focus();
           } catch {
             // ignore
