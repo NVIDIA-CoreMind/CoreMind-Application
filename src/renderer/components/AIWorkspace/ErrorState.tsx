@@ -4,7 +4,20 @@ import { AlertCircle } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 
 export const ErrorState: React.FC<{ event: ErrorEvent }> = ({ event }) => {
-  const { setState } = useAIWorkspaceStore();
+  const { setState, setExecutionState, setDraftPrompt, chatHistory, draftPrompt } = useAIWorkspaceStore();
+
+  const handleRetry = () => {
+    setExecutionState('idle');
+    setState('idle');
+    const lastUserMsg = [...chatHistory].reverse().find((m) => m.role === 'user');
+    if (lastUserMsg && !draftPrompt) {
+      setDraftPrompt(lastUserMsg.content);
+    }
+  };
+
+  const handleNewTask = () => {
+    useAIWorkspaceStore.getState().clear();
+  };
 
   return (
     <div style={{
@@ -28,7 +41,7 @@ export const ErrorState: React.FC<{ event: ErrorEvent }> = ({ event }) => {
       
       <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
         <button 
-          onClick={() => setState('idle')}
+          onClick={handleRetry}
           style={{
             padding: '4px 10px',
             backgroundColor: 'transparent',
@@ -42,9 +55,7 @@ export const ErrorState: React.FC<{ event: ErrorEvent }> = ({ event }) => {
           Retry
         </button>
         <button 
-          onClick={() => {
-            useAIWorkspaceStore.getState().clear();
-          }}
+          onClick={handleNewTask}
           style={{
             padding: '4px 10px',
             backgroundColor: 'transparent',

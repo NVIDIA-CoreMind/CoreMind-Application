@@ -277,7 +277,6 @@ export const PtyTerminal: React.FC = () => {
     closeTab,
     setTabWarning,
     renameTab,
-    resetTabs,
   } = useTerminalStore();
 
   const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
@@ -287,17 +286,12 @@ export const PtyTerminal: React.FC = () => {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [prevNormalHeight, setPrevNormalHeight] = useState(240);
 
-  // Initialize initial terminal tabs (3 tabs just like in the user's screenshot)
+  // Initialize single clean terminal session rooted in active workspace
   useEffect(() => {
     if (tabs.length === 0) {
-      resetTabs();
-      // Tab 1 with a warning glyph like in the screenshot
-      addTab('zsh', undefined, true);
-      // Tab 2 regular
-      addTab('zsh', undefined, false);
-      // Tab 3 regular and active
-      const id3 = addTab('zsh', undefined, false);
-      setActiveId(id3);
+      const defaultShell = window.coreMindAPI?.platform?.isWindows ? 'powershell' : 'zsh';
+      const newId = addTab(defaultShell, undefined, false);
+      setActiveId(newId);
     }
   }, []);
 

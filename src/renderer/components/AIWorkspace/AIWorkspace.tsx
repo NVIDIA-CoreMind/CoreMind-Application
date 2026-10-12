@@ -405,7 +405,7 @@ export const AIWorkspace: React.FC = () => {
 
       switch (event.type) {
         case 'explanation': {
-          store.setAgentPhase('thinking', event.text);
+          store.setExecutionState('thinking', event.text);
           const asstId = store.streamMessageId || `asst-stream-${now}`;
           store.appendStreamChunk(asstId, event.text + '\n\n');
           store.addEvent({
@@ -419,7 +419,7 @@ export const AIWorkspace: React.FC = () => {
         }
 
         case 'thought': {
-          store.setAgentPhase('thinking', event.text);
+          store.setExecutionState('thinking', event.text);
           store.addEvent({
             id: `evt-thought-${now}`,
             type: 'ThoughtEvent',
@@ -433,14 +433,16 @@ export const AIWorkspace: React.FC = () => {
         case 'status': {
           const step = event.step;
           const text = event.text;
-          if (/search|grep|find|scan|read|detect/i.test(text)) {
-            store.setAgentPhase('searching', text);
+          if (/search|grep|find|scan|read|detect|inspect/i.test(text)) {
+            store.setExecutionState('inspecting', text);
           } else if (step === 'validate' || /test|analyze|verify/i.test(text)) {
-            store.setAgentPhase('verifying', text);
-          } else if (/think|plan|reason|inspect/i.test(text)) {
-            store.setAgentPhase('thinking', text);
+            store.setExecutionState('testing', text);
+          } else if (/create|write|edit|generate|modify/i.test(text)) {
+            store.setExecutionState('editing', text);
+          } else if (/terminal|command|run|shell/i.test(text)) {
+            store.setExecutionState('running_command', text);
           } else {
-            store.setAgentPhase('working', text);
+            store.setExecutionState('thinking', text);
           }
           break;
         }
@@ -448,7 +450,7 @@ export const AIWorkspace: React.FC = () => {
         case 'tool_start': {
           if (event.tool === 'terminal') {
             const cmd = (event.args?.command as string) || '';
-            store.setAgentPhase('working', `$ ${cmd}`);
+            store.setExecutionState('running_command', cmd ? `$ ${cmd}` : 'Running terminal command');
             store.addEvent({
               id: `evt-term-${now}`,
               type: 'TerminalEvent',
@@ -459,9 +461,11 @@ export const AIWorkspace: React.FC = () => {
             });
             useUiStore.setState({ isTerminalOpen: true });
           } else if (/search|grep|find|read|scan/i.test(event.tool)) {
-            store.setAgentPhase('searching', `${event.tool}`);
+            store.setExecutionState('inspecting', event.tool);
+          } else if (/create|write|edit/i.test(event.tool)) {
+            store.setExecutionState('editing', event.tool);
           } else {
-            store.setAgentPhase('working', `${event.tool}`);
+            store.setExecutionState('thinking', event.tool);
           }
           break;
         }
@@ -490,7 +494,8 @@ export const AIWorkspace: React.FC = () => {
         case 'file_change': {
           const filePath = event.file;
           const action = event.action || 'created';
-          store.setAgentPhase('working', `Created ${filePath.split('/').pop() || filePath}`);
+          const fileName = filePath.split('/').pop() || filePath;
+          store.setExecutionState('editing', `${action === 'created' ? 'Created' : 'Updated'} ${fileName}`);
           store.recordFileChange(filePath, action, event.lines, event.deletions);
           store.addEvent({
             id: `evt-file-${now}`,
@@ -506,7 +511,6 @@ export const AIWorkspace: React.FC = () => {
           if (rootPath) {
             void store.safeRefreshEditorBuffers([filePath], rootPath);
             const fullPath = filePath.startsWith('/') ? filePath : `${rootPath}/${filePath}`;
-            const fileName = filePath.split('/').pop() || filePath;
             void useTabsStore.getState().openFile(fullPath, fileName, rootPath);
             void useFilesStore.getState().loadWorkspaceTree(rootPath);
           }
@@ -514,7 +518,8 @@ export const AIWorkspace: React.FC = () => {
         }
 
         case 'file_read': {
-          store.setAgentPhase('searching', `Reading ${event.file.split('/').pop() || event.file}`);
+          const fileName = event.file.split('/').pop() || event.file;
+          store.setExecutionState('inspecting', `Reading ${fileName}`);
           store.addEvent({
             id: `evt-read-${now}`,
             type: 'FileReadEvent',
@@ -527,7 +532,7 @@ export const AIWorkspace: React.FC = () => {
         }
 
         case 'search': {
-          store.setAgentPhase('searching', `Searched ${event.query}`);
+          store.setExecutionState('inspecting', `Searched: ${event.query}`);
           store.addEvent({
             id: `evt-search-${now}`,
             type: 'ToolCallEvent',
@@ -539,8 +544,21 @@ export const AIWorkspace: React.FC = () => {
           break;
         }
 
+        case 'test_result': {
+          store.setExecutionState('testing', `${event.testName}: ${event.passed ? 'Passed' : 'Failed'}`);
+          store.addEvent({
+            id: `evt-test-${now}`,
+            type: 'TestEvent',
+            testName: event.testName,
+            status: event.passed ? 'passed' : 'failed',
+            error: event.message,
+            timestamp: now,
+          });
+          break;
+        }
+
         case 'complete': {
-          store.setState('completed');
+          store.setExecutionState('completed', event.summary);
           const currentEvents = useAIWorkspaceStore.getState().events;
           const startTime = store.activeTurnStartTime || 0;
           const turnEvents = currentEvents.filter(
@@ -573,7 +591,7 @@ export const AIWorkspace: React.FC = () => {
         }
 
         case 'error': {
-          store.setState('error');
+          store.setExecutionState('failed', event.message);
           store.addEvent({
             id: `evt-err-${now}`,
             type: 'ErrorEvent',
@@ -592,7 +610,17 @@ export const AIWorkspace: React.FC = () => {
 
   // Main Prompt Submission Handler
   const handlePromptSubmit = useCallback(async (prompt: string) => {
-    if (!prompt.trim() || currentState === 'running') return;
+    const store = useAIWorkspaceStore.getState();
+    const isBusy =
+      store.currentState === 'running' ||
+      store.currentState === 'waiting' ||
+      store.executionState === 'thinking' ||
+      store.executionState === 'inspecting' ||
+      store.executionState === 'editing' ||
+      store.executionState === 'running_command' ||
+      store.executionState === 'testing';
+
+    if (!prompt.trim() || isBusy) return;
 
     if (!rootPath) {
       alert('Please open a workspace folder before executing AI tasks.');
@@ -601,7 +629,8 @@ export const AIWorkspace: React.FC = () => {
 
     const abortController = new AbortController();
     setAbortController(abortController);
-    setState('running');
+    store.resetForNewTurn();
+    store.setExecutionState('thinking', 'Analyzing workspace and instructions...');
 
     // Capture history prior to adding the new prompt
     const historyToSend = chatHistory.map((msg) => ({
@@ -635,7 +664,7 @@ export const AIWorkspace: React.FC = () => {
 
     if (backendOnline && isAutonomousAgent) {
       try {
-        useAIWorkspaceStore.getState().setAgentPhase('planning', 'Initializing autonomous agent on CoreMind backend...');
+        useAIWorkspaceStore.getState().setExecutionState('thinking', 'Initializing autonomous agent on CoreMind backend...');
         const runRes = await agentService.run(cleanPrompt, rootPath);
 
         if (runRes?.agent_id) {
@@ -643,13 +672,16 @@ export const AIWorkspace: React.FC = () => {
         }
 
         if (abortController.signal.aborted) {
+          useAIWorkspaceStore.getState().setExecutionState('cancelled', 'Task was cancelled.');
           return;
         }
         return;
       } catch (agentErr: any) {
-        if (!abortController.signal.aborted) {
-          console.warn('Backend agent start error, attempting fallback:', agentErr);
+        if (abortController.signal.aborted) {
+          useAIWorkspaceStore.getState().setExecutionState('cancelled', 'Task was cancelled.');
+          return;
         }
+        console.warn('Backend agent start error, attempting fallback:', agentErr);
       }
     }
 
@@ -659,7 +691,7 @@ export const AIWorkspace: React.FC = () => {
       return;
     }
 
-    // 3. Desktop Execution Engine Path (Fallback when backend is offline or standalone)
+    // 3. Desktop Execution Engine Path (Primary for standalone desktop IDE)
     if (window.coreMindAPI?.runAgentTask && isAutonomousAgent) {
       const assistantMsgId = `asst-${Date.now()}`;
       addChatMessage({
@@ -669,7 +701,7 @@ export const AIWorkspace: React.FC = () => {
         timestamp: Date.now(),
       });
       useAIWorkspaceStore.setState({ streamMessageId: assistantMsgId });
-      useAIWorkspaceStore.getState().setAgentPhase('thinking', 'Analyzing workspace and instructions...');
+      useAIWorkspaceStore.getState().setExecutionState('thinking', 'Analyzing workspace and instructions...');
 
       try {
         const aiApiKey = localStorage.getItem('coremind:ai-api-key') || '';
@@ -686,23 +718,59 @@ export const AIWorkspace: React.FC = () => {
           baseUrl: aiBaseUrl,
         });
 
+        if (abortController.signal.aborted) {
+          useAIWorkspaceStore.getState().setExecutionState('cancelled', 'Task was cancelled.');
+          return;
+        }
+
         if (taskResult.success) {
-          setState('completed');
+          useAIWorkspaceStore.getState().setExecutionState('completed', 'Task completed.');
           return;
         } else if (taskResult.error) {
-          console.warn('Desktop runAgentTask error, attempting agentService fallback:', taskResult.error);
+          const errMsg = taskResult.error.message || 'Execution failed.';
+          useAIWorkspaceStore.getState().setExecutionState('failed', errMsg);
+          useAIWorkspaceStore.setState((s) => ({
+            chatHistory: s.chatHistory.map((m) =>
+              m.id === assistantMsgId
+                ? {
+                    ...m,
+                    content: m.content
+                      ? `${m.content}\n\n**Error:** ${errMsg}`
+                      : `**Error:** ${errMsg}`,
+                  }
+                : m
+            ),
+          }));
+          return;
         }
       } catch (agentTaskErr: any) {
-        if (!abortController.signal.aborted) {
-          console.warn('Desktop runAgentTask threw, attempting fallback:', agentTaskErr);
+        if (abortController.signal.aborted) {
+          useAIWorkspaceStore.getState().setExecutionState('cancelled', 'Task was cancelled.');
+          return;
         }
+        const errMsg = agentTaskErr?.message || 'Execution failed with an error.';
+        useAIWorkspaceStore.getState().setExecutionState('failed', errMsg);
+        useAIWorkspaceStore.setState((s) => ({
+          chatHistory: s.chatHistory.map((m) =>
+            m.id === assistantMsgId
+              ? {
+                  ...m,
+                  content: m.content
+                    ? `${m.content}\n\n**Error:** ${errMsg}`
+                    : `**Error:** ${errMsg}`,
+                }
+              : m
+          ),
+        }));
+        return;
       }
+      return;
     }
 
     // 4. Autonomous Agent Direct Fallback
     if (isAutonomousAgent) {
       try {
-        useAIWorkspaceStore.getState().setAgentPhase('planning', 'Initializing autonomous agent...');
+        useAIWorkspaceStore.getState().setExecutionState('thinking', 'Initializing autonomous agent...');
         const runRes = await agentService.run(cleanPrompt, rootPath);
 
         if (runRes?.agent_id) {
@@ -710,14 +778,17 @@ export const AIWorkspace: React.FC = () => {
         }
 
         if (abortController.signal.aborted) {
+          useAIWorkspaceStore.getState().setExecutionState('cancelled', 'Task was cancelled.');
           return;
         }
         return;
       } catch (agentErr: any) {
-        if (!abortController.signal.aborted) {
-          console.warn('Agent start error, falling back to streaming chat:', agentErr);
-          await runStreamingChat(cleanPrompt, historyToSend, abortController);
+        if (abortController.signal.aborted) {
+          useAIWorkspaceStore.getState().setExecutionState('cancelled', 'Task was cancelled.');
+          return;
         }
+        console.warn('Agent start error, falling back to streaming chat:', agentErr);
+        await runStreamingChat(cleanPrompt, historyToSend, abortController);
       }
       return;
     }
@@ -732,7 +803,7 @@ export const AIWorkspace: React.FC = () => {
     abortController: AbortController
   ) => {
     const assistantMsgId = `asst-${Date.now()}`;
-    useAIWorkspaceStore.getState().setAgentPhase('thinking', 'Streaming AI response...');
+    useAIWorkspaceStore.getState().setExecutionState('thinking', 'Streaming AI response...');
     useAIWorkspaceStore.setState({ streamMessageId: assistantMsgId });
 
     try {
@@ -758,7 +829,7 @@ export const AIWorkspace: React.FC = () => {
           if (tc.path && typeof tc.content === 'string') {
             const cleanPath = tc.path.replace(/^\/+/, '').trim();
             const fileName = cleanPath.split('/').pop() || cleanPath;
-            useAIWorkspaceStore.getState().setAgentPhase('working', `Creating ${fileName}...`);
+            useAIWorkspaceStore.getState().setExecutionState('editing', `Creating ${fileName}...`);
             const lines = tc.content.split('\n').length;
             filesChangedDetails.push({
               file: cleanPath,
@@ -783,14 +854,14 @@ export const AIWorkspace: React.FC = () => {
           } else if (tc.command || tc.tool.toLowerCase().includes('terminal')) {
             const cmd = tc.command || tc.content || '';
             if (cmd) {
-              useAIWorkspaceStore.getState().setAgentPhase('working', `$ ${cmd}`);
+              useAIWorkspaceStore.getState().setExecutionState('running_command', `$ ${cmd}`);
               useUiStore.setState({ isTerminalOpen: true });
               const termEv: TerminalEvent = {
                 id: `evt-term-${Date.now()}`,
                 type: 'TerminalEvent',
                 command: cmd,
-                output: 'Command executed.\n',
-                status: 'completed',
+                output: '',
+                status: 'running',
                 timestamp: Date.now(),
               };
               addEvent(termEv);
@@ -798,10 +869,17 @@ export const AIWorkspace: React.FC = () => {
               if (window.coreMindAPI?.executeCommand) {
                 const res = await window.coreMindAPI.executeCommand(cmd, { cwd: rootPath });
                 if (res.success && res.data) {
+                  const combined = [res.data.stdout, res.data.stderr].filter(Boolean).join('\n');
                   updateEvent(termEv.id, {
-                    output: res.data.stdout || res.data.stderr || '',
+                    output: combined || (res.data.exitCode === 0 ? 'Command finished without output.\n' : 'Command exited with error.\n'),
                     status: res.data.exitCode === 0 ? 'completed' : 'failed',
                     exitCode: res.data.exitCode,
+                  });
+                } else if (!res.success && res.error) {
+                  updateEvent(termEv.id, {
+                    output: res.error.message || 'Failed to execute command.\n',
+                    status: 'failed',
+                    exitCode: 1,
                   });
                 }
               }
@@ -827,17 +905,20 @@ export const AIWorkspace: React.FC = () => {
         ),
       }));
 
-      setState('completed');
+      useAIWorkspaceStore.getState().setExecutionState('completed', 'Response completed.');
     } catch (streamErr: any) {
       if (!abortController.signal.aborted) {
         console.error('Streaming chat failed:', streamErr);
+        const errMsg = streamErr.message || 'Failed to complete AI request.';
         addChatMessage({
           id: `err-${Date.now()}`,
           role: 'assistant',
-          content: `**Error:** ${streamErr.message || 'Failed to complete AI request.'}`,
+          content: `**Error:** ${errMsg}`,
           timestamp: Date.now(),
         });
-        setState('error');
+        useAIWorkspaceStore.getState().setExecutionState('failed', errMsg);
+      } else {
+        useAIWorkspaceStore.getState().setExecutionState('cancelled', 'Request was cancelled.');
       }
     }
   };
@@ -866,7 +947,7 @@ export const AIWorkspace: React.FC = () => {
         {activeView === 'activity' && <ActivityTimeline />}
         {activeView === 'changes' && <DiffViewer />}
 
-        {currentState === 'stopped' && activeView === 'chat' && (
+        {(currentState === 'stopped' || currentState === 'cancelled') && activeView === 'chat' && (
           <div
             style={{
               margin: '12px 14px',

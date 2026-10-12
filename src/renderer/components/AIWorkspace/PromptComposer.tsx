@@ -34,7 +34,14 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
   const isDark = theme === 'dark';
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const isRunning = currentState === 'running' || currentState === 'waiting';
+  const isRunning =
+    currentState === 'running' ||
+    currentState === 'waiting' ||
+    currentState === 'thinking' ||
+    currentState === 'inspecting' ||
+    currentState === 'editing' ||
+    currentState === 'running_command' ||
+    currentState === 'testing';
 
   useEffect(() => {
     if (draftPrompt) {

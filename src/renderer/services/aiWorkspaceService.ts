@@ -5,7 +5,10 @@ import {
   TaskGraph,
   TaskNode,
   TerminalEvent,
+  AgentExecutionState,
+  AGENT_STATE_LABELS,
 } from '../types/aiWorkspace';
+export { AGENT_STATE_LABELS };
 import { agentService } from './coremind/agent';
 import { changesService } from './coremind/changes';
 import { useTabsStore } from '../stores/tabsStore';
@@ -97,7 +100,44 @@ function deriveTitle(content: string): string {
   return cleaned.slice(0, 45) + '...';
 }
 
-export type AgentPhase = 'thinking' | 'searching' | 'working' | 'planning' | 'verifying';
+export type AgentPhase =
+  | 'thinking'
+  | 'inspecting'
+  | 'editing'
+  | 'running_command'
+  | 'testing'
+  | 'searching'
+  | 'working'
+  | 'planning'
+  | 'verifying';
+
+export function resolveExecutionState(
+  status: AIRequestStatus,
+  phase?: AgentPhase
+): AgentExecutionState {
+  if (status === 'completed') return 'completed';
+  if (status === 'failed' || status === 'error') return 'failed';
+  if (status === 'cancelled' || status === 'stopped') return 'cancelled';
+  if (status === 'idle') return 'idle';
+
+  switch (phase) {
+    case 'inspecting':
+    case 'searching':
+      return 'inspecting';
+    case 'editing':
+      return 'editing';
+    case 'running_command':
+      return 'running_command';
+    case 'testing':
+    case 'verifying':
+      return 'testing';
+    case 'thinking':
+    case 'planning':
+    default:
+      return 'thinking';
+  }
+}
+
 export type WorkspaceViewTab = 'chat' | 'plan' | 'activity' | 'changes';
 export type AgentOperationMode = 'agent' | 'chat';
 
@@ -105,6 +145,7 @@ interface AIWorkspaceStore {
   events: AIWorkspaceEvent[];
   chatHistory: ChatMessage[];
   currentState: AIRequestStatus;
+  executionState: AgentExecutionState;
   agentPhase: AgentPhase;
   agentPhaseDetail?: string;
   selectedModel: string;
@@ -137,6 +178,8 @@ interface AIWorkspaceStore {
   updateEvent: (id: string, updates: Partial<AIWorkspaceEvent>) => void;
   setDraftPrompt: (prompt: string) => void;
   setAgentPhase: (phase: AgentPhase, detail?: string) => void;
+  setExecutionState: (state: AgentExecutionState, detail?: string) => void;
+  resetForNewTurn: () => void;
   setActiveTurnStartTime: (time: number | null) => void;
   addChatMessage: (msg: ChatMessage) => void;
   appendStreamChunk: (msgId: string, chunk: string) => void;
@@ -182,6 +225,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
     events: [],
     chatHistory: activeSession?.chatHistory ?? [],
     currentState: 'idle',
+    executionState: 'idle',
     agentPhase: 'thinking',
     agentPhaseDetail: undefined,
     selectedModel: 'NVIDIA Nemotron 3.5 Lightning',
@@ -214,7 +258,52 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
       })),
 
     setDraftPrompt: (prompt) => set({ draftPrompt: prompt }),
-    setAgentPhase: (phase, detail) => set({ agentPhase: phase, agentPhaseDetail: detail }),
+    setAgentPhase: (phase, detail) =>
+      set((state) => ({
+        agentPhase: phase,
+        agentPhaseDetail: detail !== undefined ? detail : state.agentPhaseDetail,
+        executionState: resolveExecutionState(state.currentState, phase),
+      })),
+    setExecutionState: (state, detail) => {
+      const statusMap: Record<AgentExecutionState, AIRequestStatus> = {
+        idle: 'idle',
+        thinking: 'running',
+        inspecting: 'running',
+        editing: 'running',
+        running_command: 'running',
+        testing: 'running',
+        completed: 'completed',
+        failed: 'failed',
+        cancelled: 'cancelled',
+      };
+      const phaseMap: Record<AgentExecutionState, AgentPhase> = {
+        idle: 'thinking',
+        thinking: 'thinking',
+        inspecting: 'inspecting',
+        editing: 'editing',
+        running_command: 'running_command',
+        testing: 'testing',
+        completed: 'thinking',
+        failed: 'thinking',
+        cancelled: 'thinking',
+      };
+      set((s) => ({
+        executionState: state,
+        currentState: statusMap[state] ?? 'running',
+        agentPhase: phaseMap[state] ?? s.agentPhase,
+        agentPhaseDetail: detail !== undefined ? detail : s.agentPhaseDetail,
+      }));
+    },
+    resetForNewTurn: () => {
+      set({
+        currentState: 'running',
+        executionState: 'thinking',
+        agentPhase: 'thinking',
+        agentPhaseDetail: undefined,
+        streamMessageId: null,
+        activeTurnStartTime: Date.now(),
+      });
+    },
     setActiveTurnStartTime: (time) => set({ activeTurnStartTime: time }),
 
     addChatMessage: (msg) => {
@@ -284,8 +373,13 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
     setState: (newState) =>
       set((state) => ({
         currentState: newState,
-        agentPhase: newState === 'running' ? state.agentPhase : 'thinking',
-        agentPhaseDetail: newState === 'running' ? state.agentPhaseDetail : undefined,
+        executionState: resolveExecutionState(newState, state.agentPhase),
+        agentPhase: (newState === 'running' || newState === 'thinking' || newState === 'inspecting' || newState === 'editing' || newState === 'running_command' || newState === 'testing')
+          ? state.agentPhase
+          : 'thinking',
+        agentPhaseDetail: (newState === 'running' || newState === 'thinking' || newState === 'inspecting' || newState === 'editing' || newState === 'running_command' || newState === 'testing')
+          ? state.agentPhaseDetail
+          : undefined,
       })),
 
     setSelectedModel: (model) => set({ selectedModel: model }),
@@ -374,7 +468,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
 
     cancelRequest: () => {
       const { abortController, currentState, agentId } = get();
-      if (currentState === 'running' || currentState === 'waiting') {
+      if (currentState === 'running' || currentState === 'waiting' || currentState === 'thinking' || currentState === 'inspecting' || currentState === 'editing' || currentState === 'running_command' || currentState === 'testing') {
         if (abortController) {
           abortController.abort();
         }
@@ -384,7 +478,12 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
         if (window.coreMindAPI?.cancelAgentTask) {
           window.coreMindAPI.cancelAgentTask().catch(() => {});
         }
-        set({ currentState: 'stopped', abortController: null });
+        set({
+          currentState: 'stopped',
+          executionState: 'cancelled',
+          agentPhaseDetail: 'Task was cancelled.',
+          abortController: null,
+        });
       }
     },
 
@@ -503,6 +602,9 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
         events: [],
         chatHistory: [],
         currentState: 'idle',
+        executionState: 'idle',
+        agentPhase: 'thinking',
+        agentPhaseDetail: undefined,
         abortController: null,
         activeSessionId: null,
         taskGraph: null,
@@ -526,6 +628,9 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
         events: [],
         chatHistory: [],
         currentState: 'idle',
+        executionState: 'idle',
+        agentPhase: 'thinking',
+        agentPhaseDetail: undefined,
         abortController: null,
         activeSessionId: null,
         isHistoryOpen: false,

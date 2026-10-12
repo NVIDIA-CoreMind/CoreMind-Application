@@ -357,4 +357,98 @@ describe('AI Workspace - Antigravity Architecture & Frontend Engine', () => {
       expect(useAIWorkspaceStore.getState().agentMode).toBe('chat');
     });
   });
+
+  describe('8. Antigravity 9-State Execution Model & Turn Lifecycle', () => {
+    it('resolves execution states accurately across all 9 required states', () => {
+      expect(useAIWorkspaceStore.getState().executionState).toBe('idle');
+
+      // Test all 9 discrete states via setExecutionState
+      const store = useAIWorkspaceStore.getState();
+      const states = [
+        'idle',
+        'thinking',
+        'inspecting',
+        'editing',
+        'running_command',
+        'testing',
+        'completed',
+        'failed',
+        'cancelled',
+      ] as const;
+
+      for (const s of states) {
+        store.setExecutionState(s);
+        expect(useAIWorkspaceStore.getState().executionState).toBe(s);
+      }
+    });
+
+    it('resets state cleanly for a new turn via resetForNewTurn', () => {
+      const store = useAIWorkspaceStore.getState();
+      store.setExecutionState('completed');
+      store.setAgentPhase('testing', 'Finished prior task');
+      expect(useAIWorkspaceStore.getState().executionState).toBe('completed');
+
+      store.resetForNewTurn();
+      const updated = useAIWorkspaceStore.getState();
+      expect(updated.currentState).toBe('running');
+      expect(updated.executionState).toBe('thinking');
+      expect(updated.agentPhase).toBe('thinking');
+      expect(updated.activeTurnStartTime).toBeGreaterThan(0);
+    });
+
+    it('transitions to cancelled and stopped when cancelRequest is invoked', () => {
+      const store = useAIWorkspaceStore.getState();
+      const controller = new AbortController();
+      store.setAbortController(controller);
+      store.resetForNewTurn();
+      expect(useAIWorkspaceStore.getState().executionState).toBe('thinking');
+
+      store.cancelRequest();
+      const updated = useAIWorkspaceStore.getState();
+      expect(updated.currentState).toBe('stopped');
+      expect(updated.executionState).toBe('cancelled');
+      expect(controller.signal.aborted).toBe(true);
+    });
+
+    it('clears stale AI workspace context when closing or switching workspaces', async () => {
+      const store = useAIWorkspaceStore.getState();
+      store.addChatMessage({
+        id: 'msg-ws1',
+        role: 'user',
+        content: 'Task in old workspace',
+        timestamp: 1000,
+      });
+      store.setExecutionState('completed');
+      expect(useAIWorkspaceStore.getState().chatHistory).toHaveLength(1);
+      expect(useAIWorkspaceStore.getState().executionState).toBe('completed');
+
+      // Test closeWorkspace resets AI workspace state
+      useWorkspaceStore.getState().closeWorkspace();
+      expect(useAIWorkspaceStore.getState().chatHistory).toHaveLength(0);
+      expect(useAIWorkspaceStore.getState().executionState).toBe('idle');
+      expect(useAIWorkspaceStore.getState().currentState).toBe('idle');
+
+      // Add a message again
+      useAIWorkspaceStore.getState().addChatMessage({
+        id: 'msg-ws2',
+        role: 'user',
+        content: 'Another task in new workspace',
+        timestamp: 2000,
+      });
+      expect(useAIWorkspaceStore.getState().chatHistory).toHaveLength(1);
+
+      // Mock coreMindAPI to test openWorkspacePath switching to a different project
+      (global as any).window.coreMindAPI = {
+        restoreWorkspace: vi.fn().mockResolvedValue({ success: true, data: { path: '/different/project' } }),
+        readDirectory: vi.fn().mockResolvedValue({ success: true, data: [] }),
+      };
+      useWorkspaceStore.setState({ rootPath: '/test/workspace', rootName: 'workspace' });
+
+      await useWorkspaceStore.getState().openWorkspacePath('/different/project');
+      const afterSwitch = useAIWorkspaceStore.getState();
+      expect(afterSwitch.chatHistory).toHaveLength(0);
+      expect(afterSwitch.executionState).toBe('idle');
+      expect(afterSwitch.currentState).toBe('idle');
+    });
+  });
 });

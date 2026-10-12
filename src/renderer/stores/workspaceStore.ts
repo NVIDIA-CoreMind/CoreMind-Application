@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { WorkspaceState } from '@shared/types/workspace';
 import { useFilesStore } from './filesStore';
+import { useAIWorkspaceStore } from '../services/aiWorkspaceService';
 import { ProjectMetadata, RepoMapResponse } from '../services/coremind/types';
 import { projectService } from '../services/coremind/project';
 
@@ -75,6 +76,10 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
         return false;
       }
       const rootName = cleanPath.split(/[/\\]/).filter(Boolean).pop() || 'Workspace';
+
+      if (get().rootPath && get().rootPath !== cleanPath) {
+        useAIWorkspaceStore.getState().clear();
+      }
 
       set({
         rootPath: cleanPath,
@@ -171,6 +176,7 @@ export const useWorkspaceStore = create<WorkspaceStore>((set, get) => ({
     } catch {
       // ignore
     }
+    useAIWorkspaceStore.getState().clear();
     set({
       rootPath: null,
       rootName: null,

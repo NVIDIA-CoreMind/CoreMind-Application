@@ -60,19 +60,74 @@ export const WorkspaceHeader: React.FC = () => {
           gap: '6px',
         }}
       >
-        {/* Left: Agent Title */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
-          <Bot size={15} style={{ color: 'var(--accent)' }} />
-          <span
-            style={{
-              fontSize: '12.5px',
-              fontWeight: 600,
-              color: 'var(--text-primary)',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            Agent
-          </span>
+        {/* Left: Agent Title & Status Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Bot size={15} style={{ color: 'var(--accent)' }} />
+            <span
+              style={{
+                fontSize: '12.5px',
+                fontWeight: 600,
+                color: 'var(--text-primary)',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Agent
+            </span>
+          </div>
+
+          {/* Current Execution State Badge */}
+          {(() => {
+            const execState = useAIWorkspaceStore.getState().executionState;
+            const labels: Record<string, string> = {
+              idle: 'Idle',
+              thinking: 'Thinking',
+              inspecting: 'Inspecting',
+              editing: 'Editing',
+              running_command: 'Running command',
+              testing: 'Testing',
+              completed: 'Completed',
+              failed: 'Failed',
+              cancelled: 'Cancelled',
+            };
+            const colors: Record<string, { bg: string; text: string; dot: string }> = {
+              idle: { bg: 'rgba(148, 163, 184, 0.1)', text: '#94A3B8', dot: '#94A3B8' },
+              thinking: { bg: 'rgba(59, 130, 246, 0.12)', text: '#3B82F6', dot: '#3B82F6' },
+              inspecting: { bg: 'rgba(96, 165, 250, 0.12)', text: '#60A5FA', dot: '#60A5FA' },
+              editing: { bg: 'rgba(16, 185, 129, 0.12)', text: '#10B981', dot: '#10B981' },
+              running_command: { bg: 'rgba(245, 158, 11, 0.12)', text: '#F59E0B', dot: '#F59E0B' },
+              testing: { bg: 'rgba(168, 85, 247, 0.12)', text: '#A855F7', dot: '#A855F7' },
+              completed: { bg: 'rgba(34, 197, 94, 0.12)', text: '#22C55E', dot: '#22C55E' },
+              failed: { bg: 'rgba(239, 68, 68, 0.12)', text: '#EF4444', dot: '#EF4444' },
+              cancelled: { bg: 'rgba(148, 163, 184, 0.12)', text: '#94A3B8', dot: '#94A3B8' },
+            };
+            const c = colors[execState] || colors.idle;
+            return (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontSize: '10.5px',
+                  fontWeight: 500,
+                  padding: '1.5px 6px',
+                  borderRadius: '10px',
+                  backgroundColor: c.bg,
+                  color: c.text,
+                }}
+              >
+                <span
+                  style={{
+                    width: '5px',
+                    height: '5px',
+                    borderRadius: '50%',
+                    backgroundColor: c.dot,
+                  }}
+                />
+                <span>{labels[execState] || execState}</span>
+              </span>
+            );
+          })()}
         </div>
 
         {/* Right: Status indicator + Actions */}

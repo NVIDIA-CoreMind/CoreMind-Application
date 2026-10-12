@@ -1,28 +1,52 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Loader2 } from 'lucide-react';
-import { useAIWorkspaceStore, AgentPhase } from '../../services/aiWorkspaceService';
+import {
+  Search,
+  Loader2,
+  FileEdit,
+  Terminal,
+  FlaskConical,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  CircleDot,
+} from 'lucide-react';
+import {
+  useAIWorkspaceStore,
+  AgentPhase,
+  resolveExecutionState,
+} from '../../services/aiWorkspaceService';
+import {
+  AgentExecutionState,
+  AGENT_STATE_LABELS,
+} from '../../types/aiWorkspace';
 
 interface RunningIndicatorProps {
+  state?: AgentExecutionState;
   phase?: AgentPhase;
   detail?: string;
 }
 
 export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
+  state: propState,
   phase: propPhase,
   detail: propDetail,
 }) => {
-  const { agentPhase, agentPhaseDetail, events } = useAIWorkspaceStore();
+  const { currentState, executionState, agentPhase, agentPhaseDetail, events } = useAIWorkspaceStore();
   const [dots, setDots] = useState('');
 
-  // Priority order: propPhase -> store.agentPhase -> inferred from latest event
-  let activePhase: AgentPhase = propPhase || agentPhase || 'thinking';
+  // Determine active execution state
+  let activeState: AgentExecutionState =
+    propState ||
+    executionState ||
+    resolveExecutionState(currentState, propPhase || agentPhase);
+
   let activeDetail = propDetail ?? agentPhaseDetail;
 
-  // Only fall back to event inference if no explicit phase was set in store
-  if (!propPhase && !agentPhase && events.length > 0) {
+  // Infer from events if not explicitly set
+  if (!propState && !propPhase && (!executionState || executionState === 'idle') && events.length > 0) {
     const latestEvent = events[events.length - 1];
     if (latestEvent.type === 'ThoughtEvent') {
-      activePhase = 'thinking';
+      activeState = 'thinking';
       if (!activeDetail && latestEvent.summary) activeDetail = latestEvent.summary;
     } else if (
       latestEvent.type === 'FileExploredEvent' ||
@@ -30,28 +54,43 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
       (latestEvent.type === 'ToolCallEvent' &&
         /search|grep|find|read|scan|list/i.test(latestEvent.tool))
     ) {
-      activePhase = 'searching';
+      activeState = 'inspecting';
       if (!activeDetail) {
         activeDetail = latestEvent.type === 'FileReadEvent' && latestEvent.file
           ? `Reading ${latestEvent.file.split('/').pop()}`
           : latestEvent.type === 'ToolCallEvent'
           ? `Searching ${latestEvent.tool}`
-          : 'Searching files';
+          : 'Inspecting files';
       }
     } else if (
       latestEvent.type === 'FileChangedEvent' ||
-      latestEvent.type === 'TerminalEvent' ||
       (latestEvent.type === 'ToolCallEvent' &&
-        /create|write|edit|run|bash|exec/i.test(latestEvent.tool))
+        /create|write|edit/i.test(latestEvent.tool))
     ) {
-      activePhase = 'working';
+      activeState = 'editing';
       if (!activeDetail) {
         if (latestEvent.type === 'FileChangedEvent' && latestEvent.file) {
-          activeDetail = `Created ${latestEvent.file.split('/').pop()}`;
-        } else if (latestEvent.type === 'TerminalEvent' && latestEvent.command) {
-          activeDetail = `$ ${latestEvent.command}`;
+          activeDetail = `Writing ${latestEvent.file.split('/').pop()}`;
         }
       }
+    } else if (
+      latestEvent.type === 'TerminalEvent' ||
+      (latestEvent.type === 'ToolCallEvent' &&
+        /run|bash|exec|terminal/i.test(latestEvent.tool))
+    ) {
+      activeState = 'running_command';
+      if (!activeDetail && latestEvent.type === 'TerminalEvent' && latestEvent.command) {
+        activeDetail = `$ ${latestEvent.command}`;
+      }
+    } else if (latestEvent.type === 'TestEvent') {
+      activeState = 'testing';
+      if (!activeDetail && latestEvent.testName) {
+        activeDetail = latestEvent.testName;
+      }
+    } else if (latestEvent.type === 'CompletedEvent') {
+      activeState = 'completed';
+    } else if (latestEvent.type === 'ErrorEvent') {
+      activeState = 'failed';
     }
   }
 
@@ -63,12 +102,27 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
     return () => clearInterval(interval);
   }, []);
 
-  const getPhaseConfig = () => {
-    switch (activePhase) {
-      case 'thinking':
-      case 'planning':
+  // Filter out any leaked raw multi-line reasoning traces from detail
+  const cleanDetail = activeDetail
+    ? activeDetail
+        .replace(/<think>[\s\S]*?<\/think>/gi, '')
+        .replace(/\n+/g, ' ')
+        .trim()
+    : '';
+
+  const getStateConfig = () => {
+    switch (activeState) {
+      case 'idle':
         return {
-          label: 'Thinking',
+          label: AGENT_STATE_LABELS.idle,
+          icon: <CircleDot size={13} style={{ color: '#94A3B8', flexShrink: 0 }} />,
+          accentColor: '#94A3B8',
+          animated: false,
+        };
+
+      case 'thinking':
+        return {
+          label: AGENT_STATE_LABELS.thinking,
           icon: (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px' }}>
               <div
@@ -76,18 +130,20 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
                   width: '7.5px',
                   height: '7.5px',
                   borderRadius: '50%',
-                  backgroundColor: 'var(--accent, #3B82F6)',
+                  backgroundColor: '#3B82F6',
                   boxShadow: '0 0 8px rgba(59, 130, 246, 0.7)',
                   animation: 'antigravity-pulse 1.4s infinite ease-in-out',
                 }}
               />
             </div>
           ),
-          accentColor: 'var(--accent, #3B82F6)',
+          accentColor: '#3B82F6',
+          animated: true,
         };
-      case 'searching':
+
+      case 'inspecting':
         return {
-          label: 'Searching',
+          label: AGENT_STATE_LABELS.inspecting,
           icon: (
             <Search
               size={13}
@@ -99,23 +155,84 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             />
           ),
           accentColor: '#60A5FA',
+          animated: true,
         };
-      case 'verifying':
+
+      case 'editing':
         return {
-          label: 'Verifying',
+          label: AGENT_STATE_LABELS.editing,
           icon: (
-            <Loader2
+            <FileEdit
               size={13}
               style={{
-                color: 'var(--accent, #3B82F6)',
-                animation: 'antigravity-spin 1s linear infinite',
+                color: '#10B981',
+                animation: 'antigravity-pulse 1.4s infinite ease-in-out',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: 'var(--accent, #3B82F6)',
+          accentColor: '#10B981',
+          animated: true,
         };
-      case 'working':
+
+      case 'running_command':
+        return {
+          label: AGENT_STATE_LABELS.running_command,
+          icon: (
+            <Terminal
+              size={13}
+              style={{
+                color: '#F59E0B',
+                animation: 'antigravity-pulse 1.4s infinite ease-in-out',
+                flexShrink: 0,
+              }}
+            />
+          ),
+          accentColor: '#F59E0B',
+          animated: true,
+        };
+
+      case 'testing':
+        return {
+          label: AGENT_STATE_LABELS.testing,
+          icon: (
+            <FlaskConical
+              size={13}
+              style={{
+                color: '#A855F7',
+                animation: 'antigravity-spin 2s linear infinite',
+                flexShrink: 0,
+              }}
+            />
+          ),
+          accentColor: '#A855F7',
+          animated: true,
+        };
+
+      case 'completed':
+        return {
+          label: AGENT_STATE_LABELS.completed,
+          icon: <CheckCircle2 size={13} style={{ color: '#22C55E', flexShrink: 0 }} />,
+          accentColor: '#22C55E',
+          animated: false,
+        };
+
+      case 'failed':
+        return {
+          label: AGENT_STATE_LABELS.failed,
+          icon: <AlertCircle size={13} style={{ color: '#EF4444', flexShrink: 0 }} />,
+          accentColor: '#EF4444',
+          animated: false,
+        };
+
+      case 'cancelled':
+        return {
+          label: AGENT_STATE_LABELS.cancelled,
+          icon: <XCircle size={13} style={{ color: '#94A3B8', flexShrink: 0 }} />,
+          accentColor: '#94A3B8',
+          animated: false,
+        };
+
       default:
         return {
           label: 'Working',
@@ -130,11 +247,12 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             />
           ),
           accentColor: 'var(--accent, #3B82F6)',
+          animated: true,
         };
     }
   };
 
-  const { label, icon, accentColor } = getPhaseConfig();
+  const { label, icon, accentColor, animated } = getStateConfig();
 
   return (
     <div
@@ -146,7 +264,7 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         fontSize: '12.5px',
         fontFamily: 'var(--font-sans)',
         color: 'var(--text-secondary, #94A3B8)',
-        backgroundColor: 'transparent', // Explicitly zero background like Antigravity
+        backgroundColor: 'transparent',
         border: 'none',
         boxShadow: 'none',
         userSelect: 'none',
@@ -164,33 +282,35 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         }}
       >
         <span>{label}</span>
-        <span
-          style={{
-            display: 'inline-block',
-            width: '16px',
-            textAlign: 'left',
-            color: accentColor,
-            fontWeight: 600,
-          }}
-        >
-          {dots || '.'}
-        </span>
+        {animated && (
+          <span
+            style={{
+              display: 'inline-block',
+              width: '16px',
+              textAlign: 'left',
+              color: accentColor,
+              fontWeight: 600,
+            }}
+          >
+            {dots || '.'}
+          </span>
+        )}
       </span>
 
-      {activeDetail && (
+      {cleanDetail && (
         <span
           style={{
             fontSize: '11.5px',
             color: 'var(--text-muted, #64748B)',
-            maxWidth: '240px',
+            maxWidth: '280px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             marginLeft: '2px',
           }}
-          title={activeDetail}
+          title={cleanDetail}
         >
-          {activeDetail}
+          {cleanDetail}
         </span>
       )}
 

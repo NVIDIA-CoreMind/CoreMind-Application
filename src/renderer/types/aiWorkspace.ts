@@ -189,13 +189,43 @@ export type AIWorkspaceEvent =
   | CompletedEvent
   | ErrorEvent;
 
+export type AgentExecutionState =
+  | 'idle'
+  | 'thinking'
+  | 'inspecting'
+  | 'editing'
+  | 'running_command'
+  | 'testing'
+  | 'completed'
+  | 'failed'
+  | 'cancelled';
+
+export const AGENT_STATE_LABELS: Record<AgentExecutionState, string> = {
+  idle: 'Idle',
+  thinking: 'Thinking',
+  inspecting: 'Inspecting workspace',
+  editing: 'Editing files',
+  running_command: 'Running terminal command',
+  testing: 'Testing',
+  completed: 'Completed',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+};
+
 export type AIRequestStatus =
   | 'idle'
   | 'running'
   | 'waiting'
   | 'completed'
   | 'stopped'
-  | 'error';
+  | 'error'
+  | 'thinking'
+  | 'inspecting'
+  | 'editing'
+  | 'running_command'
+  | 'testing'
+  | 'failed'
+  | 'cancelled';
 
 // Diff Parsing & Representation Types
 export interface DiffLine {
