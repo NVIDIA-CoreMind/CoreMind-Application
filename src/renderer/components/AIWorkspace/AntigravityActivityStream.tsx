@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { TerminalActivity } from './TerminalActivity';
+import { getAITheme } from './themeTokens';
 
 interface AntigravityActivityStreamProps {
   events?: AIWorkspaceEvent[];
@@ -31,6 +32,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const handleOpenFile = async (filePath: string, _line?: number) => {
     if (!rootPath) return;
@@ -51,7 +53,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
       return (
         <span
           style={{
-            color: 'var(--accent, #8AB4F8)',
+            color: tokens.iconPrimary,
             fontSize: '13px',
             lineHeight: 1,
             display: 'inline-flex',
@@ -63,73 +65,17 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         </span>
       );
     }
-    if (ext === 'ts') {
-      return (
-        <span
-          style={{
-            color: 'var(--accent, #8AB4F8)',
-            fontWeight: 700,
-            fontSize: '10.5px',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            lineHeight: 1,
-          }}
-        >
-          TS
-        </span>
-      );
-    }
-    if (ext === 'js') {
-      return (
-        <span
-          style={{
-            color: 'var(--warning, #FDD663)',
-            fontWeight: 700,
-            fontSize: '10.5px',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            lineHeight: 1,
-          }}
-        >
-          JS
-        </span>
-      );
-    }
-    if (ext === 'py') {
-      return (
-        <span
-          style={{
-            color: 'var(--warning, #FDD663)',
-            fontWeight: 700,
-            fontSize: '10.5px',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            lineHeight: 1,
-          }}
-        >
-          PY
-        </span>
-      );
-    }
-    if (ext === 'dart') {
-      return (
-        <span
-          style={{
-            color: 'var(--accent, #8AB4F8)',
-            fontWeight: 700,
-            fontSize: '10px',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-            lineHeight: 1,
-          }}
-        >
-          DART
-        </span>
-      );
-    }
     return (
       <span
         style={{
-          color: 'var(--text-muted, #70757A)',
+          color: tokens.textSecondary,
+          backgroundColor: tokens.bgCard,
+          border: `1px solid ${tokens.border}`,
+          padding: '1px 4px',
+          borderRadius: '3px',
           fontWeight: 700,
           fontSize: '9.5px',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
           textTransform: 'uppercase',
           lineHeight: 1,
         }}
@@ -143,7 +89,6 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
   const analyzedFiles: Array<{ file: string; startLine?: number; endLine?: number; id: string }> = [];
   const searchQueries: Array<{ query: string; resultsCount?: number; id: string }> = [];
   const thoughts: Array<{ summary: string; durationSeconds?: number; id: string }> = [];
-  const terminalList: TerminalEvent[] = [...terminalEvents];
 
   for (const ev of events) {
     if (ev.type === 'FileReadEvent') {
@@ -180,10 +125,41 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         summary: ev.summary,
         durationSeconds: ev.durationMs ? Math.max(1, Math.round(ev.durationMs / 1000)) : 1,
       });
-    } else if (ev.type === 'TerminalEvent') {
-      if (!terminalList.some((t) => t.id === ev.id)) {
-        terminalList.push(ev);
+    }
+  }
+
+  // Deduplicate terminal execution cards: do not display duplicate execution cards for the same command
+  const rawTerminals: TerminalEvent[] = [...terminalEvents];
+  for (const ev of events) {
+    if (ev.type === 'TerminalEvent') {
+      if (!rawTerminals.some((t) => t.id === ev.id)) {
+        rawTerminals.push(ev);
       }
+    }
+  }
+
+  const deduplicatedTerminals: TerminalEvent[] = [];
+  for (const term of rawTerminals) {
+    const existingIndex = deduplicatedTerminals.findIndex(
+      (prev) =>
+        prev.command.trim() === term.command.trim() &&
+        (Math.abs((prev.timestamp || 0) - (term.timestamp || 0)) < 25000 ||
+          Boolean(prev.output && term.output && (prev.output.includes(term.output) || term.output.includes(prev.output))) ||
+          (prev.status === 'running' && (term.status === 'completed' || term.status === 'failed')) ||
+          (term.status === 'running' && (prev.status === 'completed' || prev.status === 'failed')))
+    );
+
+    if (existingIndex !== -1) {
+      const prev = deduplicatedTerminals[existingIndex];
+      deduplicatedTerminals[existingIndex] = {
+        ...prev,
+        output: (term.output && term.output.length > (prev.output?.length || 0)) ? term.output : prev.output,
+        status: term.status === 'completed' || term.status === 'failed' ? term.status : prev.status,
+        exitCode: term.exitCode !== undefined ? term.exitCode : prev.exitCode,
+        durationMs: term.durationMs || prev.durationMs,
+      };
+    } else {
+      deduplicatedTerminals.push(term);
     }
   }
 
@@ -225,10 +201,10 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         margin: '2px 0 6px 0',
         fontFamily: 'var(--font-sans)',
         fontSize: '12.5px',
-        color: isDark ? 'var(--text-primary, #E8EAED)' : '#1E293B',
+        color: isDark ? '#E4E4E7' : '#18181B',
       }}
     >
-      {/* 1. Edited Files List matching Image 2: "Edited ⚛ RunningIndicator.tsx +34 -10" */}
+      {/* 1. Edited Files List */}
       {editedFilesList.map((ef) => {
         const basename = ef.file.split('/').pop() || ef.file;
         const additions = ef.additions ?? ef.lines ?? 0;
@@ -249,20 +225,20 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
             }}
             title={`Open ${ef.file}`}
           >
-            <span style={{ color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B', fontWeight: 400 }}>
+            <span style={{ color: tokens.textSecondary, fontWeight: 400 }}>
               Edited
             </span>
             {renderFileBadge(basename)}
-            <span style={{ color: isDark ? 'var(--text-primary, #E8EAED)' : '#0F172A', fontWeight: 600 }}>
+            <span style={{ color: tokens.textPrimary, fontWeight: 600 }}>
               {basename}
             </span>
             {additions > 0 && (
-              <span style={{ color: 'var(--success, #81C995)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+              <span style={{ color: tokens.accentSuccess, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>
                 +{additions}
               </span>
             )}
             {deletions > 0 && (
-              <span style={{ color: 'var(--error, #F28B82)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+              <span style={{ color: tokens.accentError, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>
                 -{deletions}
               </span>
             )}
@@ -270,7 +246,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         );
       })}
 
-      {/* 2. Exploring Group matching Image 2 & 3: "Exploring 8 files, 1 search v" */}
+      {/* 2. Exploring Group */}
       {hasExploringGroup && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div
@@ -281,13 +257,13 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
               gap: '6px',
               cursor: 'pointer',
               userSelect: 'none',
-              color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B',
+              color: tokens.textSecondary,
               padding: '2px 0',
             }}
           >
             <span>
               Exploring{' '}
-              <strong style={{ color: isDark ? 'var(--text-primary, #E8EAED)' : '#0F172A', fontWeight: 600 }}>
+              <strong style={{ color: tokens.textPrimary, fontWeight: 600 }}>
                 {totalExploredFiles} {totalExploredFiles === 1 ? 'file' : 'files'}
                 {totalSearches > 0
                   ? `, ${totalSearches} ${totalSearches === 1 ? 'search' : 'searches'}`
@@ -310,7 +286,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                 paddingLeft: '4px',
               }}
             >
-              {/* Analyzed Files matching Image 1: "Analyzed TS executionEngine.ts #L151-300" */}
+              {/* Analyzed Files */}
               {analyzedFiles.map((af, idx) => {
                 const basename = af.file.split('/').pop() || af.file;
                 const hasRange = af.startLine !== undefined && af.endLine !== undefined;
@@ -325,22 +301,22 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                       gap: '7px',
                       cursor: 'pointer',
                       userSelect: 'none',
-                      color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B',
+                      color: tokens.textSecondary,
                       fontSize: '12.5px',
                     }}
                     title={`Open ${af.file}`}
                   >
                     <span>Analyzed</span>
                     {renderFileBadge(basename)}
-                    <span style={{ color: isDark ? 'var(--text-primary, #E8EAED)' : '#1E293B', fontWeight: 600 }}>
+                    <span style={{ color: tokens.textPrimary, fontWeight: 600 }}>
                       {basename}
                     </span>
                     {hasRange && (
                       <span
                         style={{
-                          color: isDark ? 'var(--text-muted, #70757A)' : '#94A3B8',
+                          color: tokens.textMuted,
                           fontSize: '11.5px',
-                          fontFamily: 'var(--font-mono)',
+                          fontFamily: 'ui-monospace, monospace',
                         }}
                       >
                         #L{af.startLine}-{af.endLine}
@@ -350,7 +326,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                 );
               })}
 
-              {/* Searched Queries matching Image 1: "Searched runAgentTask 1 result" */}
+              {/* Searched Queries */}
               {searchQueries.map((sq, idx) => (
                 <div
                   key={`${sq.query}-${idx}`}
@@ -358,12 +334,12 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '7px',
-                    color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B',
+                    color: tokens.textSecondary,
                     fontSize: '12.5px',
                   }}
                 >
                   <span>Searched</span>
-                  <span style={{ color: isDark ? 'var(--text-primary, #E8EAED)' : '#0F172A', fontWeight: 600 }}>
+                  <span style={{ color: tokens.textPrimary, fontWeight: 600 }}>
                     {sq.query}
                   </span>
                   <span
@@ -371,8 +347,9 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                       fontSize: '11px',
                       padding: '1px 6px',
                       borderRadius: '4px',
-                      backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#E2E8F0',
-                      color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#475569',
+                      backgroundColor: tokens.bgCard,
+                      border: `1px solid ${tokens.border}`,
+                      color: tokens.textSecondary,
                     }}
                   >
                     {sq.resultsCount || 1} {sq.resultsCount === 1 ? 'result' : 'results'}
@@ -384,7 +361,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         </div>
       )}
 
-      {/* 3. Thinking Block matching Image 1 & 3: "Thinking for 5s v" / "Thought for 1s >" */}
+      {/* 3. Thinking Block */}
       {activeThinkingText && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div
@@ -395,7 +372,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
               gap: '6px',
               cursor: 'pointer',
               userSelect: 'none',
-              color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B',
+              color: tokens.textSecondary,
               padding: '2px 0',
             }}
           >
@@ -415,7 +392,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
             <div
               style={{
                 padding: '4px 0 6px 0',
-                color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#475569',
+                color: tokens.textSecondary,
                 lineHeight: 1.6,
                 fontSize: '12.5px',
                 whiteSpace: 'pre-wrap',
@@ -427,8 +404,8 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         </div>
       )}
 
-      {/* 4. Terminal Runs matching Image 4: "Ran <command> v" */}
-      {terminalList.map((termEv) => (
+      {/* 4. Terminal Runs (deduplicated) */}
+      {deduplicatedTerminals.map((termEv) => (
         <TerminalActivity key={termEv.id} event={termEv} />
       ))}
     </div>

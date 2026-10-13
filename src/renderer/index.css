@@ -1,19 +1,21 @@
 :root {
   /* Core IDE Palette - Antigravity Design System */
   --bg-app: #1E1F20;
-  --bg-panel: #232426;
+  --bg-header: #202124;
+  --bg-panel: #252628;
   --bg-editor: #1E1F20;
-  --bg-surface: #28292B;
-  --bg-card: #28292B;
-  --bg-hover: #303134;
-  --bg-selected: #30343B;
-  --bg-active: #30343B;
-  --border-color: #3C4043;
-  --border-subtle: #3C4043;
+  --bg-surface: #252628;
+  --bg-card: #2B2C2F;
+  --bg-hover: #323438;
+  --bg-selected: #37393D;
+  --bg-active: #37393D;
+  --border-color: #3A3C40;
+  --border-subtle: #303236;
 
-  --text-primary: #E8EAED;
-  --text-secondary: #9AA0A6;
-  --text-muted: #70757A;
+  --text-primary: #E6E6E6;
+  --text-secondary: #A6A8AB;
+  --text-muted: #777B80;
+  --icon-primary: #C4C6C9;
 
   /* Antigravity Primary Accent */
   --accent: #8AB4F8;

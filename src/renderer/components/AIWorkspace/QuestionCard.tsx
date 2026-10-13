@@ -2,20 +2,25 @@ import React, { useState } from 'react';
 import { QuestionEvent } from '../../types/aiWorkspace';
 import { HelpCircle } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
+import { useThemeStore } from '../../stores/themeStore';
+import { getAITheme } from './themeTokens';
 
 export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
   const [selected, setSelected] = useState<string | null>(null);
   const [custom, setCustom] = useState('');
   const submitAnswer = useAIWorkspaceStore(s => s.submitAnswer);
   const currentState = useAIWorkspaceStore(s => s.currentState);
+  const theme = useThemeStore(s => s.theme);
+  const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const isActive = currentState === 'waiting';
 
   return (
     <div style={{
-      backgroundColor: 'var(--bg-surface, #28292B)',
-      border: '1px solid var(--border-color, #3C4043)',
-      borderRadius: '12px',
+      backgroundColor: tokens.bgPanel,
+      border: `1px solid ${tokens.border}`,
+      borderRadius: '8px',
       padding: '16px',
       display: 'flex',
       flexDirection: 'column',
@@ -27,15 +32,16 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
       <div style={{ display: 'flex', gap: '12px' }}>
         <div style={{ 
           width: '22px', height: '22px', 
-          backgroundColor: 'rgba(138, 180, 248, 0.12)', 
+          backgroundColor: tokens.bgCard, 
           borderRadius: '4px', 
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
-          marginTop: '2px'
+          marginTop: '2px',
+          border: `1px solid ${tokens.border}`
         }}>
-          <HelpCircle size={14} color="var(--accent, #8AB4F8)" />
+          <HelpCircle size={14} color={tokens.iconPrimary} />
         </div>
-        <div style={{ fontSize: '13px', color: 'var(--text-primary, #E8EAED)', lineHeight: '1.5' }}>
+        <div style={{ fontSize: '13px', color: tokens.textPrimary, lineHeight: '1.5', fontWeight: 500 }}>
           {event.question}
         </div>
       </div>
@@ -48,19 +54,20 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
               onClick={() => { if (isActive) setSelected(opt); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '12px', 
-                fontSize: '12.5px', color: 'var(--text-secondary, #9AA0A6)', 
+                fontSize: '12.5px', color: tokens.textSecondary, 
                 cursor: isActive ? 'pointer' : 'default',
-                opacity: (selected && selected !== opt) ? 0.5 : 1,
+                opacity: (selected && selected !== opt) ? 0.4 : 1,
                 transition: 'opacity 0.2s'
               }}
             >
               <div style={{ 
-                backgroundColor: 'var(--bg-hover, #303134)', 
+                backgroundColor: tokens.bgCard, 
                 borderRadius: '4px', 
                 width: '18px', height: '18px', 
                 display: 'flex', alignItems: 'center', justifyContent: 'center', 
                 fontSize: '11px', flexShrink: 0,
-                color: 'var(--text-secondary, #9AA0A6)'
+                color: tokens.textSecondary,
+                border: `1px solid ${tokens.border}`
               }}>
                 {index + 1}
               </div>
@@ -86,13 +93,13 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
             padding: '8px 12px',
             backgroundColor: 'transparent',
             border: 'none',
-            borderBottom: '1px solid var(--border-color, #3C4043)',
-            color: 'var(--text-primary, #E8EAED)',
+            borderBottom: `1px solid ${tokens.border}`,
+            color: tokens.textPrimary,
             outline: 'none',
             transition: 'border-color 0.2s'
           }}
-          onFocus={e => e.target.style.borderBottomColor = 'var(--accent, #8AB4F8)'}
-          onBlur={e => e.target.style.borderBottomColor = 'var(--border-color, #3C4043)'}
+          onFocus={e => e.target.style.borderBottomColor = tokens.textPrimary}
+          onBlur={e => e.target.style.borderBottomColor = tokens.border}
         />
       </div>
 
@@ -103,7 +110,7 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
             style={{
               padding: '6px 14px',
               backgroundColor: 'transparent',
-              color: 'var(--text-muted, #70757A)',
+              color: tokens.textMuted,
               border: 'none',
               fontSize: '12.5px',
               cursor: 'pointer'
@@ -116,14 +123,14 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
             disabled={!custom && !selected}
             style={{
               padding: '6px 14px',
-              backgroundColor: 'var(--accent, #8AB4F8)',
-              color: '#1E1F20',
-              border: 'none',
+              backgroundColor: tokens.bgActiveTab,
+              color: tokens.textPrimary,
+              border: `1px solid ${isDark ? '#4A4D53' : '#D0D3D8'}`,
               borderRadius: '6px',
               fontSize: '12.5px',
               fontWeight: 600,
               cursor: (!custom && !selected) ? 'default' : 'pointer',
-              opacity: (!custom && !selected) ? 0.5 : 1,
+              opacity: (!custom && !selected) ? 0.4 : 1,
               display: 'flex',
               alignItems: 'center',
               gap: '6px'

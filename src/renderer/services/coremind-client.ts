@@ -209,7 +209,9 @@ export class CoreMindClient {
 
           try {
             const parsed = JSON.parse(dataPayload);
-            if (parsed.type === 'token' && typeof parsed.token === 'string') {
+            if (parsed.type === 'error') {
+              throw new Error(parsed.error || 'AI Provider error during streaming');
+            } else if (parsed.type === 'token' && typeof parsed.token === 'string') {
               accumulated += parsed.token;
               onToken(parsed.token);
             } else if (parsed.content && typeof parsed.content === 'string') {

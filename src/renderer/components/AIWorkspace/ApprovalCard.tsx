@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useThemeStore } from '../../stores/themeStore';
 import { ShieldAlert, Check, X } from 'lucide-react';
+import { getAITheme } from './themeTokens';
 
 export const ApprovalCard: React.FC = () => {
   const pendingApproval = useAIWorkspaceStore((s) => s.pendingApproval);
@@ -9,6 +10,7 @@ export const ApprovalCard: React.FC = () => {
   const denyAction = useAIWorkspaceStore((s) => s.denyAction);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const [denyReason, setDenyReason] = useState('');
   const [showDenyInput, setShowDenyInput] = useState(false);
@@ -39,39 +41,40 @@ export const ApprovalCard: React.FC = () => {
       style={{
         margin: '10px 0',
         padding: '14px',
-        borderRadius: '10px',
-        border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
-        backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#FFFBEB',
-        color: 'var(--text-primary)',
+        borderRadius: '8px',
+        border: `1px solid ${tokens.border}`,
+        backgroundColor: tokens.bgPanel,
+        color: tokens.textPrimary,
         boxShadow: 'none',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-        <ShieldAlert size={18} color="var(--warning, #FDD663)" />
-        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--warning, #FDD663)' }}>
+        <ShieldAlert size={16} color={tokens.iconPrimary} />
+        <span style={{ fontSize: '13px', fontWeight: 600, color: tokens.textPrimary }}>
           Action Approval Required
         </span>
       </div>
 
-      <div style={{ fontSize: '12.5px', marginBottom: '8px', lineHeight: 1.5 }}>
+      <div style={{ fontSize: '12.5px', marginBottom: '8px', lineHeight: 1.5, color: tokens.textSecondary }}>
         {pendingApproval.description || `The agent wants to execute ${pendingApproval.tool}.`}
       </div>
 
       <div
         style={{
-          padding: '8px',
+          padding: '8px 10px',
           borderRadius: '6px',
-          backgroundColor: isDark ? 'var(--bg-app, #1E1F20)' : '#FFFFFF',
-          border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
-          fontFamily: 'var(--font-mono)',
+          backgroundColor: tokens.bgCard,
+          border: `1px solid ${tokens.border}`,
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
           fontSize: '11px',
           marginBottom: '12px',
           maxHeight: '120px',
           overflowY: 'auto',
           whiteSpace: 'pre-wrap',
+          color: tokens.textPrimary,
         }}
       >
-        <div style={{ fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '4px' }}>
+        <div style={{ fontWeight: 600, color: tokens.textSecondary, marginBottom: '4px' }}>
           Tool: {pendingApproval.tool}
         </div>
         {JSON.stringify(pendingApproval.args, null, 2)}
@@ -88,9 +91,9 @@ export const ApprovalCard: React.FC = () => {
               width: '100%',
               padding: '6px 10px',
               borderRadius: '6px',
-              border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #CBD5E1',
-              backgroundColor: isDark ? 'var(--bg-app, #1E1F20)' : '#FFFFFF',
-              color: 'var(--text-primary)',
+              border: `1px solid ${tokens.border}`,
+              backgroundColor: tokens.bgCard,
+              color: tokens.textPrimary,
               fontSize: '12px',
               outline: 'none',
             }}
@@ -108,15 +111,15 @@ export const ApprovalCard: React.FC = () => {
             gap: '6px',
             padding: '6px 12px',
             borderRadius: '6px',
-            backgroundColor: 'var(--accent, #8AB4F8)',
-            color: '#1E1F20',
-            border: 'none',
+            backgroundColor: tokens.bgActiveTab,
+            color: tokens.textPrimary,
+            border: `1px solid ${isDark ? '#4A4D53' : '#D0D3D8'}`,
             fontSize: '12px',
             fontWeight: 600,
             cursor: 'pointer',
           }}
         >
-          <Check size={13} />
+          <Check size={13} color="currentColor" />
           <span>Approve Action</span>
         </button>
 
@@ -131,8 +134,8 @@ export const ApprovalCard: React.FC = () => {
               padding: '6px 12px',
               borderRadius: '6px',
               backgroundColor: 'transparent',
-              color: 'var(--error, #F28B82)',
-              border: '1px solid var(--error, #F28B82)',
+              color: tokens.textSecondary,
+              border: `1px solid ${tokens.border}`,
               fontSize: '12px',
               fontWeight: 500,
               cursor: 'pointer',
@@ -151,9 +154,9 @@ export const ApprovalCard: React.FC = () => {
               gap: '6px',
               padding: '6px 12px',
               borderRadius: '6px',
-              backgroundColor: 'var(--error, #F28B82)',
-              color: '#1E1F20',
-              border: 'none',
+              backgroundColor: tokens.bgCard,
+              color: tokens.textPrimary,
+              border: `1px solid ${tokens.border}`,
               fontSize: '12px',
               fontWeight: 600,
               cursor: 'pointer',

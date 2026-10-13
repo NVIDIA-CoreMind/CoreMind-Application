@@ -5,6 +5,7 @@ import { useTabsStore } from '../../stores/tabsStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { parseUnifiedDiff } from './diffParser';
 import { FileIcon } from '../FileIcon';
+import { getAITheme } from './themeTokens';
 import {
   Check,
   RotateCcw,
@@ -35,6 +36,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const fileList: FileChangeInfo[] = propFiles && propFiles.length > 0
     ? propFiles
@@ -53,13 +55,14 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
           justifyContent: 'center',
           height: '100%',
           padding: '32px 16px',
-          color: 'var(--text-secondary)',
+          color: tokens.textSecondary,
           textAlign: 'center',
           fontSize: '13px',
+          backgroundColor: tokens.bgMain,
         }}
       >
         <FileText size={36} style={{ opacity: 0.35, marginBottom: '12px' }} />
-        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+        <div style={{ fontWeight: 600, color: tokens.textPrimary, marginBottom: '4px' }}>
           No File Changes
         </div>
         <div style={{ maxWidth: '280px', lineHeight: 1.5 }}>
@@ -139,8 +142,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: 'var(--bg-app)',
-        color: 'var(--text-primary)',
+        backgroundColor: tokens.bgMain,
+        color: tokens.textPrimary,
         overflow: 'hidden',
       }}
     >
@@ -152,22 +155,22 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            borderBottom: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
-            backgroundColor: isDark ? 'var(--bg-panel, #232426)' : '#F8FAFC',
+            borderBottom: `1px solid ${tokens.border}`,
+            backgroundColor: tokens.bgHeader,
             flexShrink: 0,
             gap: '8px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '13px', fontWeight: 600 }}>
+            <span style={{ fontSize: '13px', fontWeight: 600, color: tokens.textPrimary }}>
               {fileList.length} {fileList.length === 1 ? 'file' : 'files'} changed
             </span>
-            <div style={{ display: 'flex', gap: '6px', fontSize: '12px', fontFamily: 'var(--font-mono)' }}>
+            <div style={{ display: 'flex', gap: '6px', fontSize: '12px', fontFamily: 'ui-monospace, monospace' }}>
               {totalAdditions > 0 && (
-                <span style={{ color: 'var(--success, #81C995)', fontWeight: 600 }}>+{totalAdditions}</span>
+                <span style={{ color: tokens.accentSuccess, fontWeight: 600 }}>+{totalAdditions}</span>
               )}
               {totalDeletions > 0 && (
-                <span style={{ color: 'var(--error, #F28B82)', fontWeight: 600 }}>-{totalDeletions}</span>
+                <span style={{ color: tokens.accentError, fontWeight: 600 }}>-{totalDeletions}</span>
               )}
             </div>
           </div>
@@ -179,9 +182,9 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                 onClick={handleAcceptAll}
                 style={{
                   ...actionBtnStyle,
-                  backgroundColor: 'rgba(129, 201, 149, 0.12)',
-                  color: isDark ? 'var(--success, #81C995)' : '#15803D',
-                  border: isDark ? '1px solid rgba(129, 201, 149, 0.25)' : '1px solid rgba(34, 197, 94, 0.3)',
+                  backgroundColor: tokens.bgActiveTab,
+                  color: tokens.textPrimary,
+                  border: `1px solid ${tokens.border}`,
                 }}
                 title="Accept all changes"
               >
@@ -193,9 +196,9 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                 onClick={handleRejectAll}
                 style={{
                   ...actionBtnStyle,
-                  backgroundColor: 'rgba(242, 139, 130, 0.12)',
-                  color: isDark ? 'var(--error, #F28B82)' : '#B91C1C',
-                  border: isDark ? '1px solid rgba(242, 139, 130, 0.25)' : '1px solid rgba(239, 68, 68, 0.25)',
+                  backgroundColor: tokens.bgCard,
+                  color: tokens.textSecondary,
+                  border: `1px solid ${tokens.border}`,
                 }}
                 title="Revert all changes"
               >
@@ -227,20 +230,15 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
           const parsed = parseUnifiedDiff(file.diff || '', file.file);
           const action = file.action || parsed.status;
 
-          const actionColor =
-            action === 'created'
-              ? 'var(--success, #81C995)'
-              : action === 'deleted'
-              ? 'var(--error, #F28B82)'
-              : 'var(--accent, #8AB4F8)';
+          const actionColor = tokens.textSecondary;
 
           return (
             <div
               key={file.file}
               style={{
-                borderRadius: '8px',
-                border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
-                backgroundColor: isDark ? 'var(--bg-app, #1E1F20)' : '#FFFFFF',
+                borderRadius: '6px',
+                border: `1px solid ${tokens.border}`,
+                backgroundColor: tokens.bgPanel,
                 overflow: 'hidden',
                 boxShadow: 'none',
               }}
@@ -253,18 +251,16 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                   alignItems: 'center',
                   justifyContent: 'space-between',
                   padding: '8px 12px',
-                  backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#F8FAFC',
+                  backgroundColor: tokens.bgCard,
                   borderBottom: isCollapsed
                     ? 'none'
-                    : isDark
-                    ? '1px solid var(--border-color, #3C4043)'
-                    : '1px solid #E2E8F0',
+                    : `1px solid ${tokens.border}`,
                   cursor: 'pointer',
                   userSelect: 'none',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
-                  <span style={{ color: 'var(--text-secondary)', display: 'flex' }}>
+                  <span style={{ color: tokens.textSecondary, display: 'flex' }}>
                     {isCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                   </span>
                   <FileIcon path={fileName} size={15} />
@@ -273,7 +269,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                       fontFamily: 'var(--font-mono)',
                       fontSize: '12.5px',
                       fontWeight: 600,
-                      color: 'var(--text-primary)',
+                      color: tokens.textPrimary,
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
@@ -285,7 +281,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                     <span
                       style={{
                         fontSize: '11px',
-                        color: 'var(--text-secondary)',
+                        color: tokens.textSecondary,
                         whiteSpace: 'nowrap',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
@@ -301,7 +297,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                       borderRadius: '4px',
                       fontWeight: 600,
                       textTransform: 'uppercase',
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)',
+                      backgroundColor: tokens.bgCard,
+                      border: `1px solid ${tokens.borderSubtle}`,
                       color: actionColor,
                     }}
                   >
@@ -320,10 +317,10 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                     }}
                   >
                     {file.additions ? (
-                      <span style={{ color: 'var(--success, #81C995)' }}>+{file.additions}</span>
+                      <span style={{ color: tokens.accentSuccess }}>+{file.additions}</span>
                     ) : null}
                     {file.deletions ? (
-                      <span style={{ color: 'var(--error, #F28B82)' }}>-{file.deletions}</span>
+                      <span style={{ color: tokens.accentError }}>-{file.deletions}</span>
                     ) : null}
                   </div>
 
@@ -344,7 +341,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                         onClick={(e) => handleAcceptFile(e, file.file)}
                         style={{
                           ...smallIconBtnStyle,
-                          color: 'var(--success, #81C995)',
+                          color: tokens.accentSuccess,
                         }}
                         title="Accept this file"
                       >
@@ -354,7 +351,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                         onClick={(e) => handleRejectFile(e, file.file)}
                         style={{
                           ...smallIconBtnStyle,
-                          color: 'var(--error, #F28B82)',
+                          color: tokens.accentError,
                         }}
                         title="Revert this file"
                       >
@@ -373,11 +370,11 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                     fontSize: '11.5px',
                     lineHeight: '18px',
                     overflowX: 'auto',
-                    backgroundColor: isDark ? 'var(--bg-app, #1E1F20)' : '#FFFFFF',
+                    backgroundColor: tokens.bgTerminal,
                   }}
                 >
                   {parsed.hunks.length === 0 ? (
-                    <div style={{ padding: '12px', color: 'var(--text-secondary)' }}>
+                    <div style={{ padding: '12px', color: tokens.textSecondary }}>
                       File {action === 'created' ? 'created' : 'modified'} ({file.lines || 0} lines). No diff hunks to display.
                     </div>
                   ) : (
@@ -387,11 +384,11 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                         <div
                           style={{
                             padding: '3px 10px',
-                            backgroundColor: isDark ? 'rgba(138, 180, 248, 0.08)' : '#EFF6FF',
-                            color: isDark ? 'var(--accent, #8AB4F8)' : '#2563EB',
+                            backgroundColor: tokens.bgCard,
+                            color: tokens.textSecondary,
                             fontSize: '11px',
-                            borderTop: hIdx > 0 ? (isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0') : 'none',
-                            borderBottom: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
+                            borderTop: hIdx > 0 ? `1px solid ${tokens.borderSubtle}` : 'none',
+                            borderBottom: `1px solid ${tokens.borderSubtle}`,
                             userSelect: 'none',
                           }}
                         >
@@ -404,26 +401,16 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                           const isDel = ln.type === 'delete';
 
                           const lineBg = isAdd
-                            ? isDark
-                              ? 'rgba(129, 201, 149, 0.12)'
-                              : '#ECFDF5'
+                            ? (isDark ? 'rgba(129, 201, 149, 0.12)' : '#ECFDF5')
                             : isDel
-                            ? isDark
-                              ? 'rgba(242, 139, 130, 0.12)'
-                              : '#FEF2F2'
+                            ? (isDark ? 'rgba(242, 139, 130, 0.12)' : '#FEF2F2')
                             : 'transparent';
 
                           const lineTextColor = isAdd
-                            ? isDark
-                              ? 'var(--success, #81C995)'
-                              : '#15803D'
+                            ? tokens.accentSuccess
                             : isDel
-                            ? isDark
-                              ? 'var(--error, #F28B82)'
-                              : '#B91C1C'
-                            : isDark
-                            ? 'var(--text-primary, #E8EAED)'
-                            : '#1E293B';
+                            ? tokens.accentError
+                            : tokens.textPrimary;
 
                           const marker = isAdd ? '+' : isDel ? '-' : ' ';
 
@@ -443,8 +430,8 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                                   width: '38px',
                                   padding: '0 6px',
                                   textAlign: 'right',
-                                  color: 'var(--text-muted)',
-                                  opacity: 0.6,
+                                  color: tokens.textMuted,
+                                  opacity: 0.7,
                                   userSelect: 'none',
                                   flexShrink: 0,
                                 }}
@@ -458,23 +445,22 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                                   width: '38px',
                                   padding: '0 6px',
                                   textAlign: 'right',
-                                  color: 'var(--text-muted)',
-                                  opacity: 0.6,
+                                  color: tokens.textMuted,
+                                  opacity: 0.7,
                                   userSelect: 'none',
-                                  borderRight: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
                                   flexShrink: 0,
                                 }}
                               >
                                 {ln.newLineNumber || ''}
                               </div>
 
-                              {/* Marker (+ / -) */}
+                              {/* Marker */}
                               <div
                                 style={{
                                   width: '18px',
                                   textAlign: 'center',
-                                  fontWeight: 600,
                                   userSelect: 'none',
+                                  fontWeight: 600,
                                   flexShrink: 0,
                                 }}
                               >

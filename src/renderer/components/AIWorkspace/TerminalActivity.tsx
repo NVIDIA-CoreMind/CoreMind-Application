@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { useUiStore } from '../../stores/uiStore';
+import { getAITheme } from './themeTokens';
 
 export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) => {
   const [expanded, setExpanded] = useState(true);
@@ -15,6 +16,7 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const handleStop = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -67,13 +69,13 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
           key={`${match.index}-${fullRef}`}
           onClick={() => handleOpenFile(filePath)}
           style={{
-            background: isDark ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.12)',
-            border: 'none',
-            color: 'var(--accent, #3B82F6)',
+            background: tokens.bgCard,
+            border: `1px solid ${tokens.border}`,
+            color: tokens.textPrimary,
             cursor: 'pointer',
             padding: '1px 5px',
             borderRadius: '4px',
-            fontFamily: 'var(--font-mono)',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
             fontSize: '11px',
             textDecoration: 'underline',
             display: 'inline-flex',
@@ -101,7 +103,7 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', margin: '4px 0' }}>
-      {/* Header matching Image 4: "Ran npm run v" */}
+      {/* Header: "Ran npm run v" */}
       <div
         onClick={() => setExpanded(!expanded)}
         style={{
@@ -109,25 +111,25 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
           alignItems: 'center',
           gap: '6px',
           fontSize: '12.5px',
-          color: isDark ? '#94A3B8' : '#64748B',
+          color: tokens.textSecondary,
           cursor: 'pointer',
           fontWeight: 400,
           userSelect: 'none',
         }}
       >
         <span>
-          Ran <strong style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontWeight: 600 }}>{event.command}</strong>
+          Ran <strong style={{ color: tokens.textPrimary, fontWeight: 600 }}>{event.command}</strong>
         </span>
         {expanded ? <ChevronDown size={13} color="currentColor" /> : <ChevronRight size={13} color="currentColor" />}
         {event.status === 'running' && (
           <span
             style={{
-              width: '6.5px',
-              height: '6.5px',
+              width: '6px',
+              height: '6px',
               borderRadius: '50%',
-              backgroundColor: '#3B82F6',
-              boxShadow: '0 0 6px #3B82F6',
-              animation: 'pulse-dot 1.5s infinite',
+              backgroundColor: tokens.accentRunning,
+              opacity: 0.85,
+              animation: 'pulse-dot 1.5s infinite ease-in-out',
               display: 'inline-block',
               marginLeft: '2px',
             }}
@@ -138,16 +140,16 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
       {expanded && (
         <div
           style={{
-            borderRadius: '8px',
-            backgroundColor: isDark ? '#141414' : '#FFFFFF',
-            border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
+            borderRadius: '6px',
+            backgroundColor: tokens.bgPanel,
+            border: `1px solid ${tokens.border}`,
             overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
             marginTop: '2px',
-            padding: '12px 14px',
+            padding: '10px 12px',
             position: 'relative',
-            boxShadow: isDark ? '0 2px 8px rgba(0, 0, 0, 0.3)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
+            boxShadow: 'none',
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
             fontSize: '12px',
           }}
@@ -160,10 +162,10 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
               justifyContent: 'space-between',
               marginBottom: '8px',
               paddingBottom: '6px',
-              borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid #F1F5F9',
+              borderBottom: `1px solid ${tokens.borderSubtle}`,
             }}
           >
-            {/* Agent execution badge distinguishing from interactive terminals */}
+            {/* Agent execution badge */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span
                 style={{
@@ -173,16 +175,16 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
                   letterSpacing: '0.04em',
                   padding: '2px 6px',
                   borderRadius: '4px',
-                  backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
-                  color: 'var(--accent, #3B82F6)',
-                  border: isDark ? '1px solid rgba(59, 130, 246, 0.25)' : '1px solid rgba(59, 130, 246, 0.2)',
+                  backgroundColor: tokens.bgCard,
+                  color: tokens.textSecondary,
+                  border: `1px solid ${tokens.border}`,
                 }}
-                title="Agent-managed execution stream (non-interactive sandbox process)"
+                title="Agent-managed execution stream"
               >
                 Agent Execution Stream
               </span>
               {typeof event.durationMs === 'number' && event.durationMs > 0 && (
-                <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>
+                <span style={{ fontSize: '10.5px', color: tokens.textMuted }}>
                   {event.durationMs < 1000 ? `${event.durationMs}ms` : `${(event.durationMs / 1000).toFixed(1)}s`}
                 </span>
               )}
@@ -191,9 +193,22 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
             {/* Actions */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               {event.status === 'running' && (
-                <button onClick={handleStop} title="Terminate command" style={iconBtnStyle}>
-                  <Square size={11} fill="#EF4444" color="#EF4444" />
-                  <span style={{ fontSize: '10.5px', color: '#EF4444', marginLeft: '3px' }}>Stop</span>
+                <button
+                  onClick={handleStop}
+                  title="Terminate command"
+                  style={{
+                    ...iconBtnStyle,
+                    color: tokens.textPrimary,
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.backgroundColor = tokens.bgHover;
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                  }}
+                >
+                  <Square size={10} fill="currentColor" color="currentColor" />
+                  <span style={{ fontSize: '10.5px', marginLeft: '3px', fontWeight: 500 }}>Stop</span>
                 </button>
               )}
               <button
@@ -202,60 +217,86 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
                   useUiStore.setState({ isTerminalOpen: true });
                 }}
                 title="Open user interactive terminal"
-                style={iconBtnStyle}
+                style={{
+                  ...iconBtnStyle,
+                  color: tokens.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = tokens.textPrimary;
+                  e.currentTarget.style.backgroundColor = tokens.bgHover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = tokens.textSecondary;
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
               >
-                <Terminal size={11} color="var(--accent, #3B82F6)" />
+                <Terminal size={11} color="currentColor" />
                 <span style={{ fontSize: '10.5px', marginLeft: '3px' }}>Workbench Terminal</span>
               </button>
-              <button onClick={handleCopy} title="Copy command output" style={iconBtnStyle}>
-                {copied ? <Check size={11} color="#22C55E" /> : <Copy size={11} />}
+              <button
+                onClick={handleCopy}
+                title="Copy command output"
+                style={{
+                  ...iconBtnStyle,
+                  color: tokens.textSecondary,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = tokens.textPrimary;
+                  e.currentTarget.style.backgroundColor = tokens.bgHover;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = tokens.textSecondary;
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                }}
+              >
+                {copied ? <Check size={11} color={tokens.accentSuccess} /> : <Copy size={11} color="currentColor" />}
               </button>
             </div>
           </div>
 
           {/* Prompt line: ~/.../CoreMind-Application $ npm run ... */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', fontSize: '12px' }}>
-            <span style={{ color: '#71717A', fontWeight: 500 }}>
+            <span style={{ color: tokens.textMuted, fontWeight: 500 }}>
               {promptPath} $
             </span>
-            <span style={{ color: '#F59E0B', fontWeight: 600 }}>
+            <span style={{ color: tokens.textPrimary, fontWeight: 600 }}>
               {event.command}
             </span>
           </div>
 
           <div
             style={{
-              padding: '10px 12px',
-              fontFamily: 'var(--font-mono)',
+              padding: '8px 10px',
+              fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
               fontSize: '11.5px',
               lineHeight: '1.5',
-              color: isDark ? '#E2E8F0' : '#1E293B',
-              backgroundColor: isDark ? '#0D0D0D' : '#F8FAFC',
-              borderRadius: '6px',
+              color: tokens.textPrimary,
+              backgroundColor: tokens.bgTerminal,
+              borderRadius: '5px',
               whiteSpace: 'pre-wrap',
               maxHeight: '260px',
               overflowY: 'auto',
-              border: isDark ? '1px solid rgba(255, 255, 255, 0.04)' : '1px solid #E2E8F0',
+              border: `1px solid ${tokens.borderSubtle}`,
             }}
           >
             {event.output ? (
               renderOutputWithLinks(event.output)
             ) : event.status === 'running' ? (
-              <span style={{ opacity: 0.6 }}>Executing command in workspace sandbox...</span>
+              <span style={{ color: tokens.textMuted }}>Executing command in workspace sandbox...</span>
             ) : (
-              <span style={{ opacity: 0.6 }}>Process exited with no standard output.</span>
+              <span style={{ color: tokens.textMuted }}>Process exited with no standard output.</span>
             )}
 
             {event.status === 'completed' && (
-              <div style={{ marginTop: '8px', color: '#22C55E', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Check size={12} />
+              <div style={{ marginTop: '8px', color: tokens.accentSuccess, fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+                <Check size={12} color="currentColor" />
                 <span>Process exited with code {event.exitCode ?? 0}</span>
               </div>
             )}
 
             {event.status === 'failed' && (
-              <div style={{ marginTop: '8px', color: '#EF4444', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <AlertCircle size={12} />
+              <div style={{ marginTop: '8px', color: tokens.accentError, fontWeight: 500, display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}>
+                <AlertCircle size={12} color="currentColor" />
                 <span>Process exited with error (code {event.exitCode ?? 1})</span>
               </div>
             )}

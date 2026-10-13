@@ -20,6 +20,7 @@ import { useThemeStore } from '../../stores/themeStore';
 import { useAgentStore } from '../../stores/agentStore';
 import { coremindWs } from '../../services/coremind/websocket';
 import { TerminalEvent } from '../../types/aiWorkspace';
+import { getAITheme } from './themeTokens';
 
 export const AIWorkspace: React.FC = () => {
   const currentState = useAIWorkspaceStore((s) => s.currentState);
@@ -278,25 +279,27 @@ export const AIWorkspace: React.FC = () => {
     await useAIWorkspaceStore.getState().submitPrompt(prompt);
   }, []);
 
+  const tokens = getAITheme(isDark);
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: 'var(--bg-app)',
-        color: 'var(--text-primary)',
+        backgroundColor: tokens.bgMain,
+        color: tokens.textPrimary,
         fontFamily: 'var(--font-sans)',
         overflow: 'hidden',
         position: 'relative',
-        transition: 'background-color 0.2s ease, color 0.2s ease',
+        transition: 'background-color 0.15s ease, color 0.15s ease',
       }}
     >
       {/* Header with View Tabs */}
       <WorkspaceHeader />
 
       {/* Main Active Panel View */}
-      <div style={{ flex: 1, overflowY: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ flex: 1, overflowY: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: tokens.bgMain }}>
         {activeView === 'chat' && <ChatThread />}
         {activeView === 'plan' && <ImplementationPlan />}
         {activeView === 'activity' && <ActivityTimeline />}
@@ -307,14 +310,14 @@ export const AIWorkspace: React.FC = () => {
             style={{
               margin: '12px 14px',
               padding: '10px 12px',
-              border: isDark ? '1px solid var(--border-color)' : '1px solid #E2E8F0',
-              borderRadius: '8px',
+              border: `1px solid ${tokens.border}`,
+              borderRadius: '6px',
               fontSize: '12px',
-              color: 'var(--text-secondary)',
-              backgroundColor: isDark ? 'var(--bg-surface)' : '#F8FAFC',
+              color: tokens.textSecondary,
+              backgroundColor: tokens.bgPanel,
             }}
           >
-            <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '2px' }}>
+            <strong style={{ color: tokens.textPrimary, display: 'block', marginBottom: '2px' }}>
               Execution Stopped
             </strong>
             The active operation was cancelled.
@@ -326,7 +329,7 @@ export const AIWorkspace: React.FC = () => {
       <div
         style={{
           padding: '0 12px 12px 12px',
-          backgroundColor: 'var(--bg-app)',
+          backgroundColor: tokens.bgMain,
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',

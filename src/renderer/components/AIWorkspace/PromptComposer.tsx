@@ -4,10 +4,12 @@ import {
   Folder,
   FileCode,
   Bot,
+  MessageSquare,
 } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { getAITheme } from './themeTokens';
 
 const BACKEND_MODEL = {
   id: 'nvidia/Nemotron-3_5-Lightning',
@@ -20,6 +22,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
     currentState,
     setSelectedModel,
     agentMode,
+    setAgentMode,
     cancelRequest,
     draftPrompt,
     setDraftPrompt,
@@ -32,6 +35,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
 
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isRunning =
@@ -85,9 +89,9 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
   return (
     <div
       style={{
-        backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#FFFFFF',
-        border: `1px solid ${isDark ? 'var(--border-color, #3C4043)' : 'rgba(0, 0, 0, 0.12)'}`,
-        borderRadius: '12px',
+        backgroundColor: tokens.bgPanel,
+        border: `1px solid ${tokens.border}`,
+        borderRadius: '8px',
         padding: '10px 12px',
         display: 'flex',
         flexDirection: 'column',
@@ -106,7 +110,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
             gap: '6px',
             flexWrap: 'wrap',
             paddingBottom: '4px',
-            borderBottom: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
+            borderBottom: `1px solid ${tokens.borderSubtle}`,
           }}
         >
           {rootPath && (
@@ -116,14 +120,15 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                 alignItems: 'center',
                 gap: '4px',
                 fontSize: '11px',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)',
-                color: 'var(--text-secondary)',
+                padding: '2px 7px',
+                borderRadius: '5px',
+                backgroundColor: tokens.bgCard,
+                border: `1px solid ${tokens.border}`,
+                color: tokens.textSecondary,
               }}
               title={rootPath}
             >
-              <Folder size={11} />
+              <Folder size={11} color="currentColor" />
               <span>{rootName || 'workspace'}</span>
             </span>
           )}
@@ -135,15 +140,16 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                 alignItems: 'center',
                 gap: '4px',
                 fontSize: '11px',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                backgroundColor: isDark ? 'rgba(138, 180, 248, 0.12)' : 'rgba(138, 180, 248, 0.15)',
-                color: 'var(--accent, #8AB4F8)',
+                padding: '2px 7px',
+                borderRadius: '5px',
+                backgroundColor: tokens.bgCard,
+                border: `1px solid ${tokens.border}`,
+                color: tokens.textPrimary,
                 fontWeight: 500,
               }}
               title="Active editor file context"
             >
-              <FileCode size={11} />
+              <FileCode size={11} color="currentColor" />
               <span>{activeFileName}</span>
             </span>
           )}
@@ -154,9 +160,9 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
             style={{
               background: 'transparent',
               border: 'none',
-              color: 'var(--text-muted)',
+              color: tokens.textMuted,
               cursor: 'pointer',
-              fontSize: '10px',
+              fontSize: '10.5px',
               marginLeft: 'auto',
               padding: '2px 4px',
             }}
@@ -177,10 +183,10 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
           onKeyDown={handleKeyDown}
           placeholder={
             isRunning
-              ? 'Agent is currently executing... Click Stop to cancel.'
+              ? 'Executing request... Click Stop to cancel.'
               : agentMode === 'agent'
               ? 'Ask CoreMind Agent to implement features, fix bugs, or edit files...'
-              : 'Ask a question about your code or codebase (Shift+Enter for newline)...'
+              : 'Ask a friendly question or chat with CoreMind AI (Shift+Enter for newline)...'
           }
           rows={2}
           style={{
@@ -188,7 +194,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
             backgroundColor: 'transparent',
             border: 'none',
             outline: 'none',
-            color: 'var(--text-primary)',
+            color: tokens.textPrimary,
             fontFamily: 'var(--font-sans)',
             fontSize: '13px',
             lineHeight: 1.5,
@@ -210,26 +216,45 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
       >
         {/* Left: Agent indicator & Model Picker */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {/* Agent Badge */}
-          <div
+          {/* Mode Switcher: Agent vs Friendly Chat */}
+          <button
+            type="button"
+            disabled={isRunning}
+            onClick={() => setAgentMode(agentMode === 'agent' ? 'chat' : 'agent')}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
               gap: '4px',
               padding: '3px 8px',
               borderRadius: '6px',
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.06)' : '#F1F5F9',
-              color: 'var(--accent)',
+              backgroundColor: tokens.bgCard,
+              border: `1px solid ${tokens.border}`,
+              color: tokens.textPrimary,
               fontSize: '11px',
-              fontWeight: 600,
+              fontWeight: 500,
+              cursor: isRunning ? 'default' : 'pointer',
+              transition: 'all 0.15s ease',
             }}
-            title="Autonomous multi-step agent"
+            title={
+              agentMode === 'agent'
+                ? 'Current: Agent Mode (Click to switch to Friendly Chat)'
+                : 'Current: Friendly Chat (Click to switch to Agent Mode)'
+            }
           >
-            <Bot size={12} />
-            <span>Agent</span>
-          </div>
+            {agentMode === 'agent' ? (
+              <>
+                <Bot size={12} color="currentColor" />
+                <span>Agent</span>
+              </>
+            ) : (
+              <>
+                <MessageSquare size={12} color="currentColor" />
+                <span>Friendly Chat</span>
+              </>
+            )}
+          </button>
 
-          {/* Active Backend AI Model */}
+          {/* Active Backend AI Model - Neutral gray pill */}
           <div
             style={{
               display: 'inline-flex',
@@ -237,8 +262,9 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
               gap: '4px',
               padding: '3px 8px',
               borderRadius: '6px',
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : '#F1F5F9',
-              color: 'var(--text-secondary)',
+              backgroundColor: tokens.bgCard,
+              border: `1px solid ${tokens.border}`,
+              color: tokens.textSecondary,
               fontSize: '11px',
               fontWeight: 500,
             }}
@@ -248,7 +274,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
           </div>
         </div>
 
-        {/* Right: Circular Send / Red Stop Button */}
+        {/* Right: Circular Send / Stop Button */}
         <div style={{ display: 'flex', alignItems: 'center' }}>
           {isRunning ? (
             <button
@@ -256,34 +282,30 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
               title="Stop Generation (Esc)"
               aria-label="Stop generation"
               style={{
-                width: '28px',
-                height: '28px',
+                width: '26px',
+                height: '26px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: 'none',
+                border: `1px solid ${tokens.border}`,
                 cursor: 'pointer',
-                backgroundColor: isDark ? 'rgba(242, 139, 130, 0.15)' : 'rgba(242, 139, 130, 0.1)',
+                backgroundColor: tokens.bgCard,
                 transition: 'all 0.15s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = isDark
-                  ? 'rgba(242, 139, 130, 0.25)'
-                  : 'rgba(242, 139, 130, 0.2)';
+                e.currentTarget.style.backgroundColor = tokens.bgHover;
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = isDark
-                  ? 'rgba(242, 139, 130, 0.15)'
-                  : 'rgba(242, 139, 130, 0.1)';
+                e.currentTarget.style.backgroundColor = tokens.bgCard;
               }}
             >
               <div
                 style={{
-                  width: '10px',
-                  height: '10px',
-                  borderRadius: '2.5px',
-                  backgroundColor: 'var(--error, #F28B82)',
+                  width: '9px',
+                  height: '9px',
+                  borderRadius: '2px',
+                  backgroundColor: tokens.textPrimary,
                 }}
               />
             </button>
@@ -294,39 +316,35 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
               title="Submit prompt (Enter)"
               aria-label="Submit prompt"
               style={{
-                width: '28px',
-                height: '28px',
+                width: '26px',
+                height: '26px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: 'none',
+                border: input.trim() ? `1px solid ${isDark ? '#4A4D53' : '#D0D3D8'}` : `1px solid ${tokens.border}`,
                 cursor: input.trim() ? 'pointer' : 'default',
                 backgroundColor: input.trim()
-                  ? 'var(--accent, #8AB4F8)'
-                  : isDark
-                  ? 'var(--bg-hover, #303134)'
-                  : 'rgba(0, 0, 0, 0.06)',
+                  ? tokens.bgActiveTab
+                  : tokens.bgCard,
                 color: input.trim()
-                  ? '#1E1F20'
-                  : isDark
-                  ? 'var(--text-muted, #70757A)'
-                  : 'rgba(0, 0, 0, 0.25)',
+                  ? tokens.textPrimary
+                  : tokens.textMuted,
                 transition: 'all 0.15s ease',
                 boxShadow: 'none',
               }}
               onMouseEnter={(e) => {
                 if (input.trim()) {
-                  e.currentTarget.style.backgroundColor = '#A8C7FA';
+                  e.currentTarget.style.backgroundColor = tokens.bgHover;
                 }
               }}
               onMouseLeave={(e) => {
                 if (input.trim()) {
-                  e.currentTarget.style.backgroundColor = 'var(--accent, #8AB4F8)';
+                  e.currentTarget.style.backgroundColor = tokens.bgActiveTab;
                 }
               }}
             >
-              <ArrowRight size={14} strokeWidth={2.4} />
+              <ArrowRight size={13} strokeWidth={2.4} />
             </button>
           )}
         </div>

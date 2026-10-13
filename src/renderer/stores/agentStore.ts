@@ -668,9 +668,9 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
             await get().finalizeTask(reported);
 
             const summary = get().taskSummary;
-            const content = summary
+            const content = event.data?.response || event.data?.summary || (summary
               ? formatSummary(summary)
-              : `Task completed successfully in ${event.data?.steps || 1} steps.`;
+              : `Task completed successfully in ${event.data?.steps || 1} steps.`);
             set((s) => ({
               messages: [
                 ...s.messages,
@@ -924,6 +924,17 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       );
       set({ sessions: updatedSessions });
       saveSessions(updatedSessions);
+
+      if (runRes?.response) {
+        set((s) => ({
+          isLoading: false,
+          lifecycleStage: 'completed',
+          messages: [
+            ...s.messages,
+            { id: `ai-${Date.now()}`, role: 'assistant', content: runRes.response!, timestamp: Date.now() },
+          ],
+        }));
+      }
 
       return true;
     } catch (err: unknown) {

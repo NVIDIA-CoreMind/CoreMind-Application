@@ -20,6 +20,7 @@ import { QuestionCard } from './QuestionCard';
 import { ApprovalCard } from './ApprovalCard';
 import { AntigravityActivityStream } from './AntigravityActivityStream';
 import { TerminalEvent } from '../../types/aiWorkspace';
+import { getAITheme } from './themeTokens';
 
 const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, value }) => {
   const [copied, setCopied] = useState(false);
@@ -52,16 +53,18 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
     }
   };
 
+  const tokens = getAITheme(isDark);
+
   return (
     <div
       style={{
         margin: '10px 0',
-        borderRadius: '8px',
+        borderRadius: '6px',
         overflow: 'hidden',
-        border: isDark ? '1px solid var(--border-color)' : '1px solid #E2E8F0',
-        backgroundColor: isDark ? 'var(--bg-editor)' : '#F8FAFC',
+        border: `1px solid ${tokens.border}`,
+        backgroundColor: tokens.bgTerminal,
         fontSize: '12px',
-        fontFamily: 'var(--font-mono, monospace)',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
       }}
     >
       <div
@@ -70,26 +73,26 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '6px 10px',
-          backgroundColor: isDark ? 'var(--bg-surface)' : '#F1F5F9',
-          borderBottom: isDark ? '1px solid var(--border-color)' : '1px solid #E2E8F0',
+          backgroundColor: tokens.bgCard,
+          borderBottom: `1px solid ${tokens.borderSubtle}`,
           fontSize: '11px',
-          color: 'var(--text-secondary)',
+          color: tokens.textSecondary,
         }}
       >
         <span style={{ fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
           {language || 'code'}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <button onClick={handleCopy} style={codeActionBtnStyle} title="Copy code snippet">
-            {copied ? <Check size={12} color="var(--success)" /> : <Copy size={12} />}
+          <button onClick={handleCopy} style={{ ...codeActionBtnStyle, color: tokens.textSecondary }} title="Copy code snippet">
+            {copied ? <Check size={12} color={tokens.accentSuccess} /> : <Copy size={12} />}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
-          <button onClick={handleInsert} style={codeActionBtnStyle} title="Insert into active editor tab">
-            {inserted ? <Check size={12} color="var(--success)" /> : <ArrowDownRight size={12} />}
+          <button onClick={handleInsert} style={{ ...codeActionBtnStyle, color: tokens.textSecondary }} title="Insert into active editor tab">
+            {inserted ? <Check size={12} color={tokens.accentSuccess} /> : <ArrowDownRight size={12} />}
             <span>{inserted ? 'Inserted' : 'Insert'}</span>
           </button>
-          <button onClick={handleApply} style={codeActionBtnStyle} title="Apply changes to active file">
-            {applied ? <Check size={12} color="var(--success)" /> : <FileCheck size={12} />}
+          <button onClick={handleApply} style={{ ...codeActionBtnStyle, color: tokens.textSecondary }} title="Apply changes to active file">
+            {applied ? <Check size={12} color={tokens.accentSuccess} /> : <FileCheck size={12} />}
             <span>{applied ? 'Applied' : 'Apply'}</span>
           </button>
         </div>
@@ -100,7 +103,7 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
           padding: '10px 12px',
           overflowX: 'auto',
           lineHeight: 1.5,
-          color: isDark ? 'var(--text-primary)' : '#1E293B',
+          color: tokens.textPrimary,
         }}
       >
         <code>{value}</code>
@@ -151,7 +154,6 @@ function renderMarkdownContent(rawText: string) {
       );
     },
     a: ({ href, children, ...props }: any) => {
-      const isLocal = href && (href.includes('localhost') || href.includes('127.0.0.1'));
       return (
         <a
           href={href}
@@ -169,11 +171,9 @@ function renderMarkdownContent(rawText: string) {
             }
           }}
           style={{
-            color: isLocal ? '#0284C7' : 'var(--accent, #3B82F6)',
-            backgroundColor: isLocal ? 'rgba(2, 132, 199, 0.1)' : 'transparent',
-            padding: isLocal ? '2px 6px' : '0',
-            borderRadius: isLocal ? '4px' : '0',
-            textDecoration: isLocal ? 'none' : 'underline',
+            color: 'inherit',
+            textDecoration: 'underline',
+            textUnderlineOffset: '2px',
             fontWeight: 500,
             cursor: 'pointer',
           }}
@@ -204,6 +204,7 @@ export const ChatThread: React.FC = () => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
   const setDraftPrompt = useAIWorkspaceStore((s) => s.setDraftPrompt);
   const agentPhaseDetail = useAIWorkspaceStore((s) => s.agentPhaseDetail);
 
@@ -245,28 +246,29 @@ export const ChatThread: React.FC = () => {
           alignItems: 'center',
           justifyContent: 'center',
           padding: '24px 16px',
-          color: 'var(--text-secondary)',
+          color: isDark ? '#A1A1AA' : '#71717A',
           textAlign: 'center',
         }}
       >
         <div
           style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(138, 180, 248, 0.12)',
+            width: '40px',
+            height: '40px',
+            borderRadius: '8px',
+            backgroundColor: tokens.bgCard,
+            border: `1px solid ${tokens.border}`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: '12px',
           }}
         >
-          <Bot size={22} color="var(--accent)" />
+          <Bot size={20} color={tokens.iconPrimary} />
         </div>
-        <h2 style={{ fontSize: '16px', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '6px' }}>
+        <h2 style={{ fontSize: '15px', fontWeight: 600, color: tokens.textPrimary, marginBottom: '6px' }}>
           CoreMind AI Workspace
         </h2>
-        <p style={{ maxWidth: '300px', lineHeight: 1.5, fontSize: '12.5px', marginBottom: '20px' }}>
+        <p style={{ maxWidth: '300px', lineHeight: 1.5, fontSize: '12.5px', marginBottom: '20px', color: tokens.textSecondary }}>
           Autonomous coding agent inspired by Cursor and Google Antigravity. Generate plans, execute tools, edit files, and review diffs.
         </p>
 
@@ -282,20 +284,26 @@ export const ChatThread: React.FC = () => {
               onClick={() => setDraftPrompt(promptText)}
               style={{
                 padding: '8px 12px',
-                borderRadius: '8px',
-                border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
-                backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#FFFFFF',
-                color: 'var(--text-primary)',
+                borderRadius: '6px',
+                border: `1px solid ${tokens.border}`,
+                backgroundColor: tokens.bgPanel,
+                color: tokens.textPrimary,
                 fontSize: '12px',
                 textAlign: 'left',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                transition: 'border-color 0.15s ease',
+                transition: 'border-color 0.15s ease, background-color 0.15s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = tokens.bgCard;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = tokens.bgPanel;
               }}
             >
-              <Sparkles size={13} color="var(--accent)" style={{ flexShrink: 0 }} />
+              <Sparkles size={13} color={tokens.textSecondary} style={{ flexShrink: 0 }} />
               <span style={{ lineHeight: 1.4 }}>{promptText}</span>
             </button>
           ))}
@@ -313,7 +321,8 @@ export const ChatThread: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         padding: '16px 12px',
-        gap: '20px',
+        gap: '16px',
+        backgroundColor: tokens.bgMain,
       }}
     >
       {chatHistory.map((msg, index) => {
@@ -343,19 +352,13 @@ export const ChatThread: React.FC = () => {
               {/* Message Bubble */}
               <div
                 style={{
-                  padding: isUser ? '10px 14px' : '12px 14px',
-                  borderRadius: '12px',
+                  padding: isUser ? '10px 13px' : '12px 14px',
+                  borderRadius: '8px',
                   backgroundColor: isUser
-                    ? isDark
-                      ? 'var(--bg-card, #28292B)'
-                      : '#F1F5F9'
-                    : isDark
-                    ? 'var(--bg-panel, #232426)'
-                    : '#FFFFFF',
-                  color: 'var(--text-primary)',
-                  border: isDark
-                    ? '1px solid var(--border-color, #3C4043)'
-                    : '1px solid #E2E8F0',
+                    ? tokens.bgCard
+                    : tokens.bgPanel,
+                  color: tokens.textPrimary,
+                  border: `1px solid ${tokens.border}`,
                   boxShadow: 'none',
                   fontSize: '13px',
                   lineHeight: 1.6,
@@ -370,10 +373,11 @@ export const ChatThread: React.FC = () => {
                   <div>
                     {/* Antigravity Activity Stream: Analyzed files, Edited files, Searches, Thoughts, Ran Terminal */}
                     <AntigravityActivityStream
-                      events={msg.activityEvents}
-                      filesChanged={msg.filesChanged}
-                      terminalEvents={msg.terminalEvents}
-                      thoughtText={msg.thoughtSummary}
+                      events={isGenerating ? runningTurnEvents : msg.activityEvents}
+                      filesChanged={isGenerating ? realtimeFiles : msg.filesChanged}
+                      terminalEvents={isGenerating ? runningTurnTerminalEvents : msg.terminalEvents}
+                      thoughtText={isGenerating ? agentPhaseDetail : msg.thoughtSummary}
+                      isRunning={isGenerating}
                     />
 
                     {msg.content ? (
@@ -383,9 +387,9 @@ export const ChatThread: React.FC = () => {
                           <span
                             style={{
                               display: 'inline-block',
-                              width: '8px',
+                              width: '7px',
                               height: '14px',
-                              backgroundColor: 'var(--accent, #8AB4F8)',
+                              backgroundColor: isDark ? '#F4F4F5' : '#18181B',
                               marginLeft: '4px',
                               verticalAlign: 'middle',
                               animation: 'chatgpt-blink 1s step-end infinite',
@@ -403,12 +407,15 @@ export const ChatThread: React.FC = () => {
                           gap: '6px',
                           marginTop: '8px',
                           paddingTop: '6px',
-                          borderTop: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #F1F5F9',
+                          borderTop: isDark ? '1px solid #27272A' : '1px solid #F4F4F5',
                         }}
                       >
                         <button
                           onClick={() => navigator.clipboard.writeText(msg.content)}
-                          style={codeActionBtnStyle}
+                          style={{
+                            ...codeActionBtnStyle,
+                            color: isDark ? '#A1A1AA' : '#52525B',
+                          }}
                           title="Copy response"
                         >
                           <Copy size={12} />
@@ -421,7 +428,10 @@ export const ChatThread: React.FC = () => {
                               setDraftPrompt(prevUser.content);
                             }
                           }}
-                          style={codeActionBtnStyle}
+                          style={{
+                            ...codeActionBtnStyle,
+                            color: isDark ? '#A1A1AA' : '#52525B',
+                          }}
                           title="Regenerate prompt"
                         >
                           <RotateCcw size={12} />
@@ -451,8 +461,8 @@ export const ChatThread: React.FC = () => {
           {taskGraph && (taskGraph.tasks?.length || taskGraph.nodes?.length) ? (
             <div
               style={{
-                borderRadius: '8px',
-                border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
+                borderRadius: '6px',
+                border: isDark ? '1px solid #27272A' : '1px solid #E4E4E7',
                 overflow: 'hidden',
               }}
             >
@@ -460,14 +470,16 @@ export const ChatThread: React.FC = () => {
             </div>
           ) : null}
 
-          {/* Antigravity Live Activity Stream (Analyzed files, Edited files, Searches, Thinking, Terminal) */}
-          <AntigravityActivityStream
-            events={runningTurnEvents}
-            filesChanged={realtimeFiles}
-            terminalEvents={runningTurnTerminalEvents}
-            thoughtText={agentPhaseDetail}
-            isRunning={true}
-          />
+          {/* Only render live activity stream at bottom if the last message is NOT already rendering it */}
+          {(!chatHistory.length || chatHistory[chatHistory.length - 1].role !== 'assistant') && (
+            <AntigravityActivityStream
+              events={runningTurnEvents}
+              filesChanged={realtimeFiles}
+              terminalEvents={runningTurnTerminalEvents}
+              thoughtText={agentPhaseDetail}
+              isRunning={true}
+            />
+          )}
 
           {/* Running Indicator with Active Phase */}
           <RunningIndicator />

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useThemeStore } from '../../stores/themeStore';
+import { getAITheme } from './themeTokens';
 import { TaskNode, TaskStatus } from '../../types/aiWorkspace';
 import {
   CheckCircle2,
@@ -23,6 +24,7 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
   const currentState = useAIWorkspaceStore((s) => s.currentState);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
 
@@ -38,13 +40,14 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
           justifyContent: 'center',
           height: '100%',
           padding: '32px 16px',
-          color: 'var(--text-secondary)',
+          color: tokens.textSecondary,
           textAlign: 'center',
           fontSize: '13px',
+          backgroundColor: compact ? 'transparent' : tokens.bgMain,
         }}
       >
         <ListTodo size={36} style={{ opacity: 0.35, marginBottom: '12px' }} />
-        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+        <div style={{ fontWeight: 600, color: tokens.textPrimary, marginBottom: '4px' }}>
           No Active Implementation Plan
         </div>
         <div style={{ maxWidth: '280px', lineHeight: 1.5 }}>
@@ -68,14 +71,14 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
   const getStatusIcon = (status: TaskStatus) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle2 size={16} color="var(--success, #81C995)" style={{ flexShrink: 0 }} />;
+        return <CheckCircle2 size={15} style={{ color: tokens.accentSuccess, flexShrink: 0 }} />;
       case 'in_progress':
-        return <Loader2 size={16} color="var(--accent, #8AB4F8)" className="animate-spin" style={{ flexShrink: 0 }} />;
+        return <Loader2 size={15} style={{ color: tokens.accentRunning, flexShrink: 0 }} className="animate-spin" />;
       case 'failed':
-        return <AlertCircle size={16} color="var(--error, #F28B82)" style={{ flexShrink: 0 }} />;
+        return <AlertCircle size={15} style={{ color: tokens.accentError, flexShrink: 0 }} />;
       case 'pending':
       default:
-        return <Circle size={16} color="var(--text-muted, #70757A)" style={{ opacity: 0.5, flexShrink: 0 }} />;
+        return <Circle size={15} style={{ color: tokens.textMuted, flexShrink: 0 }} />;
     }
   };
 
@@ -85,33 +88,34 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: compact ? 'transparent' : 'var(--bg-app)',
-        color: 'var(--text-primary)',
+        backgroundColor: compact ? 'transparent' : tokens.bgMain,
+        color: tokens.textPrimary,
         overflow: 'hidden',
       }}
     >
       {/* Header & Progress Summary */}
       <div
         style={{
-          padding: compact ? '8px 12px' : '14px 16px',
-          borderBottom: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
-          backgroundColor: isDark ? 'var(--bg-panel, #232426)' : '#F8FAFC',
+          padding: compact ? '8px 12px' : '12px 14px',
+          borderBottom: `1px solid ${tokens.border}`,
+          backgroundColor: tokens.bgHeader,
           flexShrink: 0,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ListTodo size={16} color="var(--accent)" />
+            <ListTodo size={15} color="currentColor" />
             <span style={{ fontSize: '13px', fontWeight: 600 }}>
               Implementation Plan
             </span>
             <span
               style={{
                 fontSize: '11px',
-                padding: '1px 7px',
-                borderRadius: '10px',
-                backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#E2E8F0',
-                color: 'var(--text-secondary)',
+                padding: '1px 6px',
+                borderRadius: '4px',
+                backgroundColor: tokens.bgCard,
+                border: `1px solid ${tokens.borderSubtle}`,
+                color: tokens.textSecondary,
                 fontWeight: 600,
               }}
             >
@@ -122,9 +126,9 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
           <span
             style={{
               fontSize: '12px',
-              fontFamily: 'var(--font-mono)',
+              fontFamily: 'ui-monospace, monospace',
               fontWeight: 600,
-              color: progressPercent === 100 ? 'var(--success, #81C995)' : 'var(--accent, #8AB4F8)',
+              color: tokens.textPrimary,
             }}
           >
             {progressPercent}%
@@ -134,10 +138,10 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
         {/* Progress Bar */}
         <div
           style={{
-            height: '5px',
+            height: '4px',
             width: '100%',
-            backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#E2E8F0',
-            borderRadius: '3px',
+            backgroundColor: tokens.bgCard,
+            borderRadius: '2px',
             overflow: 'hidden',
           }}
         >
@@ -145,12 +149,7 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
             style={{
               height: '100%',
               width: `${progressPercent}%`,
-              backgroundColor:
-                failedCount > 0
-                  ? 'var(--error, #F28B82)'
-                  : progressPercent === 100
-                  ? 'var(--success, #81C995)'
-                  : 'var(--accent, #8AB4F8)',
+              backgroundColor: tokens.textPrimary,
               transition: 'width 0.3s ease',
             }}
           />
@@ -159,11 +158,10 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
         {taskGraph?.goal && !compact && (
           <div
             style={{
-              marginTop: '10px',
+              marginTop: '8px',
               fontSize: '12px',
-              color: 'var(--text-secondary)',
+              color: tokens.textSecondary,
               lineHeight: 1.4,
-              fontStyle: 'italic',
             }}
           >
             Goal: {taskGraph.goal}
@@ -176,10 +174,10 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: compact ? '8px' : '12px 16px',
+          padding: compact ? '8px' : '12px 14px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '6px',
         }}
       >
         {tasks.map((task, idx) => {
@@ -190,21 +188,15 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
             <div
               key={task.id || idx}
               style={{
-                borderRadius: '8px',
+                borderRadius: '6px',
                 border: isCurrent
-                  ? '1px solid var(--accent, #8AB4F8)'
-                  : isDark
-                  ? '1px solid var(--border-color, #3C4043)'
-                  : '1px solid #E2E8F0',
+                  ? `1px solid ${tokens.border}`
+                  : `1px solid ${tokens.borderSubtle}`,
                 backgroundColor: isCurrent
-                  ? isDark
-                    ? 'var(--bg-selected, #30343B)'
-                    : '#EFF6FF'
-                  : isDark
-                  ? 'var(--bg-surface, #28292B)'
-                  : '#FFFFFF',
+                  ? tokens.bgCard
+                  : tokens.bgPanel,
                 overflow: 'hidden',
-                transition: 'border-color 0.15s ease',
+                transition: 'border-color 0.15s ease, background-color 0.15s ease',
               }}
             >
               <div
@@ -227,8 +219,8 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                       fontWeight: 500,
                       color:
                         task.status === 'completed'
-                          ? 'var(--text-secondary)'
-                          : 'var(--text-primary)',
+                          ? tokens.textSecondary
+                          : tokens.textPrimary,
                       textDecoration: task.status === 'completed' ? 'line-through' : 'none',
                       whiteSpace: 'nowrap',
                       overflow: 'hidden',
@@ -249,25 +241,25 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                       textTransform: 'uppercase',
                       backgroundColor:
                         task.status === 'completed'
-                          ? 'rgba(129, 201, 149, 0.15)'
+                          ? (isDark ? 'rgba(129, 201, 149, 0.12)' : '#ECFDF5')
                           : task.status === 'in_progress'
-                          ? 'rgba(138, 180, 248, 0.15)'
+                          ? (isDark ? 'rgba(138, 180, 248, 0.12)' : '#EFF6FF')
                           : task.status === 'failed'
-                          ? 'rgba(242, 139, 130, 0.15)'
-                          : isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
+                          ? (isDark ? 'rgba(242, 139, 130, 0.12)' : '#FEF2F2')
+                          : tokens.bgCard,
                       color:
                         task.status === 'completed'
-                          ? 'var(--success, #81C995)'
+                          ? tokens.accentSuccess
                           : task.status === 'in_progress'
-                          ? 'var(--accent, #8AB4F8)'
+                          ? tokens.accentRunning
                           : task.status === 'failed'
-                          ? 'var(--error, #F28B82)'
-                          : 'var(--text-muted, #70757A)',
+                          ? tokens.accentError
+                          : tokens.textMuted,
                     }}
                   >
                     {task.status.replace('_', ' ')}
                   </span>
-                  <span style={{ color: 'var(--text-secondary)' }}>
+                  <span style={{ color: tokens.textSecondary }}>
                     {isExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                   </span>
                 </div>
@@ -278,9 +270,9 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                 <div
                   style={{
                     padding: '8px 12px 10px 38px',
-                    borderTop: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #F1F5F9',
+                    borderTop: `1px solid ${tokens.borderSubtle}`,
                     fontSize: '12px',
-                    color: 'var(--text-secondary)',
+                    color: tokens.textSecondary,
                     lineHeight: 1.5,
                   }}
                 >
@@ -289,7 +281,7 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                   )}
 
                   {task.dependencies && task.dependencies.length > 0 && (
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '11px', color: tokens.textMuted }}>
                       Dependencies: {task.dependencies.join(', ')}
                     </div>
                   )}
@@ -300,8 +292,8 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                         marginTop: '6px',
                         padding: '6px 8px',
                         borderRadius: '4px',
-                        backgroundColor: isDark ? 'rgba(242, 139, 130, 0.15)' : '#FEF2F2',
-                        color: 'var(--error, #F28B82)',
+                        backgroundColor: isDark ? 'rgba(242, 139, 130, 0.12)' : '#FEF2F2',
+                        color: tokens.accentError,
                         fontFamily: 'var(--font-mono)',
                         fontSize: '11px',
                       }}

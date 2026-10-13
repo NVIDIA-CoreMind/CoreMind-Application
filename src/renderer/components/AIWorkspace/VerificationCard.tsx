@@ -12,6 +12,7 @@ import {
   ExternalLink,
   Terminal,
 } from 'lucide-react';
+import { getAITheme } from './themeTokens';
 
 interface VerificationCardProps {
   event: TestEvent;
@@ -23,9 +24,9 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const isPassed = event.status === 'passed';
-  const isFailed = event.status === 'failed';
   const isRunning = event.status === 'running';
 
   // Helper to open a file when clicked from error location
@@ -42,7 +43,6 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
   };
 
   // Find file and line references in error text
-  // Matches patterns like `src/foo/bar.ts:12:5` or `lib/main.dart:42`
   const renderErrorWithLinks = (text: string) => {
     const fileLocRegex = /(?:([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+):(\d+)(?::(\d+))?)/g;
     const parts = [];
@@ -62,15 +62,15 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
           key={`${match.index}-${fullRef}`}
           onClick={() => handleOpenFile(filePath)}
           style={{
-            background: isDark ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.1)',
-            border: 'none',
-            color: 'var(--accent, #3B82F6)',
+            background: tokens.bgCard,
+            border: `1px solid ${tokens.border}`,
+            color: tokens.textPrimary,
             cursor: 'pointer',
             padding: '1px 5px',
             borderRadius: '4px',
-            fontFamily: 'var(--font-mono)',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
             fontSize: '11px',
-            textDecoration: 'underline',
+            textDecoration: 'none',
             display: 'inline-flex',
             alignItems: 'center',
             gap: '3px',
@@ -91,14 +91,12 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
     return parts;
   };
 
-  const statusColor = isPassed ? '#22C55E' : isFailed ? '#EF4444' : 'var(--accent, #3B82F6)';
-
   return (
     <div
       style={{
-        borderRadius: '8px',
-        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : '#E2E8F0'}`,
-        backgroundColor: isDark ? '#181818' : '#FFFFFF',
+        borderRadius: '6px',
+        border: `1px solid ${tokens.border}`,
+        backgroundColor: tokens.bgPanel,
         overflow: 'hidden',
         margin: '6px 0',
       }}
@@ -111,11 +109,9 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '8px 12px',
-          backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
+          backgroundColor: tokens.bgCard,
           borderBottom: expanded
-            ? isDark
-              ? '1px solid rgba(255, 255, 255, 0.06)'
-              : '1px solid #E2E8F0'
+            ? `1px solid ${tokens.borderSubtle}`
             : 'none',
           cursor: 'pointer',
           userSelect: 'none',
@@ -123,26 +119,27 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
           {isRunning ? (
-            <Loader2 size={15} color="var(--accent)" className="animate-spin" />
+            <Loader2 size={14} className="animate-spin" color={tokens.accentRunning} />
           ) : isPassed ? (
-            <ShieldCheck size={16} color="#22C55E" />
+            <ShieldCheck size={14} color={tokens.accentSuccess} />
           ) : (
-            <ShieldAlert size={16} color="#EF4444" />
+            <ShieldAlert size={14} color={tokens.accentError} />
           )}
 
-          <span style={{ fontSize: '12.5px', fontWeight: 600 }}>
+          <span style={{ fontSize: '12px', fontWeight: 600, color: tokens.textPrimary }}>
             {event.testName || `Verification ${event.attempt ? `(Attempt ${event.attempt})` : ''}`}
           </span>
 
           <span
             style={{
-              fontSize: '10.5px',
+              fontSize: '10px',
               padding: '1px 6px',
               borderRadius: '4px',
               fontWeight: 600,
               textTransform: 'uppercase',
-              backgroundColor: `${statusColor}20`,
-              color: statusColor,
+              backgroundColor: tokens.bgPanel,
+              border: `1px solid ${tokens.border}`,
+              color: isPassed ? tokens.accentSuccess : isRunning ? tokens.accentRunning : tokens.accentError,
             }}
           >
             {event.status}
@@ -151,11 +148,11 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {event.durationMs !== undefined && (
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+            <span style={{ fontSize: '11px', color: tokens.textMuted, fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace' }}>
               {event.durationMs}ms
             </span>
           )}
-          <span style={{ color: 'var(--text-secondary)' }}>
+          <span style={{ color: tokens.iconPrimary }}>
             {expanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
           </span>
         </div>
@@ -171,8 +168,8 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
                 alignItems: 'center',
                 gap: '6px',
                 marginBottom: '8px',
-                color: 'var(--text-secondary)',
-                fontFamily: 'var(--font-mono)',
+                color: tokens.textSecondary,
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                 fontSize: '11px',
               }}
             >
@@ -188,12 +185,12 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
                 style={{
                   background: 'transparent',
                   border: 'none',
-                  color: 'var(--accent)',
+                  color: tokens.textSecondary,
                   cursor: 'pointer',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  fontFamily: 'var(--font-mono)',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                   fontSize: '11px',
                   textDecoration: 'underline',
                   padding: 0,
@@ -213,10 +210,10 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
               style={{
                 padding: '8px 10px',
                 borderRadius: '6px',
-                backgroundColor: isDark ? 'rgba(239, 68, 68, 0.12)' : '#FEF2F2',
-                border: '1px solid rgba(239, 68, 68, 0.25)',
-                color: isDark ? '#FCA5A5' : '#B91C1C',
-                fontFamily: 'var(--font-mono)',
+                backgroundColor: tokens.bgTerminal,
+                border: `1px solid ${isDark ? 'rgba(242, 139, 130, 0.3)' : '#FCA5A5'}`,
+                color: tokens.textPrimary,
+                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                 fontSize: '11.5px',
                 lineHeight: 1.5,
                 whiteSpace: 'pre-wrap',
@@ -229,7 +226,7 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
           )}
 
           {isPassed && (
-            <div style={{ color: '#22C55E', fontWeight: 500, fontSize: '12px' }}>
+            <div style={{ color: tokens.accentSuccess, fontWeight: 500, fontSize: '12px' }}>
               All tests and verification criteria passed successfully.
             </div>
           )}

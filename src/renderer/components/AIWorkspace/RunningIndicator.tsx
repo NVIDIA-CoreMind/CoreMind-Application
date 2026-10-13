@@ -19,6 +19,8 @@ import {
   AgentExecutionState,
   AGENT_STATE_LABELS,
 } from '../../types/aiWorkspace';
+import { useThemeStore } from '../../stores/themeStore';
+import { getAITheme } from './themeTokens';
 
 interface RunningIndicatorProps {
   state?: AgentExecutionState;
@@ -33,6 +35,9 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
 }) => {
   const { currentState, executionState, agentPhase, agentPhaseDetail, events } = useAIWorkspaceStore();
   const [dots, setDots] = useState('');
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   // Determine active execution state
   let activeState: AgentExecutionState =
@@ -110,13 +115,17 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         .trim()
     : '';
 
+  const monoColor = tokens.textPrimary;
+  const monoMuted = tokens.textSecondary;
+  const activePulse = tokens.accentRunning;
+
   const getStateConfig = () => {
     switch (activeState) {
       case 'idle':
         return {
           label: AGENT_STATE_LABELS.idle,
-          icon: <CircleDot size={13} style={{ color: 'var(--text-muted, #70757A)', flexShrink: 0 }} />,
-          accentColor: 'var(--text-muted, #70757A)',
+          icon: <CircleDot size={13} style={{ color: monoMuted, flexShrink: 0 }} />,
+          accentColor: monoMuted,
           animated: false,
         };
 
@@ -127,16 +136,16 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '14px', height: '14px' }}>
               <div
                 style={{
-                  width: '7.5px',
-                  height: '7.5px',
+                  width: '7px',
+                  height: '7px',
                   borderRadius: '50%',
-                  backgroundColor: 'var(--accent, #8AB4F8)',
+                  backgroundColor: activePulse,
                   animation: 'antigravity-pulse 1.4s infinite ease-in-out',
                 }}
               />
             </div>
           ),
-          accentColor: 'var(--accent, #8AB4F8)',
+          accentColor: activePulse,
           animated: true,
         };
 
@@ -147,13 +156,13 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <Search
               size={13}
               style={{
-                color: 'var(--accent, #8AB4F8)',
+                color: activePulse,
                 animation: 'antigravity-search-pulse 1.4s infinite ease-in-out',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: 'var(--accent, #8AB4F8)',
+          accentColor: activePulse,
           animated: true,
         };
 
@@ -164,13 +173,13 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <FileEdit
               size={13}
               style={{
-                color: 'var(--accent, #8AB4F8)',
+                color: activePulse,
                 animation: 'antigravity-pulse 1.4s infinite ease-in-out',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: 'var(--accent, #8AB4F8)',
+          accentColor: activePulse,
           animated: true,
         };
 
@@ -181,13 +190,13 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <Terminal
               size={13}
               style={{
-                color: 'var(--accent, #8AB4F8)',
+                color: activePulse,
                 animation: 'antigravity-pulse 1.4s infinite ease-in-out',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: 'var(--accent, #8AB4F8)',
+          accentColor: activePulse,
           animated: true,
         };
 
@@ -198,37 +207,37 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <FlaskConical
               size={13}
               style={{
-                color: 'var(--accent, #8AB4F8)',
+                color: activePulse,
                 animation: 'antigravity-spin 2s linear infinite',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: 'var(--accent, #8AB4F8)',
+          accentColor: activePulse,
           animated: true,
         };
 
       case 'completed':
         return {
           label: AGENT_STATE_LABELS.completed,
-          icon: <CheckCircle2 size={13} style={{ color: 'var(--success, #81C995)', flexShrink: 0 }} />,
-          accentColor: 'var(--success, #81C995)',
+          icon: <CheckCircle2 size={13} style={{ color: tokens.accentSuccess, flexShrink: 0 }} />,
+          accentColor: tokens.accentSuccess,
           animated: false,
         };
 
       case 'failed':
         return {
           label: AGENT_STATE_LABELS.failed,
-          icon: <AlertCircle size={13} style={{ color: 'var(--error, #F28B82)', flexShrink: 0 }} />,
-          accentColor: 'var(--error, #F28B82)',
+          icon: <AlertCircle size={13} style={{ color: tokens.accentError, flexShrink: 0 }} />,
+          accentColor: tokens.accentError,
           animated: false,
         };
 
       case 'cancelled':
         return {
           label: AGENT_STATE_LABELS.cancelled,
-          icon: <XCircle size={13} style={{ color: 'var(--text-muted, #70757A)', flexShrink: 0 }} />,
-          accentColor: 'var(--text-muted, #70757A)',
+          icon: <XCircle size={13} style={{ color: monoMuted, flexShrink: 0 }} />,
+          accentColor: monoMuted,
           animated: false,
         };
 
@@ -239,13 +248,13 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <Loader2
               size={13}
               style={{
-                color: 'var(--accent, #8AB4F8)',
+                color: monoColor,
                 animation: 'antigravity-spin 1s linear infinite',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: 'var(--accent, #8AB4F8)',
+          accentColor: monoColor,
           animated: true,
         };
     }
@@ -262,7 +271,7 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         padding: '4px 2px',
         fontSize: '12.5px',
         fontFamily: 'var(--font-sans)',
-        color: 'var(--text-secondary, #9AA0A6)',
+        color: monoMuted,
         backgroundColor: 'transparent',
         border: 'none',
         boxShadow: 'none',
@@ -275,7 +284,7 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         style={{
           fontWeight: 500,
           letterSpacing: '-0.01em',
-          color: 'var(--text-primary, #E8EAED)',
+          color: monoColor,
           display: 'inline-flex',
           alignItems: 'center',
         }}
@@ -300,7 +309,7 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         <span
           style={{
             fontSize: '11.5px',
-            color: 'var(--text-muted, #70757A)',
+            color: monoMuted,
             maxWidth: '280px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',

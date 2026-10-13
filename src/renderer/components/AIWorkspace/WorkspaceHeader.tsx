@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import {
   Plus,
   History,
@@ -11,9 +11,9 @@ import {
 } from 'lucide-react';
 import { useUiStore } from '../../stores/uiStore';
 import { useAIWorkspaceStore, WorkspaceViewTab } from '../../services/aiWorkspaceService';
-import { coremindWs } from '../../services/coremind/websocket';
 import { useThemeStore } from '../../stores/themeStore';
 import { AiSettingsModal } from './AiSettingsModal';
+import { getAITheme } from './themeTokens';
 
 export const WorkspaceHeader: React.FC = () => {
   const { toggleRightPanel } = useUiStore();
@@ -27,7 +27,6 @@ export const WorkspaceHeader: React.FC = () => {
     setIsAiSettingsOpen,
   } = useAIWorkspaceStore();
 
-  const executionState = useAIWorkspaceStore((s) => s.executionState);
   const taskGraph = useAIWorkspaceStore((s) => s.taskGraph);
   const events = useAIWorkspaceStore((s) => s.events);
   const trackedChanges = useAIWorkspaceStore((s) => s.trackedChanges);
@@ -35,16 +34,7 @@ export const WorkspaceHeader: React.FC = () => {
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
 
-  const [wsStatus, setWsStatus] = useState<'connected' | 'connecting' | 'reconnecting' | 'disconnected' | 'error'>(
-    coremindWs.getStatus()
-  );
-
-  useEffect(() => {
-    const unsub = coremindWs.onStatusChange((status) => {
-      setWsStatus(status);
-    });
-    return () => unsub();
-  }, []);
+  const tokens = getAITheme(isDark);
 
   const tasksCount = taskGraph?.tasks?.length || taskGraph?.nodes?.length || 0;
   const eventsCount = events.length;
@@ -63,8 +53,8 @@ export const WorkspaceHeader: React.FC = () => {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: isDark ? 'var(--bg-panel)' : '#F8FAFC',
-          borderBottom: isDark ? '1px solid var(--border-color)' : '1px solid #E2E8F0',
+          backgroundColor: tokens.bgHeader,
+          borderBottom: `1px solid ${tokens.border}`,
           flexShrink: 0,
           userSelect: 'none',
         }}
@@ -72,7 +62,7 @@ export const WorkspaceHeader: React.FC = () => {
         {/* Top Control Bar */}
         <div
           style={{
-            height: '40px',
+            height: '38px',
             padding: '0 12px',
             display: 'flex',
             alignItems: 'center',
@@ -80,106 +70,39 @@ export const WorkspaceHeader: React.FC = () => {
             gap: '8px',
           }}
         >
-          {/* Left: Agent Title & Status Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Bot size={15} style={{ color: 'var(--accent, #8AB4F8)' }} />
-              <span
-                style={{
-                  fontSize: '12.5px',
-                  fontWeight: 600,
-                  color: 'var(--text-primary)',
-                  letterSpacing: '-0.01em',
-                }}
-              >
-                CoreMind Agent
-              </span>
-            </div>
-
-            {/* Current Execution State Badge */}
-            {(() => {
-              const labels: Record<string, string> = {
-                idle: 'Idle',
-                thinking: 'Thinking',
-                inspecting: 'Inspecting',
-                editing: 'Editing',
-                running_command: 'Running command',
-                testing: 'Testing',
-                completed: 'Completed',
-                failed: 'Failed',
-                cancelled: 'Cancelled',
-              };
-              const colors: Record<string, { bg: string; text: string; dot: string }> = {
-                idle: { bg: 'rgba(255, 255, 255, 0.05)', text: '#9AA0A6', dot: '#70757A' },
-                thinking: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
-                inspecting: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
-                editing: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
-                running_command: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
-                testing: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
-                completed: { bg: 'rgba(129, 201, 149, 0.12)', text: '#81C995', dot: '#81C995' },
-                failed: { bg: 'rgba(242, 139, 130, 0.12)', text: '#F28B82', dot: '#F28B82' },
-                cancelled: { bg: 'rgba(255, 255, 255, 0.05)', text: '#9AA0A6', dot: '#70757A' },
-              };
-              const c = colors[executionState] || colors.idle;
-              return (
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    fontSize: '10.5px',
-                    fontWeight: 500,
-                    padding: '1.5px 6px',
-                    borderRadius: '10px',
-                    backgroundColor: c.bg,
-                    color: c.text,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '5px',
-                      height: '5px',
-                      borderRadius: '50%',
-                      backgroundColor: c.dot,
-                    }}
-                  />
-                  <span>{labels[executionState] || executionState}</span>
-                </span>
-              );
-            })()}
-          </div>
-
-          {/* Right: Status indicator + Actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {/* Backend WebSocket connection dot */}
-            <div
-              title={`Backend WS: ${wsStatus}`}
+          {/* Left: Agent Title */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '7px' }}>
+            <Bot size={15} style={{ color: tokens.iconPrimary }} />
+            <span
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                padding: '2px 6px',
-                borderRadius: '4px',
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.04)',
-                marginRight: '2px',
+                fontSize: '12.5px',
+                fontWeight: 600,
+                color: tokens.textPrimary,
+                letterSpacing: '-0.01em',
               }}
             >
-              <span
-                style={{
-                  width: '6.5px',
-                  height: '6.5px',
-                  borderRadius: '50%',
-                  backgroundColor:
-                    wsStatus === 'connected'
-                      ? '#22C55E'
-                      : wsStatus === 'connecting' || wsStatus === 'reconnecting'
-                      ? '#F59E0B'
-                      : '#EF4444',
-                  display: 'inline-block',
-                }}
-              />
-            </div>
+              CoreMind Agent
+            </span>
+          </div>
 
-            <button onClick={newSession} title="New Task Session" style={btnStyle}>
+          {/* Right: Functional Action Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
+            <button
+              onClick={newSession}
+              title="New Task Session"
+              style={{
+                ...btnStyle,
+                color: tokens.textSecondary,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = tokens.bgHover;
+                e.currentTarget.style.color = tokens.textPrimary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = tokens.textSecondary;
+              }}
+            >
               <Plus size={14} />
             </button>
 
@@ -188,14 +111,45 @@ export const WorkspaceHeader: React.FC = () => {
               title="Past Sessions"
               style={{
                 ...btnStyle,
-                color: isHistoryOpen ? 'var(--accent, #8AB4F8)' : 'var(--text-secondary)',
-                backgroundColor: isHistoryOpen ? 'var(--accent-bg)' : 'transparent',
+                color: isHistoryOpen
+                  ? tokens.textPrimary
+                  : tokens.textSecondary,
+                backgroundColor: isHistoryOpen
+                  ? tokens.bgHover
+                  : 'transparent',
+              }}
+              onMouseEnter={(e) => {
+                if (!isHistoryOpen) {
+                  e.currentTarget.style.backgroundColor = tokens.bgHover;
+                  e.currentTarget.style.color = tokens.textPrimary;
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isHistoryOpen) {
+                  e.currentTarget.style.backgroundColor = 'transparent';
+                  e.currentTarget.style.color = tokens.textSecondary;
+                }
               }}
             >
               <History size={13} />
             </button>
 
-            <button onClick={toggleRightPanel} title="Close Workspace" style={btnStyle}>
+            <button
+              onClick={toggleRightPanel}
+              title="Close Workspace"
+              style={{
+                ...btnStyle,
+                color: tokens.textSecondary,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = tokens.bgHover;
+                e.currentTarget.style.color = tokens.textPrimary;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = tokens.textSecondary;
+              }}
+            >
               <X size={14} />
             </button>
           </div>
@@ -206,7 +160,7 @@ export const WorkspaceHeader: React.FC = () => {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '2px',
+            gap: '3px',
             padding: '0 8px 6px 8px',
           }}
         >
@@ -221,21 +175,31 @@ export const WorkspaceHeader: React.FC = () => {
                   alignItems: 'center',
                   gap: '5px',
                   padding: '4px 9px',
-                  borderRadius: '5px',
-                  border: isActive && isDark ? '1px solid rgba(138, 180, 248, 0.25)' : '1px solid transparent',
+                  borderRadius: '6px',
+                  border: '1px solid transparent',
                   fontSize: '11.5px',
                   fontWeight: isActive ? 600 : 500,
                   cursor: 'pointer',
                   backgroundColor: isActive
-                    ? isDark
-                      ? 'var(--accent-bg, rgba(138, 180, 248, 0.12))'
-                      : '#FFFFFF'
+                    ? tokens.bgActiveTab
                     : 'transparent',
                   color: isActive
-                    ? 'var(--accent, #8AB4F8)'
-                    : 'var(--text-secondary)',
+                    ? tokens.textPrimary
+                    : tokens.textSecondary,
                   boxShadow: 'none',
                   transition: 'background-color 0.12s ease, color 0.12s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = tokens.bgHover;
+                    e.currentTarget.style.color = tokens.textPrimary;
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.backgroundColor = 'transparent';
+                    e.currentTarget.style.color = tokens.textSecondary;
+                  }
                 }}
               >
                 {tab.icon}
@@ -245,14 +209,11 @@ export const WorkspaceHeader: React.FC = () => {
                     style={{
                       fontSize: '10px',
                       fontWeight: 600,
-                      padding: '0 4px',
+                      padding: '0 5px',
                       borderRadius: '10px',
-                      backgroundColor: isActive
-                        ? 'var(--accent, #8AB4F8)'
-                        : isDark
-                        ? 'var(--bg-hover)'
-                        : 'rgba(0, 0, 0, 0.08)',
-                      color: isActive ? '#1E1F20' : 'var(--text-secondary)',
+                      backgroundColor: isDark ? '#2B2C2F' : '#E0E2E6',
+                      border: `1px solid ${tokens.border}`,
+                      color: tokens.textSecondary,
                       lineHeight: '14px',
                     }}
                   >
@@ -276,7 +237,6 @@ export const WorkspaceHeader: React.FC = () => {
 const btnStyle: React.CSSProperties = {
   padding: '5px',
   borderRadius: '5px',
-  color: 'var(--text-secondary)',
   background: 'transparent',
   border: 'none',
   cursor: 'pointer',

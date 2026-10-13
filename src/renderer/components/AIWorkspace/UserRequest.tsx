@@ -1,15 +1,21 @@
 import React from 'react';
 import { UserRequestEvent } from '../../types/aiWorkspace';
+import { useThemeStore } from '../../stores/themeStore';
+import { getAITheme } from './themeTokens';
 
 export const UserRequest: React.FC<{ event: UserRequestEvent }> = ({ event }) => {
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
+
   return (
     <div style={{
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
-      border: '1px solid rgba(255, 255, 255, 0.03)',
-      borderRadius: '12px',
+      backgroundColor: tokens.bgCard,
+      border: `1px solid ${tokens.border}`,
+      borderRadius: '8px',
       padding: '12px 16px',
       margin: '12px 14px 16px 14px',
-      color: '#E5E7EB',
+      color: tokens.textPrimary,
       fontSize: '13px',
       lineHeight: '1.5',
       wordBreak: 'break-word',

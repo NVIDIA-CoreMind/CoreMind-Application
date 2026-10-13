@@ -298,7 +298,9 @@ export class CoreMindClient {
 
           try {
             const parsed = JSON.parse(dataPayload);
-            if (parsed.type === 'token' && typeof parsed.token === 'string') {
+            if (parsed.type === 'error') {
+              throw new Error(parsed.error || 'AI Provider error during streaming');
+            } else if (parsed.type === 'token' && typeof parsed.token === 'string') {
               accumulated += parsed.token;
               onToken(parsed.token);
             } else if (parsed.content && typeof parsed.content === 'string') {
@@ -320,6 +322,19 @@ export class CoreMindClient {
     }
 
     return accumulated;
+  }
+  /**
+   * Fast non-streaming friendly chat completion (/v1/ai/chat/friendly).
+   */
+  public async friendlyChat(
+    query: string,
+    history: Array<{ role: string; content: string }> = [],
+    projectPath: string = '.'
+  ): Promise<{ status: string; response: string; history?: any[] }> {
+    return this.post<{ status: string; response: string; history?: any[] }>(
+      '/v1/ai/chat/friendly',
+      { query, history, project_path: projectPath }
+    );
   }
 }
 

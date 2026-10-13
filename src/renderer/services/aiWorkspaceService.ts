@@ -359,7 +359,7 @@ interface AIWorkspaceStore {
   // Agent Actions
   submitPrompt: (prompt: string) => Promise<boolean>;
   handleCoreMindEvent: (event: CoreMindEvent) => void;
-  finalizeActiveAssistantTurn: (params: { steps?: number; filesChanged?: string[]; status: 'completed' | 'failed' | 'cancelled'; error?: string }) => void;
+  finalizeActiveAssistantTurn: (params: { steps?: number; filesChanged?: string[]; status: 'completed' | 'failed' | 'cancelled'; error?: string; response?: string }) => void;
   initWsListeners: () => void;
   submitAnswer: (answer: string) => Promise<boolean>;
   approveAction: () => Promise<boolean>;
@@ -1399,6 +1399,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
             steps: event.data?.steps || 1,
             filesChanged: event.data?.files_changed || [],
             status: 'completed',
+            response: event.data?.response || event.data?.summary,
           });
           break;
         }
@@ -1460,7 +1461,9 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
           if (streamId && m.id === streamId) {
             let content = m.content.trim();
             if (!content) {
-              if (params.status === 'completed') {
+              if (params.response && params.response.trim()) {
+                content = params.response.trim();
+              } else if (params.status === 'completed') {
                 content = formatTaskCompletedSummary(
                   params.steps || 1,
                   params.filesChanged || [],
@@ -1506,20 +1509,22 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
 
       if (!trimmed || isBusy) return false;
 
+      const isAgent = get().agentMode === 'agent';
       const rootPath = useWorkspaceStore.getState().rootPath;
-      if (!rootPath) {
-        alert('Please open a workspace folder before executing AI tasks.');
+      if (isAgent && !rootPath) {
+        alert('Please open a workspace folder before executing AI Agent coding tasks.');
         return false;
       }
+      const effectivePath = rootPath || '.';
 
       // Ensure WebSocket listeners are initialized
       get().initWsListeners();
       coremindWs.connect();
 
       const abortController = new AbortController();
-      set({ abortController });
+      set({ abortController, agentId: null });
       get().resetForNewTurn();
-      get().setExecutionState('thinking', 'Analyzing instructions and repository context...');
+      get().setExecutionState('thinking', isAgent ? 'Analyzing instructions and repository context...' : 'Thinking...');
 
       // 1. Add user message
       const userMsgId = `user-${Date.now()}`;
@@ -1544,13 +1549,12 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
       set({ streamMessageId: assistantMsgId });
 
       const activeSessionId = get().activeSessionId;
-      const isAgent = get().agentMode === 'agent';
 
       if (isAgent) {
         try {
           get().setExecutionState('thinking', 'Starting autonomous agent on CoreMind backend...');
           const cleanTask = trimmed.replace(/^\/(?:agent|autonomous|plan)\s+/, '');
-          const runRes = await agentService.run(cleanTask, rootPath, activeSessionId || undefined);
+          const runRes = await agentService.run(cleanTask, effectivePath, activeSessionId || undefined);
 
           if (abortController.signal.aborted) {
             get().setExecutionState('cancelled', 'Task was cancelled.');
@@ -1560,6 +1564,24 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
           if (runRes?.agent_id) {
             set({ agentId: runRes.agent_id });
           }
+
+          // If backend friendly chat returned direct completion response in HTTP payload
+          if (runRes?.response) {
+            set((s) => ({
+              currentState: 'completed',
+              executionState: 'completed',
+              agentPhaseDetail: 'Task completed.',
+              chatHistory: s.chatHistory.map((m) =>
+                m.id === assistantMsgId
+                  ? { ...m, content: runRes.response! }
+                  : m
+              ),
+              streamMessageId: null,
+            }));
+            get()._persistCurrentSession();
+            return true;
+          }
+
           return true;
         } catch (err: any) {
           if (abortController.signal.aborted) {
@@ -1582,17 +1604,18 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
           return false;
         }
       } else {
-        // Direct chat streaming
+        // Direct chat streaming (Friendly Chat)
         try {
           get().setExecutionState('thinking', 'Streaming assistant response...');
+          // Exclude assistantMsgId AND the newly added userMsgId so query isn't duplicated
           const history = get().chatHistory
-            .filter((m) => m.id !== assistantMsgId)
+            .filter((m) => m.id !== assistantMsgId && m.id !== userMsgId)
             .map((m) => ({ role: m.role, content: m.content }));
 
           let accumulated = '';
           await coremindClient.streamChat(
             trimmed,
-            rootPath,
+            effectivePath,
             history,
             (token) => {
               accumulated += token;
@@ -1626,7 +1649,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
           set((s) => ({
             chatHistory: s.chatHistory.map((m) =>
               m.id === assistantMsgId
-                ? { ...m, content: `**Error:** ${errMsg}` }
+                ? { ...m, content: `**Chat Error:** ${errMsg}\n\nPlease check backend connection or retry.` }
                 : m
             ),
             abortController: null,
@@ -1634,7 +1657,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
           return false;
         }
       }
-    },
-  };
+    }
+};
 });
 

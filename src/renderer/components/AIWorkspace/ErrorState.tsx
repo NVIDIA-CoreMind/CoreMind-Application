@@ -2,9 +2,14 @@ import React from 'react';
 import { ErrorEvent } from '../../types/aiWorkspace';
 import { AlertCircle } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
+import { useThemeStore } from '../../stores/themeStore';
+import { getAITheme } from './themeTokens';
 
 export const ErrorState: React.FC<{ event: ErrorEvent }> = ({ event }) => {
   const { setState, setExecutionState, setDraftPrompt, chatHistory, draftPrompt } = useAIWorkspaceStore();
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const handleRetry = () => {
     setExecutionState('idle');
@@ -21,21 +26,21 @@ export const ErrorState: React.FC<{ event: ErrorEvent }> = ({ event }) => {
 
   return (
     <div style={{
-      backgroundColor: 'rgba(239, 68, 68, 0.05)',
-      border: '1px solid rgba(239, 68, 68, 0.2)',
+      backgroundColor: tokens.bgPanel,
+      border: `1px solid ${isDark ? 'rgba(242, 139, 130, 0.25)' : '#FCA5A5'}`,
       borderRadius: '8px',
-      padding: '12px',
+      padding: '12px 14px',
       display: 'flex',
       flexDirection: 'column',
       gap: '8px',
       marginTop: '8px'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#FCA5A5' }}>
-        <AlertCircle size={14} />
-        <span style={{ fontSize: '13px', fontWeight: 500 }}>Failed</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tokens.accentError }}>
+        <AlertCircle size={14} color="currentColor" />
+        <span style={{ fontSize: '13px', fontWeight: 600, color: tokens.textPrimary }}>Execution Error</span>
       </div>
       
-      <div style={{ fontSize: '12px', color: '#E5E7EB', lineHeight: '1.5' }}>
+      <div style={{ fontSize: '12px', color: tokens.textSecondary, lineHeight: '1.5' }}>
         {event.error}
       </div>
       
@@ -43,12 +48,13 @@ export const ErrorState: React.FC<{ event: ErrorEvent }> = ({ event }) => {
         <button 
           onClick={handleRetry}
           style={{
-            padding: '4px 10px',
-            backgroundColor: 'transparent',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            color: '#FCA5A5',
-            borderRadius: '4px',
+            padding: '5px 12px',
+            backgroundColor: tokens.bgActiveTab,
+            border: `1px solid ${tokens.border}`,
+            color: tokens.textPrimary,
+            borderRadius: '5px',
             fontSize: '11px',
+            fontWeight: 600,
             cursor: 'pointer'
           }}
         >
@@ -57,12 +63,13 @@ export const ErrorState: React.FC<{ event: ErrorEvent }> = ({ event }) => {
         <button 
           onClick={handleNewTask}
           style={{
-            padding: '4px 10px',
-            backgroundColor: 'transparent',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            color: '#D1D5DB',
-            borderRadius: '4px',
+            padding: '5px 12px',
+            backgroundColor: tokens.bgCard,
+            border: `1px solid ${tokens.border}`,
+            color: tokens.textSecondary,
+            borderRadius: '5px',
             fontSize: '11px',
+            fontWeight: 500,
             cursor: 'pointer'
           }}
         >

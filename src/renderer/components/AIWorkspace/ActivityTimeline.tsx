@@ -4,12 +4,15 @@ import { ActivityItem } from './ActivityItem';
 import { Activity, Wrench, FileCode, Terminal, ShieldCheck } from 'lucide-react';
 import { useThemeStore } from '../../stores/themeStore';
 
+import { getAITheme } from './themeTokens';
+
 export const ActivityTimeline: React.FC = () => {
   const { events } = useAIWorkspaceStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<'all' | 'tools' | 'files' | 'terminal' | 'tests'>('all');
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -34,13 +37,13 @@ export const ActivityTimeline: React.FC = () => {
           justifyContent: 'center',
           height: '100%',
           padding: '32px 16px',
-          color: 'var(--text-secondary)',
+          color: tokens.textSecondary,
           textAlign: 'center',
           fontSize: '13px',
         }}
       >
         <Activity size={36} style={{ opacity: 0.35, marginBottom: '12px' }} />
-        <div style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '4px' }}>
+        <div style={{ fontWeight: 600, color: tokens.textPrimary, marginBottom: '4px' }}>
           No Live Activity Yet
         </div>
         <div style={{ maxWidth: '280px', lineHeight: 1.5 }}>
@@ -58,6 +61,7 @@ export const ActivityTimeline: React.FC = () => {
         flexDirection: 'column',
         overflow: 'hidden',
         height: '100%',
+        backgroundColor: tokens.bgMain,
       }}
     >
       {/* Event Filters Bar */}
@@ -67,18 +71,18 @@ export const ActivityTimeline: React.FC = () => {
           display: 'flex',
           alignItems: 'center',
           gap: '4px',
-          borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
-          backgroundColor: isDark ? 'rgba(0, 0, 0, 0.15)' : '#F8FAFC',
+          borderBottom: `1px solid ${tokens.border}`,
+          backgroundColor: tokens.bgHeader,
           flexShrink: 0,
         }}
       >
         {(
           [
-            { id: 'all', label: 'All', icon: <Activity size={12} /> },
-            { id: 'tools', label: 'Tools', icon: <Wrench size={12} /> },
-            { id: 'files', label: 'Files', icon: <FileCode size={12} /> },
-            { id: 'terminal', label: 'Terminal', icon: <Terminal size={12} /> },
-            { id: 'tests', label: 'Tests', icon: <ShieldCheck size={12} /> },
+            { id: 'all', label: 'All', icon: <Activity size={12} color="currentColor" /> },
+            { id: 'tools', label: 'Tools', icon: <Wrench size={12} color="currentColor" /> },
+            { id: 'files', label: 'Files', icon: <FileCode size={12} color="currentColor" /> },
+            { id: 'terminal', label: 'Terminal', icon: <Terminal size={12} color="currentColor" /> },
+            { id: 'tests', label: 'Tests', icon: <ShieldCheck size={12} color="currentColor" /> },
           ] as const
         ).map((tab) => (
           <button
@@ -89,19 +93,14 @@ export const ActivityTimeline: React.FC = () => {
               alignItems: 'center',
               gap: '4px',
               padding: '3px 8px',
-              borderRadius: '4px',
+              borderRadius: '5px',
               fontSize: '11px',
               fontWeight: 500,
               cursor: 'pointer',
               border: 'none',
-              backgroundColor:
-                filter === tab.id
-                  ? isDark
-                    ? 'rgba(255, 255, 255, 0.12)'
-                    : '#FFFFFF'
-                  : 'transparent',
-              color: filter === tab.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-              boxShadow: filter === tab.id ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+              backgroundColor: filter === tab.id ? tokens.bgActiveTab : 'transparent',
+              color: filter === tab.id ? tokens.textPrimary : tokens.textSecondary,
+              boxShadow: 'none',
             }}
           >
             {tab.icon}

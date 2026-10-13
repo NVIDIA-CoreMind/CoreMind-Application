@@ -10,6 +10,7 @@ import { FinalResult } from './FinalResult';
 import { ErrorState } from './ErrorState';
 import { VerificationCard } from './VerificationCard';
 import { useThemeStore } from '../../stores/themeStore';
+import { getAITheme } from './themeTokens';
 import {
   Wrench,
   ChevronDown,
@@ -31,6 +32,7 @@ export const ActivityItem: React.FC<{ event: AIWorkspaceEvent }> = ({ event }) =
   const [toolExpanded, setToolExpanded] = useState(false);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   let content: React.ReactNode = null;
 
@@ -40,8 +42,8 @@ export const ActivityItem: React.FC<{ event: AIWorkspaceEvent }> = ({ event }) =
 
     case 'AgentStartedEvent':
       content = (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent)', fontSize: '12px', fontWeight: 600 }}>
-          <Play size={13} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tokens.textPrimary, fontSize: '12px', fontWeight: 600 }}>
+          <Play size={13} color="currentColor" />
           <span>Agent started coding session: {event.task || 'Autonomous task'}</span>
         </div>
       );
@@ -49,8 +51,8 @@ export const ActivityItem: React.FC<{ event: AIWorkspaceEvent }> = ({ event }) =
 
     case 'PlanCreatedEvent':
       content = (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent)', fontSize: '12px', fontWeight: 600 }}>
-          <ListTodo size={14} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: tokens.textPrimary, fontSize: '12px', fontWeight: 600 }}>
+          <ListTodo size={14} color="currentColor" />
           <span>Created implementation plan with {event.tasks.length} subtasks</span>
         </div>
       );
@@ -65,12 +67,13 @@ export const ActivityItem: React.FC<{ event: AIWorkspaceEvent }> = ({ event }) =
             borderRadius: '4px',
             fontWeight: 600,
             textTransform: 'uppercase',
-            backgroundColor: event.status === 'completed' ? 'rgba(34, 197, 94, 0.15)' : 'rgba(59, 130, 246, 0.15)',
-            color: event.status === 'completed' ? '#22C55E' : 'var(--accent)',
+            backgroundColor: tokens.bgCard,
+            border: `1px solid ${tokens.borderSubtle}`,
+            color: tokens.textSecondary,
           }}>
             {event.status}
           </span>
-          <span style={{ fontWeight: 500 }}>{event.title}</span>
+          <span style={{ fontWeight: 500, color: tokens.textPrimary }}>{event.title}</span>
         </div>
       );
       break;
@@ -91,23 +94,24 @@ export const ActivityItem: React.FC<{ event: AIWorkspaceEvent }> = ({ event }) =
               cursor: 'pointer',
               userSelect: 'none',
               fontSize: '12.5px',
+              color: tokens.textPrimary,
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Wrench size={13} color="var(--accent)" />
-              <span style={{ fontWeight: 600, fontFamily: 'var(--font-mono)' }}>{event.tool}</span>
+              <Wrench size={13} color="currentColor" />
+              <span style={{ fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>{event.tool}</span>
               {event.success !== undefined && (
                 event.success ? (
-                  <Check size={12} color="#22C55E" />
+                  <Check size={12} style={{ color: tokens.accentSuccess }} />
                 ) : (
-                  <AlertTriangle size={12} color="#EF4444" />
+                  <AlertTriangle size={12} style={{ color: tokens.accentError }} />
                 )
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: tokens.textSecondary }}>
               {event.durationMs && (
-                <span style={{ fontSize: '11px', fontFamily: 'var(--font-mono)' }}>{event.durationMs}ms</span>
+                <span style={{ fontSize: '11px', fontFamily: 'ui-monospace, monospace' }}>{event.durationMs}ms</span>
               )}
               {toolExpanded ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
             </div>
@@ -117,21 +121,22 @@ export const ActivityItem: React.FC<{ event: AIWorkspaceEvent }> = ({ event }) =
             <div
               style={{
                 borderRadius: '6px',
-                backgroundColor: isDark ? '#141414' : '#F8FAFC',
-                border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
+                backgroundColor: tokens.bgTerminal,
+                border: `1px solid ${tokens.border}`,
                 padding: '8px 10px',
                 fontSize: '11px',
-                fontFamily: 'var(--font-mono)',
+                fontFamily: 'ui-monospace, monospace',
                 whiteSpace: 'pre-wrap',
                 maxHeight: '180px',
                 overflowY: 'auto',
+                color: tokens.textPrimary,
               }}
             >
-              <div style={{ color: 'var(--text-secondary)', marginBottom: '4px', fontWeight: 600 }}>Arguments:</div>
+              <div style={{ color: tokens.textMuted, marginBottom: '4px', fontWeight: 600 }}>Arguments:</div>
               <div>{JSON.stringify(event.args, null, 2)}</div>
               {event.result && (
                 <>
-                  <div style={{ color: 'var(--text-secondary)', margin: '8px 0 4px', fontWeight: 600 }}>Result:</div>
+                  <div style={{ color: tokens.textMuted, margin: '8px 0 4px', fontWeight: 600 }}>Result:</div>
                   <div>{typeof event.result === 'string' ? event.result : JSON.stringify(event.result, null, 2)}</div>
                 </>
               )}
@@ -149,11 +154,11 @@ export const ActivityItem: React.FC<{ event: AIWorkspaceEvent }> = ({ event }) =
 
     case 'DiffCreatedEvent':
       content = (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}>
-          <FileCode size={13} color="var(--accent)" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: tokens.textPrimary }}>
+          <FileCode size={13} color="currentColor" />
           <span>Diff for <strong>{event.path}</strong></span>
-          <span style={{ color: '#22C55E', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>+{event.additions}</span>
-          <span style={{ color: '#EF4444', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>-{event.deletions}</span>
+          <span style={{ color: tokens.accentSuccess, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>+{event.additions}</span>
+          <span style={{ color: tokens.accentError, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>-{event.deletions}</span>
         </div>
       );
       break;

@@ -10,6 +10,7 @@ import {
   ChevronRight,
   ChevronDown,
 } from 'lucide-react';
+import { getAITheme } from './themeTokens';
 
 interface FileChangesCardProps {
   files: FileChangeInfo[];
@@ -26,6 +27,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -69,14 +71,10 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
         <div
           style={{
             borderRadius: '8px',
-            border: isDark
-              ? '1px solid rgba(255, 255, 255, 0.12)'
-              : '1px solid #E2E8F0',
-            backgroundColor: isDark
-              ? 'rgba(255, 255, 255, 0.04)'
-              : '#F8FAFC',
+            border: `1px solid ${tokens.border}`,
+            backgroundColor: tokens.bgPanel,
             overflow: 'hidden',
-            boxShadow: '0 1px 2px rgba(0, 0, 0, 0.04)',
+            boxShadow: 'none',
             transition: 'border-color 0.15s ease',
           }}
         >
@@ -102,7 +100,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                     width: '6px',
                     height: '6px',
                     borderRadius: '50%',
-                    backgroundColor: '#3B82F6',
+                    backgroundColor: tokens.accentRunning,
                     animation: 'pulse 1.5s infinite',
                     display: 'inline-block',
                     flexShrink: 0,
@@ -112,8 +110,8 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
               <span
                 style={{
                   fontSize: '13px',
-                  fontWeight: 500,
-                  color: isDark ? '#E2E8F0' : '#1E293B',
+                  fontWeight: 600,
+                  color: tokens.textPrimary,
                 }}
               >
                 {files.length} {files.length === 1 ? 'file changed' : 'files changed'}
@@ -122,9 +120,9 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
               {totalAdditions > 0 && (
                 <span
                   style={{
-                    fontSize: '12px',
+                    fontSize: '11px',
                     fontWeight: 600,
-                    color: '#22C55E',
+                    color: tokens.accentSuccess,
                     fontFamily:
                       'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                   }}
@@ -136,9 +134,9 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
               {totalDeletions > 0 && (
                 <span
                   style={{
-                    fontSize: '12px',
+                    fontSize: '11px',
                     fontWeight: 600,
-                    color: '#EF4444',
+                    color: tokens.accentError,
                     fontFamily:
                       'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                   }}
@@ -149,7 +147,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
 
               <span
                 style={{
-                  color: isDark ? '#94A3B8' : '#64748B',
+                  color: tokens.iconPrimary,
                   display: 'flex',
                   alignItems: 'center',
                   marginLeft: '2px',
@@ -169,13 +167,9 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                 gap: '5px',
                 padding: '4px 10px',
                 borderRadius: '6px',
-                border: isDark
-                  ? '1px solid rgba(255, 255, 255, 0.12)'
-                  : '1px solid #CBD5E1',
-                backgroundColor: isDark
-                  ? 'rgba(255, 255, 255, 0.07)'
-                  : '#FFFFFF',
-                color: isDark ? '#E2E8F0' : '#1E293B',
+                border: `1px solid ${tokens.border}`,
+                backgroundColor: tokens.bgCard,
+                color: tokens.textPrimary,
                 fontSize: '12px',
                 fontWeight: 500,
                 cursor: 'pointer',
@@ -192,12 +186,8 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
           {isExpanded && (
             <div
               style={{
-                borderTop: isDark
-                  ? '1px solid rgba(255, 255, 255, 0.08)'
-                  : '1px solid #E2E8F0',
-                backgroundColor: isDark
-                  ? 'rgba(0, 0, 0, 0.15)'
-                  : '#FFFFFF',
+                borderTop: `1px solid ${tokens.borderSubtle}`,
+                backgroundColor: tokens.bgPanel,
               }}
             >
               {files.map((file, idx) => {
@@ -221,9 +211,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                       padding: '8px 12px',
                       borderBottom:
                         idx < files.length - 1
-                          ? isDark
-                            ? '1px solid rgba(255, 255, 255, 0.05)'
-                            : '1px solid #F1F5F9'
+                          ? `1px solid ${tokens.borderSubtle}`
                           : 'none',
                       cursor: 'pointer',
                       transition: 'background-color 0.15s ease',
@@ -242,7 +230,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                         style={{
                           fontWeight: 500,
                           fontSize: '12.5px',
-                          color: isDark ? '#F1F5F9' : '#1E293B',
+                          color: tokens.textPrimary,
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
@@ -256,7 +244,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                         <span
                           style={{
                             fontSize: '11px',
-                            color: isDark ? '#94A3B8' : '#64748B',
+                            color: tokens.textMuted,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -281,20 +269,9 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                           padding: '1px 7px',
                           borderRadius: '4px',
                           fontWeight: 500,
-                          backgroundColor: isCreated
-                            ? isDark
-                              ? 'rgba(34, 197, 94, 0.15)'
-                              : '#ECFDF5'
-                            : isDark
-                              ? 'rgba(59, 130, 246, 0.15)'
-                              : '#EFF6FF',
-                          color: isCreated
-                            ? isDark
-                              ? '#4ADE80'
-                              : '#059669'
-                            : isDark
-                              ? '#60A5FA'
-                              : '#2563EB',
+                          backgroundColor: tokens.bgCard,
+                          color: tokens.textSecondary,
+                          border: `1px solid ${tokens.border}`,
                         }}
                       >
                         {isCreated ? 'Created' : 'Modified'}
@@ -306,7 +283,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                             fontSize: '11px',
                             fontFamily:
                               'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                            color: '#22C55E',
+                            color: tokens.accentSuccess,
                             fontWeight: 600,
                           }}
                         >
@@ -317,7 +294,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
                       <ExternalLink
                         size={12}
                         style={{
-                          color: isDark ? '#64748B' : '#94A3B8',
+                          color: tokens.iconPrimary,
                           marginLeft: '2px',
                         }}
                       />
@@ -332,19 +309,13 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
 
       <style>{`
         .antigravity-summary-bar:hover {
-          background-color: ${
-            isDark ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9'
-          } !important;
+          background-color: ${tokens.bgHover} !important;
         }
         .antigravity-review-btn:hover {
-          background-color: ${
-            isDark ? 'rgba(255, 255, 255, 0.14)' : '#F8FAFC'
-          } !important;
+          background-color: ${tokens.bgHover} !important;
         }
         .antigravity-file-row:hover {
-          background-color: ${
-            isDark ? 'rgba(255, 255, 255, 0.05)' : '#F8FAFC'
-          } !important;
+          background-color: ${tokens.bgCard} !important;
         }
       `}</style>
     </div>

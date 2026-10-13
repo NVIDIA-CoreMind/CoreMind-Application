@@ -4,11 +4,16 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 import { FileIcon } from '../FileIcon';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useThemeStore } from '../../stores/themeStore';
+import { getAITheme } from './themeTokens';
 
 export const FileActivity: React.FC<{ event: FileExploredEvent | FileReadEvent | FileChangedEvent }> = ({ event }) => {
   const [expanded, setExpanded] = useState(false);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = theme === 'dark';
+  const tokens = getAITheme(isDark);
 
   const handleOpenFile = async (relPath: string) => {
     if (!rootPath) return;
@@ -28,9 +33,9 @@ export const FileActivity: React.FC<{ event: FileExploredEvent | FileReadEvent |
     content = (
       <div 
         onClick={() => setExpanded(!expanded)}
-        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--text-secondary, #64748B)', cursor: 'pointer' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: tokens.textSecondary, cursor: 'pointer' }}
       >
-        <span>Explored <strong style={{ color: 'var(--text-primary, #0F172A)' }}>{event.filesCount} file{event.filesCount > 1 ? 's' : ''}</strong></span>
+        <span>Explored <strong style={{ color: tokens.textPrimary }}>{event.filesCount} file{event.filesCount > 1 ? 's' : ''}</strong></span>
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
       </div>
     );
@@ -38,12 +43,12 @@ export const FileActivity: React.FC<{ event: FileExploredEvent | FileReadEvent |
     content = (
       <div 
         onClick={() => handleOpenFile(event.file)}
-        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: 'var(--text-secondary, #64748B)', cursor: 'pointer' }}
+        style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: tokens.textSecondary, cursor: 'pointer' }}
       >
         <span>Analyzed</span>
         <FileIcon path={event.file.split('/').pop() || ''} size={14} />
-        <strong style={{ color: 'var(--text-primary, #0F172A)' }}>{event.file.split('/').pop()}</strong>
-        {event.startLine && <span style={{ color: 'var(--text-muted, #94A3B8)' }}>#L{event.startLine}-{event.endLine}</span>}
+        <strong style={{ color: tokens.textPrimary }}>{event.file.split('/').pop()}</strong>
+        {event.startLine && <span style={{ color: tokens.textMuted }}>#L{event.startLine}-{event.endLine}</span>}
       </div>
     );
   } else {
@@ -58,25 +63,25 @@ export const FileActivity: React.FC<{ event: FileExploredEvent | FileReadEvent |
           alignItems: 'center',
           gap: '6px',
           fontSize: '12.5px',
-          color: 'var(--text-secondary, #64748B)',
+          color: tokens.textSecondary,
           cursor: 'pointer',
         }}
       >
-        <span style={{ color: isCreated ? '#059669' : '#2563EB', fontWeight: 600 }}>
+        <span style={{ color: 'inherit', fontWeight: 600 }}>
           {isCreated ? 'Created' : 'Modified'}
         </span>
         <FileIcon path={event.file.split('/').pop() || ''} size={14} />
-        <strong style={{ color: 'var(--text-primary, #0F172A)' }}>{event.file.split('/').pop()}</strong>
+        <strong style={{ color: tokens.textPrimary }}>{event.file.split('/').pop()}</strong>
         {lines !== undefined && lines > 0 && (
           <span
             style={{
               fontSize: '11px',
-              fontFamily: 'monospace',
+              fontFamily: 'ui-monospace, monospace',
               padding: '1px 6px',
               borderRadius: '4px',
-              backgroundColor: '#F1F5F9',
-              border: '1px solid #E2E8F0',
-              color: '#475569',
+              backgroundColor: tokens.bgCard,
+              border: `1px solid ${tokens.borderSubtle}`,
+              color: tokens.textSecondary,
             }}
           >
             {lines} {lines === 1 ? 'line' : 'lines'}

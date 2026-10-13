@@ -260,6 +260,7 @@ export interface AgentRunResponse {
   task_id?: string;
   session_id: string;
   status: string;
+  response?: string;
 }
 
 export interface AgentStatusResponse {
