@@ -38,16 +38,8 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const { saveActiveTab, closeTab, activeTabId } = useTabsStore();
-  const { rootPath, openFolderDialog, openWorkspacePath, restoreLastWorkspace } = useWorkspaceStore();
-  const {
-    toggleSidebar,
-    toggleTerminal,
-    setCommandPaletteOpen,
-    setQuickOpenOpen,
-    isCommandPaletteOpen,
-    isQuickOpenOpen,
-  } = useUiStore();
+  const openWorkspacePath = useWorkspaceStore((s) => s.openWorkspacePath);
+  const restoreLastWorkspace = useWorkspaceStore((s) => s.restoreLastWorkspace);
 
   // Initialize CoreMind Backend WebSocket and Auth session on startup
   useEffect(() => {
@@ -104,7 +96,6 @@ export const App: React.FC = () => {
       const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
       const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
-
       // Cmd+N: New File
       if (cmdOrCtrl && !e.shiftKey && (e.key === 'n' || e.key === 'N')) {
         e.preventDefault();
@@ -115,14 +106,15 @@ export const App: React.FC = () => {
       // Cmd+O: Open Folder
       if (cmdOrCtrl && !e.shiftKey && (e.key === 'o' || e.key === 'O')) {
         e.preventDefault();
-        openFolderDialog();
+        useWorkspaceStore.getState().openFolderDialog();
         return;
       }
 
       // Cmd+Shift+P: Command Palette
       if (cmdOrCtrl && e.shiftKey && (e.key === 'p' || e.key === 'P')) {
         e.preventDefault();
-        setCommandPaletteOpen(!isCommandPaletteOpen);
+        const curPalette = useUiStore.getState().isCommandPaletteOpen;
+        useUiStore.getState().setCommandPaletteOpen(!curPalette);
         return;
       }
 
@@ -136,15 +128,17 @@ export const App: React.FC = () => {
       // Cmd+P: Quick Open
       if (cmdOrCtrl && !e.shiftKey && (e.key === 'p' || e.key === 'P')) {
         e.preventDefault();
-        setQuickOpenOpen(!isQuickOpenOpen);
+        const curQuickOpen = useUiStore.getState().isQuickOpenOpen;
+        useUiStore.getState().setQuickOpenOpen(!curQuickOpen);
         return;
       }
 
       // Cmd+S: Save File
       if (cmdOrCtrl && !e.shiftKey && (e.key === 's' || e.key === 'S')) {
         e.preventDefault();
-        if (rootPath) {
-          saveActiveTab(rootPath);
+        const curRoot = useWorkspaceStore.getState().rootPath;
+        if (curRoot) {
+          useTabsStore.getState().saveActiveTab(curRoot);
         }
         return;
       }
@@ -152,8 +146,9 @@ export const App: React.FC = () => {
       // Cmd+W: Close Tab
       if (cmdOrCtrl && !e.shiftKey && (e.key === 'w' || e.key === 'W')) {
         e.preventDefault();
-        if (activeTabId) {
-          closeTab(activeTabId);
+        const curActiveTabId = useTabsStore.getState().activeTabId;
+        if (curActiveTabId) {
+          useTabsStore.getState().closeTab(curActiveTabId);
         }
         return;
       }
@@ -161,14 +156,14 @@ export const App: React.FC = () => {
       // Cmd+B: Toggle Sidebar
       if (cmdOrCtrl && !e.shiftKey && (e.key === 'b' || e.key === 'B')) {
         e.preventDefault();
-        toggleSidebar();
+        useUiStore.getState().toggleSidebar();
         return;
       }
 
       // Cmd+J: Toggle Terminal
       if (cmdOrCtrl && !e.shiftKey && (e.key === 'j' || e.key === 'J')) {
         e.preventDefault();
-        toggleTerminal();
+        useUiStore.getState().toggleTerminal();
         return;
       }
     };
@@ -177,19 +172,7 @@ export const App: React.FC = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [
-    rootPath,
-    activeTabId,
-    openFolderDialog,
-    saveActiveTab,
-    closeTab,
-    toggleSidebar,
-    toggleTerminal,
-    setCommandPaletteOpen,
-    setQuickOpenOpen,
-    isCommandPaletteOpen,
-    isQuickOpenOpen,
-  ]);
+  }, []);
 
   if (!isOnboardingCompleted) {
     return (

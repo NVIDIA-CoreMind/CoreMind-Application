@@ -13,16 +13,17 @@ import { isMacClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
 loader.config({ monaco });
 
 export const MonacoEditor: React.FC = () => {
-  const { tabs, activeTabId, updateTabContent, saveActiveTab } = useTabsStore();
-  const { settings, setCursorPosition } = useEditorStore();
-  const { rootPath } = useWorkspaceStore();
-  const { theme } = useThemeStore();
+  const activeTab = useTabsStore((s) => s.tabs.find((t) => t.id === s.activeTabId));
+  const updateTabContent = useTabsStore((s) => s.updateTabContent);
+  const saveActiveTab = useTabsStore((s) => s.saveActiveTab);
+  const settings = useEditorStore((s) => s.settings);
+  const setCursorPosition = useEditorStore((s) => s.setCursorPosition);
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const theme = useThemeStore((s) => s.theme);
   const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
 
   const editorRef = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
-
-  const activeTab = tabs.find((t) => t.id === activeTabId);
   const prevActiveTabIdRef = useRef<string | null>(null);
 
   const handleEditorDidMount: OnMount = (editor, monacoInstance) => {

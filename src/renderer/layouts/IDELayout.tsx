@@ -22,20 +22,19 @@ import { isMacClient, isWindowsClient } from '../../shared/utils/shortcuts';
 export const IDELayout: React.FC = () => {
   const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
   const isWindows = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isWindows : isWindowsClient();
-  const { rootPath } = useWorkspaceStore();
-  const tabs = useTabsStore((state) => state.tabs);
-  const {
-    activeSidebarTab,
-    isSidebarOpen,
-    sidebarWidth,
-    setSidebarWidth,
-    isRightPanelOpen,
-    rightPanelWidth,
-    setRightPanelWidth,
-    isTerminalOpen,
-    terminalHeight,
-    setTerminalHeight,
-  } = useUiStore();
+  const rootPath = useWorkspaceStore((state) => state.rootPath);
+  const hasTabs = useTabsStore((state) => state.tabs.length > 0);
+
+  const activeSidebarTab = useUiStore((s) => s.activeSidebarTab);
+  const isSidebarOpen = useUiStore((s) => s.isSidebarOpen);
+  const sidebarWidth = useUiStore((s) => s.sidebarWidth);
+  const setSidebarWidth = useUiStore((s) => s.setSidebarWidth);
+  const isRightPanelOpen = useUiStore((s) => s.isRightPanelOpen);
+  const rightPanelWidth = useUiStore((s) => s.rightPanelWidth);
+  const setRightPanelWidth = useUiStore((s) => s.setRightPanelWidth);
+  const isTerminalOpen = useUiStore((s) => s.isTerminalOpen);
+  const terminalHeight = useUiStore((s) => s.terminalHeight);
+  const setTerminalHeight = useUiStore((s) => s.setTerminalHeight);
 
   const renderSidebarContent = () => {
     switch (activeSidebarTab) {
@@ -118,7 +117,7 @@ export const IDELayout: React.FC = () => {
         >
           {/* Main Editor Area */}
           <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-            {!rootPath && tabs.length === 0 ? <EmptyState /> : <MonacoEditor />}
+            {!rootPath && !hasTabs ? <EmptyState /> : <MonacoEditor />}
           </div>
 
           {/* Integrated Terminal (Child of Code/Editor Workspace ONLY) */}

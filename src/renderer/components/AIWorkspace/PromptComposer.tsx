@@ -18,17 +18,17 @@ const BACKEND_MODEL = {
 };
 
 export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = ({ onSubmit }) => {
-  const {
-    currentState,
-    setSelectedModel,
-    agentMode,
-    setAgentMode,
-    cancelRequest,
-    draftPrompt,
-    setDraftPrompt,
-  } = useAIWorkspaceStore();
+  const currentState = useAIWorkspaceStore((s) => s.currentState);
+  const setSelectedModel = useAIWorkspaceStore((s) => s.setSelectedModel);
+  const agentMode = useAIWorkspaceStore((s) => s.agentMode);
+  const setAgentMode = useAIWorkspaceStore((s) => s.setAgentMode);
+  const cancelRequest = useAIWorkspaceStore((s) => s.cancelRequest);
+  const draftPrompt = useAIWorkspaceStore((s) => s.draftPrompt);
+  const setDraftPrompt = useAIWorkspaceStore((s) => s.setDraftPrompt);
 
-  const { rootPath, rootName, activeFileName } = useWorkspaceStore();
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const rootName = useWorkspaceStore((s) => s.rootName);
+  const activeFileName = useWorkspaceStore((s) => s.activeFileName);
 
   const [input, setInput] = useState('');
   const [includeContext, setIncludeContext] = useState(true);

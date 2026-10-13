@@ -8,10 +8,13 @@ import { ProjectSearchMatch } from '../services/coremind/types';
 import { useFilesStore } from '../stores/filesStore';
 
 export const SearchPanel: React.FC = () => {
-  const { rootPath } = useWorkspaceStore();
-  const { openFile } = useTabsStore();
-  const { setCursorPosition } = useEditorStore();
-  const { searchResults: localResults, isSearching: localSearching, search: localSearch, clearSearch: localClear } = useFilesStore();
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const openFile = useTabsStore((s) => s.openFile);
+  const setCursorPosition = useEditorStore((s) => s.setCursorPosition);
+  const localResults = useFilesStore((s) => s.searchResults);
+  const localSearching = useFilesStore((s) => s.isSearching);
+  const localSearch = useFilesStore((s) => s.search);
+  const localClear = useFilesStore((s) => s.clearSearch);
 
   const [query, setQuery] = useState('');
   const [filePattern, setFilePattern] = useState('');

@@ -7,9 +7,13 @@ import { editorModelManager } from './EditorModelManager';
 import { isMacClient, isWindowsClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
 
 export const EditorTabs: React.FC = () => {
-  const { tabs, activeTabId, setActiveTab, closeTab, saveActiveTab } = useTabsStore();
-  const { rootPath } = useWorkspaceStore();
-  const { runCommand } = useTerminalStore();
+  const tabs = useTabsStore((s) => s.tabs);
+  const activeTabId = useTabsStore((s) => s.activeTabId);
+  const setActiveTab = useTabsStore((s) => s.setActiveTab);
+  const closeTab = useTabsStore((s) => s.closeTab);
+  const saveActiveTab = useTabsStore((s) => s.saveActiveTab);
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const runCommand = useTerminalStore((s) => s.runCommand);
   const [isRunning, setIsRunning] = useState(false);
 
   const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();

@@ -33,8 +33,9 @@ interface ExecutedLog {
 }
 
 export const TerminalPanel: React.FC = () => {
-  const { toggleTerminal } = useUiStore();
-  const { rootPath, rootName } = useWorkspaceStore();
+  const toggleTerminal = useUiStore((s) => s.toggleTerminal);
+  const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const rootName = useWorkspaceStore((s) => s.rootName);
   const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
 
   const [activeTab, setActiveTab] = useState<TerminalTab>('pty');

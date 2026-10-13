@@ -157,16 +157,23 @@ interface TerminalViewProps {
   onExit: (id: string, code: number) => void;
 }
 
-const TerminalView: React.FC<TerminalViewProps> = ({ id, active, shell, onExit }) => {
+const TerminalView: React.FC<TerminalViewProps> = React.memo(({ id, active, shell, onExit }) => {
   const hostRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<XTerm | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const theme = useThemeStore((s) => s.theme);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
+  const onExitRef = useRef(onExit);
+  onExitRef.current = onExit;
+  const rootPathRef = useRef(rootPath);
+  rootPathRef.current = rootPath;
 
   useEffect(() => {
     const api = window.coreMindAPI;
     if (!api || !hostRef.current) return;
+
+    // Clear any stale child elements in container
+    hostRef.current.innerHTML = '';
 
     const term = new XTerm({
       fontFamily: "'JetBrains Mono', Menlo, Monaco, 'Courier New', monospace",
@@ -198,18 +205,20 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, shell, onExit }
     const offExit = api.onTerminalExit(({ id: sid, exitCode }) => {
       if (sid === id) {
         term.write(`\r\n\x1b[90m[Process exited with code ${exitCode}]\x1b[0m\r\n`);
-        onExit(id, exitCode);
+        onExitRef.current?.(id, exitCode);
       }
     });
 
     const input = term.onData((data) => void api.terminalWrite(id, data));
     const resize = term.onResize(({ cols, rows }) => void api.terminalResize(id, cols, rows));
 
+    const initialCwd = rootPathRef.current || useWorkspaceStore.getState().rootPath || undefined;
+
     void api
       .createTerminal(id, {
         cols: term.cols || 80,
         rows: term.rows || 24,
-        cwd: rootPath || undefined,
+        cwd: initialCwd,
         shell: shell || undefined,
       })
       .then((res) => {
@@ -241,8 +250,10 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, shell, onExit }
       terminalRegistry.delete(id);
       void api.closeTerminal(id);
       term.dispose();
+      termRef.current = null;
+      fitRef.current = null;
     };
-  }, [id, shell, rootPath, onExit]);
+  }, [id, shell]);
 
   useEffect(() => {
     if (termRef.current) {
@@ -275,22 +286,29 @@ const TerminalView: React.FC<TerminalViewProps> = ({ id, active, shell, onExit }
       }}
     />
   );
-};
+});
 
 export const PtyTerminal: React.FC = () => {
-  const { toggleTerminal, terminalHeight, setTerminalHeight } = useUiStore();
+  const toggleTerminal = useUiStore((s) => s.toggleTerminal);
+  const terminalHeight = useUiStore((s) => s.terminalHeight);
+  const setTerminalHeight = useUiStore((s) => s.setTerminalHeight);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
-  const {
-    tabs,
-    activeId,
-    activeTopTab,
-    setActiveTopTab,
-    setActiveId,
-    addTab,
-    closeTab,
-    setTabWarning,
-    renameTab,
-  } = useTerminalStore();
+
+  const tabs = useTerminalStore((s) => s.tabs);
+  const activeId = useTerminalStore((s) => s.activeId);
+  const activeTopTab = useTerminalStore((s) => s.activeTopTab);
+  const setActiveTopTab = useTerminalStore((s) => s.setActiveTopTab);
+  const setActiveId = useTerminalStore((s) => s.setActiveId);
+  const addTab = useTerminalStore((s) => s.addTab);
+  const closeTab = useTerminalStore((s) => s.closeTab);
+  const setTabWarning = useTerminalStore((s) => s.setTabWarning);
+  const renameTab = useTerminalStore((s) => s.renameTab);
+
+  const handleExit = React.useCallback((id: string, code: number) => {
+    if (code !== 0) {
+      setTabWarning(id, true);
+    }
+  }, [setTabWarning]);
 
   const [hoveredTabId, setHoveredTabId] = useState<string | null>(null);
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -301,12 +319,11 @@ export const PtyTerminal: React.FC = () => {
 
   // Initialize single clean terminal session rooted in active workspace
   useEffect(() => {
-    if (tabs.length === 0) {
+    if (useTerminalStore.getState().tabs.length === 0) {
       const defaultShell = window.coreMindAPI?.platform?.isWindows ? 'powershell' : 'zsh';
-      const newId = addTab(defaultShell, undefined, false);
-      setActiveId(newId);
+      addTab(defaultShell, undefined, false);
     }
-  }, []);
+  }, [addTab]);
 
   // Close menus when clicking outside
   useEffect(() => {
@@ -768,11 +785,7 @@ export const PtyTerminal: React.FC = () => {
                   id={tab.id}
                   active={tab.id === activeId}
                   shell={tab.shell}
-                  onExit={(id, code) => {
-                    if (code !== 0) {
-                      setTabWarning(id, true);
-                    }
-                  }}
+                  onExit={handleExit}
                 />
               ))}
             </div>
