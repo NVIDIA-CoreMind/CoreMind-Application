@@ -64,7 +64,7 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
           <div
             style={{
               flex: 1,
-              backgroundColor: '#1E1E1E',
+              backgroundColor: '#1E1F20',
               display: 'flex',
               flexDirection: 'column',
               padding: '6px',
@@ -72,17 +72,17 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2px' }}>
-              <span style={{ fontSize: '7px', color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <span style={{ fontSize: '7px', color: '#9AA0A6', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 AUTO
               </span>
             </div>
             <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-              <div style={{ width: '18px', backgroundColor: '#181818', borderRadius: '2px' }} />
+              <div style={{ width: '18px', backgroundColor: '#232426', borderRadius: '2px' }} />
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                <div style={{ width: '65%', height: '3px', backgroundColor: '#60A5FA', borderRadius: '1px' }} />
-                <div style={{ width: '50%', height: '3px', backgroundColor: '#A78BFA', borderRadius: '1px' }} />
-                <div style={{ width: '80%', height: '3px', backgroundColor: '#34D399', borderRadius: '1px' }} />
-                <div style={{ width: '40%', height: '3px', backgroundColor: '#4B5563', borderRadius: '1px' }} />
+                <div style={{ width: '65%', height: '3px', backgroundColor: '#8AB4F8', borderRadius: '1px' }} />
+                <div style={{ width: '50%', height: '3px', backgroundColor: '#FDD663', borderRadius: '1px' }} />
+                <div style={{ width: '80%', height: '3px', backgroundColor: '#81C995', borderRadius: '1px' }} />
+                <div style={{ width: '40%', height: '3px', backgroundColor: '#70757A', borderRadius: '1px' }} />
               </div>
             </div>
           </div>
@@ -91,13 +91,13 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
     }
 
     const isLight = theme === 'light';
-    const bgColor = isLight ? '#FFFFFF' : '#1E1E1E';
-    const sidebarBg = isLight ? '#F3F4F6' : '#181818';
-    const borderColor = isLight ? '#E5E7EB' : '#2A2A2A';
-    const textCode1 = isLight ? '#2563EB' : '#60A5FA';
-    const textCode2 = isLight ? '#7C3AED' : '#C084FC';
-    const textCode3 = isLight ? '#059669' : '#34D399';
-    const textMuted = isLight ? '#9CA3AF' : '#4B5563';
+    const bgColor = isLight ? '#FFFFFF' : '#1E1F20';
+    const sidebarBg = isLight ? '#F3F4F6' : '#232426';
+    const borderColor = isLight ? '#E5E7EB' : '#3C4043';
+    const textCode1 = isLight ? '#2563EB' : '#8AB4F8';
+    const textCode2 = isLight ? '#7C3AED' : '#FDD663';
+    const textCode3 = isLight ? '#059669' : '#81C995';
+    const textMuted = isLight ? '#9CA3AF' : '#70757A';
 
     return (
       <div
@@ -172,7 +172,7 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
           style={{
             height: '4px',
             width: '100%',
-            backgroundColor: isLight ? '#2563EB' : '#3B82F6',
+            backgroundColor: isLight ? '#2563EB' : '#8AB4F8',
             borderRadius: '1px',
             opacity: 0.8,
           }}
@@ -193,18 +193,18 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
         flexDirection: 'column',
         borderRadius: '10px',
         border: isSelected
-          ? '2px solid var(--accent, #3B82F6)'
-          : '1px solid var(--border-color, rgba(128, 128, 128, 0.2))',
+          ? '2px solid var(--accent, #8AB4F8)'
+          : '1px solid var(--border-color, #3C4043)',
         backgroundColor: isSelected
-          ? 'var(--accent-bg, rgba(59, 130, 246, 0.08))'
-          : 'var(--bg-card, rgba(255, 255, 255, 0.03))',
+          ? 'var(--accent-bg, rgba(138, 180, 248, 0.12))'
+          : 'var(--bg-card, #28292B)',
         padding: '12px',
         cursor: 'pointer',
         transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         position: 'relative',
         boxShadow: isSelected
-          ? '0 0 0 1px var(--accent, #3B82F6), 0 4px 14px rgba(0, 0, 0, 0.15)'
-          : '0 2px 6px rgba(0, 0, 0, 0.04)',
+          ? '0 0 0 1px var(--accent, #8AB4F8)'
+          : 'none',
         outline: 'none',
       }}
     >
@@ -218,12 +218,12 @@ export const ThemePreviewCard: React.FC<ThemePreviewCardProps> = ({
             width: '18px',
             height: '18px',
             borderRadius: '50%',
-            backgroundColor: 'var(--accent, #3B82F6)',
-            color: '#FFFFFF',
+            backgroundColor: 'var(--accent, #8AB4F8)',
+            color: '#1E1F20',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+            boxShadow: 'none',
             zIndex: 2,
           }}
         >

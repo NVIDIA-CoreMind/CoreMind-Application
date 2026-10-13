@@ -115,8 +115,8 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
       case 'idle':
         return {
           label: AGENT_STATE_LABELS.idle,
-          icon: <CircleDot size={13} style={{ color: '#94A3B8', flexShrink: 0 }} />,
-          accentColor: '#94A3B8',
+          icon: <CircleDot size={13} style={{ color: 'var(--text-muted, #70757A)', flexShrink: 0 }} />,
+          accentColor: 'var(--text-muted, #70757A)',
           animated: false,
         };
 
@@ -130,14 +130,13 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
                   width: '7.5px',
                   height: '7.5px',
                   borderRadius: '50%',
-                  backgroundColor: '#3B82F6',
-                  boxShadow: '0 0 8px rgba(59, 130, 246, 0.7)',
+                  backgroundColor: 'var(--accent, #8AB4F8)',
                   animation: 'antigravity-pulse 1.4s infinite ease-in-out',
                 }}
               />
             </div>
           ),
-          accentColor: '#3B82F6',
+          accentColor: 'var(--accent, #8AB4F8)',
           animated: true,
         };
 
@@ -148,13 +147,13 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <Search
               size={13}
               style={{
-                color: '#60A5FA',
+                color: 'var(--accent, #8AB4F8)',
                 animation: 'antigravity-search-pulse 1.4s infinite ease-in-out',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: '#60A5FA',
+          accentColor: 'var(--accent, #8AB4F8)',
           animated: true,
         };
 
@@ -165,13 +164,13 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <FileEdit
               size={13}
               style={{
-                color: '#10B981',
+                color: 'var(--accent, #8AB4F8)',
                 animation: 'antigravity-pulse 1.4s infinite ease-in-out',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: '#10B981',
+          accentColor: 'var(--accent, #8AB4F8)',
           animated: true,
         };
 
@@ -182,13 +181,13 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <Terminal
               size={13}
               style={{
-                color: '#F59E0B',
+                color: 'var(--accent, #8AB4F8)',
                 animation: 'antigravity-pulse 1.4s infinite ease-in-out',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: '#F59E0B',
+          accentColor: 'var(--accent, #8AB4F8)',
           animated: true,
         };
 
@@ -199,37 +198,37 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <FlaskConical
               size={13}
               style={{
-                color: '#A855F7',
+                color: 'var(--accent, #8AB4F8)',
                 animation: 'antigravity-spin 2s linear infinite',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: '#A855F7',
+          accentColor: 'var(--accent, #8AB4F8)',
           animated: true,
         };
 
       case 'completed':
         return {
           label: AGENT_STATE_LABELS.completed,
-          icon: <CheckCircle2 size={13} style={{ color: '#22C55E', flexShrink: 0 }} />,
-          accentColor: '#22C55E',
+          icon: <CheckCircle2 size={13} style={{ color: 'var(--success, #81C995)', flexShrink: 0 }} />,
+          accentColor: 'var(--success, #81C995)',
           animated: false,
         };
 
       case 'failed':
         return {
           label: AGENT_STATE_LABELS.failed,
-          icon: <AlertCircle size={13} style={{ color: '#EF4444', flexShrink: 0 }} />,
-          accentColor: '#EF4444',
+          icon: <AlertCircle size={13} style={{ color: 'var(--error, #F28B82)', flexShrink: 0 }} />,
+          accentColor: 'var(--error, #F28B82)',
           animated: false,
         };
 
       case 'cancelled':
         return {
           label: AGENT_STATE_LABELS.cancelled,
-          icon: <XCircle size={13} style={{ color: '#94A3B8', flexShrink: 0 }} />,
-          accentColor: '#94A3B8',
+          icon: <XCircle size={13} style={{ color: 'var(--text-muted, #70757A)', flexShrink: 0 }} />,
+          accentColor: 'var(--text-muted, #70757A)',
           animated: false,
         };
 
@@ -240,13 +239,13 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
             <Loader2
               size={13}
               style={{
-                color: 'var(--accent, #3B82F6)',
+                color: 'var(--accent, #8AB4F8)',
                 animation: 'antigravity-spin 1s linear infinite',
                 flexShrink: 0,
               }}
             />
           ),
-          accentColor: 'var(--accent, #3B82F6)',
+          accentColor: 'var(--accent, #8AB4F8)',
           animated: true,
         };
     }
@@ -263,7 +262,7 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         padding: '4px 2px',
         fontSize: '12.5px',
         fontFamily: 'var(--font-sans)',
-        color: 'var(--text-secondary, #94A3B8)',
+        color: 'var(--text-secondary, #9AA0A6)',
         backgroundColor: 'transparent',
         border: 'none',
         boxShadow: 'none',
@@ -276,7 +275,7 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         style={{
           fontWeight: 500,
           letterSpacing: '-0.01em',
-          color: 'var(--text-primary, #E2E8F0)',
+          color: 'var(--text-primary, #E8EAED)',
           display: 'inline-flex',
           alignItems: 'center',
         }}
@@ -301,7 +300,7 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
         <span
           style={{
             fontSize: '11.5px',
-            color: 'var(--text-muted, #64748B)',
+            color: 'var(--text-muted, #70757A)',
             maxWidth: '280px',
             overflow: 'hidden',
             textOverflow: 'ellipsis',

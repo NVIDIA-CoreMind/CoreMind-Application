@@ -78,7 +78,7 @@ export function createMainWindow(): BrowserWindow {
     minWidth: 1100,
     minHeight: 700,
     title: 'CoreMind',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#1E1F20',
     ...platformOptions,
     show: true,
     webPreferences: {

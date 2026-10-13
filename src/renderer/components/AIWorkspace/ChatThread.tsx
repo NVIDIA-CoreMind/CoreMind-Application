@@ -58,8 +58,8 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
         margin: '10px 0',
         borderRadius: '8px',
         overflow: 'hidden',
-        border: isDark ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid #E2E8F0',
-        backgroundColor: isDark ? '#141414' : '#F8FAFC',
+        border: isDark ? '1px solid var(--border-color)' : '1px solid #E2E8F0',
+        backgroundColor: isDark ? 'var(--bg-editor)' : '#F8FAFC',
         fontSize: '12px',
         fontFamily: 'var(--font-mono, monospace)',
       }}
@@ -70,8 +70,8 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '6px 10px',
-          backgroundColor: isDark ? '#1F1F1F' : '#F1F5F9',
-          borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
+          backgroundColor: isDark ? 'var(--bg-surface)' : '#F1F5F9',
+          borderBottom: isDark ? '1px solid var(--border-color)' : '1px solid #E2E8F0',
           fontSize: '11px',
           color: 'var(--text-secondary)',
         }}
@@ -81,15 +81,15 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <button onClick={handleCopy} style={codeActionBtnStyle} title="Copy code snippet">
-            {copied ? <Check size={12} color="#22C55E" /> : <Copy size={12} />}
+            {copied ? <Check size={12} color="var(--success)" /> : <Copy size={12} />}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
           <button onClick={handleInsert} style={codeActionBtnStyle} title="Insert into active editor tab">
-            {inserted ? <Check size={12} color="#22C55E" /> : <ArrowDownRight size={12} />}
+            {inserted ? <Check size={12} color="var(--success)" /> : <ArrowDownRight size={12} />}
             <span>{inserted ? 'Inserted' : 'Insert'}</span>
           </button>
           <button onClick={handleApply} style={codeActionBtnStyle} title="Apply changes to active file">
-            {applied ? <Check size={12} color="#22C55E" /> : <FileCheck size={12} />}
+            {applied ? <Check size={12} color="var(--success)" /> : <FileCheck size={12} />}
             <span>{applied ? 'Applied' : 'Apply'}</span>
           </button>
         </div>
@@ -100,7 +100,7 @@ const CodeBlock: React.FC<{ language: string; value: string }> = ({ language, va
           padding: '10px 12px',
           overflowX: 'auto',
           lineHeight: 1.5,
-          color: isDark ? '#E2E8F0' : '#1E293B',
+          color: isDark ? 'var(--text-primary)' : '#1E293B',
         }}
       >
         <code>{value}</code>
@@ -254,7 +254,7 @@ export const ChatThread: React.FC = () => {
             width: '42px',
             height: '42px',
             borderRadius: '12px',
-            backgroundColor: 'rgba(59, 130, 246, 0.12)',
+            backgroundColor: 'rgba(138, 180, 248, 0.12)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -283,8 +283,8 @@ export const ChatThread: React.FC = () => {
               style={{
                 padding: '8px 12px',
                 borderRadius: '8px',
-                border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
-                backgroundColor: isDark ? '#1C1C1C' : '#FFFFFF',
+                border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
+                backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#FFFFFF',
                 color: 'var(--text-primary)',
                 fontSize: '12px',
                 textAlign: 'left',
@@ -347,22 +347,16 @@ export const ChatThread: React.FC = () => {
                   borderRadius: '12px',
                   backgroundColor: isUser
                     ? isDark
-                      ? '#2A2A2A'
+                      ? 'var(--bg-card, #28292B)'
                       : '#F1F5F9'
                     : isDark
-                    ? 'rgba(28, 28, 28, 0.75)'
+                    ? 'var(--bg-panel, #232426)'
                     : '#FFFFFF',
                   color: 'var(--text-primary)',
-                  border: isUser
-                    ? 'none'
-                    : isDark
-                    ? '1px solid rgba(255, 255, 255, 0.08)'
+                  border: isDark
+                    ? '1px solid var(--border-color, #3C4043)'
                     : '1px solid #E2E8F0',
-                  boxShadow: isUser
-                    ? 'none'
-                    : isDark
-                    ? '0 2px 8px rgba(0, 0, 0, 0.2)'
-                    : '0 1px 4px rgba(0, 0, 0, 0.05)',
+                  boxShadow: 'none',
                   fontSize: '13px',
                   lineHeight: 1.6,
                   overflowWrap: 'break-word',
@@ -391,7 +385,7 @@ export const ChatThread: React.FC = () => {
                               display: 'inline-block',
                               width: '8px',
                               height: '14px',
-                              backgroundColor: 'var(--accent, #3B82F6)',
+                              backgroundColor: 'var(--accent, #8AB4F8)',
                               marginLeft: '4px',
                               verticalAlign: 'middle',
                               animation: 'chatgpt-blink 1s step-end infinite',
@@ -409,7 +403,7 @@ export const ChatThread: React.FC = () => {
                           gap: '6px',
                           marginTop: '8px',
                           paddingTop: '6px',
-                          borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid #F1F5F9',
+                          borderTop: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #F1F5F9',
                         }}
                       >
                         <button
@@ -458,7 +452,7 @@ export const ChatThread: React.FC = () => {
             <div
               style={{
                 borderRadius: '8px',
-                border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #E2E8F0',
+                border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
                 overflow: 'hidden',
               }}
             >

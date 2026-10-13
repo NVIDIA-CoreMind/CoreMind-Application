@@ -79,7 +79,7 @@ export const UserProfileButton: React.FC = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: '#2E7D32',
+            backgroundColor: 'var(--accent, #8AB4F8)',
             flexShrink: 0,
             position: 'relative',
           }}
@@ -100,7 +100,7 @@ export const UserProfileButton: React.FC = () => {
           ) : (
             <span
               style={{
-                color: '#FFFFFF',
+                color: '#1E1F20',
                 fontSize: '11px',
                 fontWeight: 600,
                 lineHeight: 1,
@@ -114,7 +114,7 @@ export const UserProfileButton: React.FC = () => {
         <ChevronDown
           size={14}
           style={{
-            color: 'var(--text-secondary, #A0A0A0)',
+            color: 'var(--text-secondary, #9AA0A6)',
             transform: isOpen ? 'rotate(180deg)' : 'none',
             transition: 'transform 0.15s ease',
           }}
@@ -129,10 +129,10 @@ export const UserProfileButton: React.FC = () => {
             top: 'calc(100% + 8px)',
             right: 0,
             width: '260px',
-            backgroundColor: 'var(--bg-surface, #1e1e1e)',
-            border: '1px solid var(--border-color, rgba(255, 255, 255, 0.12))',
+            backgroundColor: 'var(--bg-surface, #28292B)',
+            border: '1px solid var(--border-color, #3C4043)',
             borderRadius: '12px',
-            boxShadow: '0 12px 32px rgba(0, 0, 0, 0.4)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.4)',
             zIndex: 1000,
             overflow: 'hidden',
             animation: 'fadeInMenu 0.15s ease-out',
@@ -142,7 +142,7 @@ export const UserProfileButton: React.FC = () => {
           <div
             style={{
               padding: '14px 16px',
-              borderBottom: '1px solid var(--border-color, rgba(255, 255, 255, 0.08))',
+              borderBottom: '1px solid var(--border-color, #3C4043)',
               display: 'flex',
               alignItems: 'center',
               gap: '12px',
@@ -157,9 +157,8 @@ export const UserProfileButton: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: 'var(--accent, #3B82F6)',
+                backgroundColor: 'var(--accent, #8AB4F8)',
                 flexShrink: 0,
-                boxShadow: '0 0 0 2px rgba(59, 130, 246, 0.3)',
               }}
             >
               {avatarUrl && !imgError ? (
@@ -174,7 +173,7 @@ export const UserProfileButton: React.FC = () => {
                   }}
                 />
               ) : (
-                <span style={{ color: '#FFFFFF', fontSize: '16px', fontWeight: 600 }}>
+                <span style={{ color: '#1E1F20', fontSize: '16px', fontWeight: 600 }}>
                   {initial}
                 </span>
               )}
@@ -185,7 +184,7 @@ export const UserProfileButton: React.FC = () => {
                 style={{
                   fontSize: '13px',
                   fontWeight: 600,
-                  color: 'var(--text-primary, #ffffff)',
+                  color: 'var(--text-primary, #E8EAED)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -196,7 +195,7 @@ export const UserProfileButton: React.FC = () => {
               <div
                 style={{
                   fontSize: '11px',
-                  color: 'var(--text-muted, #888888)',
+                  color: 'var(--text-muted, #70757A)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -212,7 +211,7 @@ export const UserProfileButton: React.FC = () => {
                   gap: '4px',
                   marginTop: '4px',
                   fontSize: '10px',
-                  color: '#3B82F6',
+                  color: 'var(--accent, #8AB4F8)',
                   fontWeight: 500,
                 }}
               >
@@ -233,7 +232,7 @@ export const UserProfileButton: React.FC = () => {
                 borderRadius: '6px',
                 backgroundColor: 'transparent',
                 border: 'none',
-                color: 'var(--text-primary, #ffffff)',
+                color: 'var(--text-primary, #E8EAED)',
                 fontSize: '12px',
                 display: 'flex',
                 alignItems: 'center',
@@ -243,12 +242,12 @@ export const UserProfileButton: React.FC = () => {
                 transition: 'background-color 0.1s ease',
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = 'rgba(239, 68, 68, 0.12)';
-                e.currentTarget.style.color = '#F87171';
+                e.currentTarget.style.backgroundColor = 'rgba(242, 139, 130, 0.12)';
+                e.currentTarget.style.color = 'var(--error, #F28B82)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = 'var(--text-primary, #ffffff)';
+                e.currentTarget.style.color = 'var(--text-primary, #E8EAED)';
               }}
             >
               <LogOut size={13} />

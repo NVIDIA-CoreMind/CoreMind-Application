@@ -51,7 +51,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
       return (
         <span
           style={{
-            color: '#38BDF8',
+            color: 'var(--accent, #8AB4F8)',
             fontSize: '13px',
             lineHeight: 1,
             display: 'inline-flex',
@@ -67,7 +67,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
       return (
         <span
           style={{
-            color: '#3B82F6',
+            color: 'var(--accent, #8AB4F8)',
             fontWeight: 700,
             fontSize: '10.5px',
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
@@ -82,7 +82,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
       return (
         <span
           style={{
-            color: '#FACC15',
+            color: 'var(--warning, #FDD663)',
             fontWeight: 700,
             fontSize: '10.5px',
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
@@ -97,7 +97,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
       return (
         <span
           style={{
-            color: '#EAB308',
+            color: 'var(--warning, #FDD663)',
             fontWeight: 700,
             fontSize: '10.5px',
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
@@ -112,7 +112,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
       return (
         <span
           style={{
-            color: '#06B6D4',
+            color: 'var(--accent, #8AB4F8)',
             fontWeight: 700,
             fontSize: '10px',
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
@@ -126,7 +126,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
     return (
       <span
         style={{
-          color: '#94A3B8',
+          color: 'var(--text-muted, #70757A)',
           fontWeight: 700,
           fontSize: '9.5px',
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
@@ -225,7 +225,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         margin: '2px 0 6px 0',
         fontFamily: 'var(--font-sans)',
         fontSize: '12.5px',
-        color: isDark ? '#E2E8F0' : '#1E293B',
+        color: isDark ? 'var(--text-primary, #E8EAED)' : '#1E293B',
       }}
     >
       {/* 1. Edited Files List matching Image 2: "Edited ⚛ RunningIndicator.tsx +34 -10" */}
@@ -249,20 +249,20 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
             }}
             title={`Open ${ef.file}`}
           >
-            <span style={{ color: isDark ? '#94A3B8' : '#64748B', fontWeight: 400 }}>
+            <span style={{ color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B', fontWeight: 400 }}>
               Edited
             </span>
             {renderFileBadge(basename)}
-            <span style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontWeight: 600 }}>
+            <span style={{ color: isDark ? 'var(--text-primary, #E8EAED)' : '#0F172A', fontWeight: 600 }}>
               {basename}
             </span>
             {additions > 0 && (
-              <span style={{ color: '#22C55E', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+              <span style={{ color: 'var(--success, #81C995)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
                 +{additions}
               </span>
             )}
             {deletions > 0 && (
-              <span style={{ color: '#EF4444', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
+              <span style={{ color: 'var(--error, #F28B82)', fontWeight: 600, fontFamily: 'var(--font-mono)' }}>
                 -{deletions}
               </span>
             )}
@@ -281,13 +281,13 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
               gap: '6px',
               cursor: 'pointer',
               userSelect: 'none',
-              color: isDark ? '#94A3B8' : '#64748B',
+              color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B',
               padding: '2px 0',
             }}
           >
             <span>
               Exploring{' '}
-              <strong style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontWeight: 600 }}>
+              <strong style={{ color: isDark ? 'var(--text-primary, #E8EAED)' : '#0F172A', fontWeight: 600 }}>
                 {totalExploredFiles} {totalExploredFiles === 1 ? 'file' : 'files'}
                 {totalSearches > 0
                   ? `, ${totalSearches} ${totalSearches === 1 ? 'search' : 'searches'}`
@@ -325,20 +325,20 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                       gap: '7px',
                       cursor: 'pointer',
                       userSelect: 'none',
-                      color: isDark ? '#94A3B8' : '#64748B',
+                      color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B',
                       fontSize: '12.5px',
                     }}
                     title={`Open ${af.file}`}
                   >
                     <span>Analyzed</span>
                     {renderFileBadge(basename)}
-                    <span style={{ color: isDark ? '#E2E8F0' : '#1E293B', fontWeight: 600 }}>
+                    <span style={{ color: isDark ? 'var(--text-primary, #E8EAED)' : '#1E293B', fontWeight: 600 }}>
                       {basename}
                     </span>
                     {hasRange && (
                       <span
                         style={{
-                          color: isDark ? '#64748B' : '#94A3B8',
+                          color: isDark ? 'var(--text-muted, #70757A)' : '#94A3B8',
                           fontSize: '11.5px',
                           fontFamily: 'var(--font-mono)',
                         }}
@@ -358,12 +358,12 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '7px',
-                    color: isDark ? '#94A3B8' : '#64748B',
+                    color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B',
                     fontSize: '12.5px',
                   }}
                 >
                   <span>Searched</span>
-                  <span style={{ color: isDark ? '#FFFFFF' : '#0F172A', fontWeight: 600 }}>
+                  <span style={{ color: isDark ? 'var(--text-primary, #E8EAED)' : '#0F172A', fontWeight: 600 }}>
                     {sq.query}
                   </span>
                   <span
@@ -371,8 +371,8 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                       fontSize: '11px',
                       padding: '1px 6px',
                       borderRadius: '4px',
-                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
-                      color: isDark ? '#A1A1AA' : '#475569',
+                      backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#E2E8F0',
+                      color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#475569',
                     }}
                   >
                     {sq.resultsCount || 1} {sq.resultsCount === 1 ? 'result' : 'results'}
@@ -395,7 +395,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
               gap: '6px',
               cursor: 'pointer',
               userSelect: 'none',
-              color: isDark ? '#94A3B8' : '#64748B',
+              color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#64748B',
               padding: '2px 0',
             }}
           >
@@ -415,7 +415,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
             <div
               style={{
                 padding: '4px 0 6px 0',
-                color: isDark ? '#A1A1AA' : '#475569',
+                color: isDark ? 'var(--text-secondary, #9AA0A6)' : '#475569',
                 lineHeight: 1.6,
                 fontSize: '12.5px',
                 whiteSpace: 'pre-wrap',

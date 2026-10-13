@@ -28,29 +28,30 @@ export const MonacoEditor: React.FC = () => {
   const handleEditorDidMount: OnMount = (editor, monacoInstance) => {
     editorRef.current = editor;
 
-    // Define CoreMind bespoke dark theme
+    // Define CoreMind bespoke dark theme (Antigravity-inspired)
     monacoInstance.editor.defineTheme('coremind-dark', {
       base: 'vs-dark',
       inherit: true,
       rules: [
-        { token: '', background: '1E1E1E' },
-        { token: 'comment', foreground: '666666', fontStyle: 'italic' },
-        { token: 'keyword', foreground: '60A5FA', fontStyle: 'bold' },
-        { token: 'string', foreground: '34D399' },
-        { token: 'number', foreground: 'FBBF24' },
-        { token: 'type', foreground: '38BDF8' },
-        { token: 'function', foreground: 'A78BFA' },
+        { token: '', background: '1E1F20' },
+        { token: 'comment', foreground: '70757A', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '8AB4F8', fontStyle: 'bold' },
+        { token: 'string', foreground: '81C995' },
+        { token: 'number', foreground: 'FDD663' },
+        { token: 'type', foreground: 'A8C7FA' },
+        { token: 'function', foreground: 'D2E3FC' },
       ],
       colors: {
-        'editor.background': '#1E1E1E',
-        'editor.foreground': '#E6E6E6',
-        'editor.lineHighlightBackground': '#26262640',
-        'editorCursor.foreground': '#3B82F6',
-        'editorWhitespace.foreground': '#2A2A2A',
-        'editorIndentGuide.background': '#262626',
-        'editorIndentGuide.activeBackground': '#3B82F6',
-        'editorLineNumber.foreground': '#666666',
-        'editorLineNumber.activeForeground': '#E6E6E6',
+        'editor.background': '#1E1F20',
+        'editor.foreground': '#E8EAED',
+        'editor.lineHighlightBackground': '#30313440',
+        'editorCursor.foreground': '#8AB4F8',
+        'editorWhitespace.foreground': '#3C4043',
+        'editorIndentGuide.background': '#303134',
+        'editorIndentGuide.activeBackground': '#8AB4F8',
+        'editorLineNumber.foreground': '#70757A',
+        'editorLineNumber.activeForeground': '#E8EAED',
+        'editor.selectionBackground': '#30343B',
       },
     });
 

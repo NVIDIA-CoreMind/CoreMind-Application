@@ -85,15 +85,15 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
   return (
     <div
       style={{
-        backgroundColor: isDark ? '#1C1C1C' : '#FFFFFF',
-        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'}`,
+        backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#FFFFFF',
+        border: `1px solid ${isDark ? 'var(--border-color, #3C4043)' : 'rgba(0, 0, 0, 0.12)'}`,
         borderRadius: '12px',
         padding: '10px 12px',
         display: 'flex',
         flexDirection: 'column',
         gap: '8px',
         transition: 'border-color 0.2s, background-color 0.2s',
-        boxShadow: isDark ? '0 4px 14px rgba(0, 0, 0, 0.25)' : '0 4px 14px rgba(0, 0, 0, 0.06)',
+        boxShadow: 'none',
         position: 'relative',
       }}
     >
@@ -137,8 +137,8 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                 fontSize: '11px',
                 padding: '2px 6px',
                 borderRadius: '4px',
-                backgroundColor: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.1)',
-                color: 'var(--accent, #3B82F6)',
+                backgroundColor: isDark ? 'rgba(138, 180, 248, 0.12)' : 'rgba(138, 180, 248, 0.15)',
+                color: 'var(--accent, #8AB4F8)',
                 fontWeight: 500,
               }}
               title="Active editor file context"
@@ -264,18 +264,18 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                 justifyContent: 'center',
                 border: 'none',
                 cursor: 'pointer',
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+                backgroundColor: isDark ? 'rgba(242, 139, 130, 0.15)' : 'rgba(242, 139, 130, 0.1)',
                 transition: 'all 0.15s ease',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.backgroundColor = isDark
-                  ? 'rgba(255, 255, 255, 0.2)'
-                  : 'rgba(0, 0, 0, 0.14)';
+                  ? 'rgba(242, 139, 130, 0.25)'
+                  : 'rgba(242, 139, 130, 0.2)';
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.backgroundColor = isDark
-                  ? 'rgba(255, 255, 255, 0.12)'
-                  : 'rgba(0, 0, 0, 0.08)';
+                  ? 'rgba(242, 139, 130, 0.15)'
+                  : 'rgba(242, 139, 130, 0.1)';
               }}
             >
               <div
@@ -283,7 +283,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                   width: '10px',
                   height: '10px',
                   borderRadius: '2.5px',
-                  backgroundColor: '#EF4444',
+                  backgroundColor: 'var(--error, #F28B82)',
                 }}
               />
             </button>
@@ -303,26 +303,26 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                 border: 'none',
                 cursor: input.trim() ? 'pointer' : 'default',
                 backgroundColor: input.trim()
-                  ? '#0078D4'
+                  ? 'var(--accent, #8AB4F8)'
                   : isDark
-                  ? 'rgba(255, 255, 255, 0.08)'
+                  ? 'var(--bg-hover, #303134)'
                   : 'rgba(0, 0, 0, 0.06)',
                 color: input.trim()
-                  ? '#FFFFFF'
+                  ? '#1E1F20'
                   : isDark
-                  ? 'rgba(255, 255, 255, 0.3)'
+                  ? 'var(--text-muted, #70757A)'
                   : 'rgba(0, 0, 0, 0.25)',
                 transition: 'all 0.15s ease',
-                boxShadow: input.trim() ? '0 1px 4px rgba(0, 120, 212, 0.35)' : 'none',
+                boxShadow: 'none',
               }}
               onMouseEnter={(e) => {
                 if (input.trim()) {
-                  e.currentTarget.style.backgroundColor = '#006CBE';
+                  e.currentTarget.style.backgroundColor = '#A8C7FA';
                 }
               }}
               onMouseLeave={(e) => {
                 if (input.trim()) {
-                  e.currentTarget.style.backgroundColor = '#0078D4';
+                  e.currentTarget.style.backgroundColor = 'var(--accent, #8AB4F8)';
                 }
               }}
             >

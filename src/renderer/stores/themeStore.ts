@@ -42,8 +42,8 @@ function applyTheme(theme: ThemeMode): void {
     try {
       const isDark = effective === 'dark';
       window.coreMindAPI?.setTitleBarOverlay?.({
-        color: isDark ? '#1E1E1E' : '#ffffff',
-        symbolColor: isDark ? '#9A9A9A' : '#57606a',
+        color: isDark ? '#1E1F20' : '#ffffff',
+        symbolColor: isDark ? '#9AA0A6' : '#57606a',
         height: 36,
       });
     } catch {

@@ -187,17 +187,17 @@ export const EditorTabs: React.FC = () => {
               borderRadius: '4px',
               fontSize: '11.5px',
               fontWeight: 500,
-              backgroundColor: 'var(--accent-bg, rgba(59, 130, 246, 0.12))',
-              color: 'var(--accent, #3B82F6)',
-              border: '1px solid rgba(59, 130, 246, 0.35)',
+              backgroundColor: 'var(--accent-bg, rgba(138, 180, 248, 0.12))',
+              color: 'var(--accent, #8AB4F8)',
+              border: '1px solid rgba(138, 180, 248, 0.35)',
               cursor: isRunning ? 'default' : 'pointer',
               transition: 'all 0.15s ease',
             }}
           >
             {isRunning ? (
-              <Loader2 size={13} className="animate-spin" color="var(--accent, #3B82F6)" />
+              <Loader2 size={13} className="animate-spin" color="var(--accent, #8AB4F8)" />
             ) : (
-              <Play size={12} fill="var(--accent, #3B82F6)" color="var(--accent, #3B82F6)" />
+              <Play size={12} fill="var(--accent, #8AB4F8)" color="var(--accent, #8AB4F8)" />
             )}
             <span>{isPython ? 'Run Python' : 'Run File'}</span>
           </button>

@@ -87,26 +87,26 @@ const PanelToggleGlyphIcon: React.FC<{ size?: number; isMaximized?: boolean }> =
 
 const THEMES = {
   dark: {
-    background: '#181818',
-    foreground: '#E6E6E6',
-    cursor: '#FFFFFF',
-    cursorAccent: '#181818',
-    selectionBackground: 'rgba(255, 255, 255, 0.22)',
-    black: '#181818',
-    red: '#F87171',
-    green: '#34D399',
-    yellow: '#FBBF24',
-    blue: '#60A5FA',
-    magenta: '#C084FC',
-    cyan: '#38BDF8',
-    white: '#E6E6E6',
-    brightBlack: '#666666',
-    brightRed: '#EF4444',
-    brightGreen: '#10B981',
-    brightYellow: '#F59E0B',
-    brightBlue: '#3B82F6',
-    brightMagenta: '#A855F7',
-    brightCyan: '#06B6D4',
+    background: '#1E1F20',
+    foreground: '#E8EAED',
+    cursor: '#8AB4F8',
+    cursorAccent: '#1E1F20',
+    selectionBackground: '#30343B',
+    black: '#1E1F20',
+    red: '#F28B82',
+    green: '#81C995',
+    yellow: '#FDD663',
+    blue: '#8AB4F8',
+    magenta: '#C58AF9',
+    cyan: '#78D9EC',
+    white: '#E8EAED',
+    brightBlack: '#70757A',
+    brightRed: '#F28B82',
+    brightGreen: '#81C995',
+    brightYellow: '#FDD663',
+    brightBlue: '#8AB4F8',
+    brightMagenta: '#D7AEFB',
+    brightCyan: '#A1E4F2',
     brightWhite: '#FFFFFF',
   },
   light: {
@@ -382,19 +382,19 @@ export const PtyTerminal: React.FC = () => {
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: '#181818',
-        borderTop: '1px solid #2b2d30',
+        backgroundColor: 'var(--bg-app)',
+        borderTop: '1px solid var(--border-color)',
         overflow: 'hidden',
-        color: '#E6E6E6',
-        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+        color: 'var(--text-primary)',
+        fontFamily: 'var(--font-sans)',
       }}
     >
       {/* 1. TOP HEADER WITH TABS & ACTIONS */}
       <div
         style={{
           height: '35px',
-          backgroundColor: '#181818',
-          borderBottom: '1px solid #282a2d',
+          backgroundColor: 'var(--bg-panel)',
+          borderBottom: '1px solid var(--border-color)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -412,8 +412,8 @@ export const PtyTerminal: React.FC = () => {
                 key={tab.id}
                 onClick={() => setActiveTopTab(tab.id)}
                 style={{
-                  background: isActive ? '#2a2d2e' : 'transparent',
-                  color: isActive ? '#ffffff' : '#969696',
+                  background: isActive ? 'var(--bg-selected)' : 'transparent',
+                  color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                   border: 'none',
                   outline: 'none',
                   fontSize: '11.5px',
@@ -426,13 +426,13 @@ export const PtyTerminal: React.FC = () => {
                 }}
                 onMouseEnter={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.color = '#cccccc';
-                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.04)';
+                    e.currentTarget.style.color = 'var(--text-primary)';
+                    e.currentTarget.style.backgroundColor = 'var(--bg-hover)';
                   }
                 }}
                 onMouseLeave={(e) => {
                   if (!isActive) {
-                    e.currentTarget.style.color = '#969696';
+                    e.currentTarget.style.color = 'var(--text-secondary)';
                     e.currentTarget.style.backgroundColor = 'transparent';
                   }
                 }}
@@ -518,10 +518,10 @@ export const PtyTerminal: React.FC = () => {
                 top: '28px',
                 right: '70px',
                 zIndex: 100,
-                backgroundColor: '#202020',
-                border: '1px solid #333333',
+                backgroundColor: 'var(--bg-surface)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '5px',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                 minWidth: '180px',
                 padding: '4px 0',
                 fontSize: '12px',
@@ -536,7 +536,7 @@ export const PtyTerminal: React.FC = () => {
                   alignItems: 'center',
                   gap: '8px',
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2c2d30')}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
                 onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
               >
                 <TerminalBoxIcon size={13} />
@@ -633,10 +633,10 @@ export const PtyTerminal: React.FC = () => {
                   top: '28px',
                   right: '0',
                   zIndex: 100,
-                  backgroundColor: '#202020',
-                  border: '1px solid #333333',
+                  backgroundColor: 'var(--bg-surface)',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '5px',
-                  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.45)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
                   minWidth: '170px',
                   padding: '4px 0',
                   fontSize: '12px',
@@ -645,7 +645,7 @@ export const PtyTerminal: React.FC = () => {
                 <div
                   onClick={handleClearTerminal}
                   style={{ padding: '6px 12px', cursor: 'pointer' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2c2d30')}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   Clear Terminal
@@ -653,7 +653,7 @@ export const PtyTerminal: React.FC = () => {
                 <div
                   onClick={handleScrollToTop}
                   style={{ padding: '6px 12px', cursor: 'pointer' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2c2d30')}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   Scroll to Top
@@ -661,12 +661,12 @@ export const PtyTerminal: React.FC = () => {
                 <div
                   onClick={handleScrollToBottom}
                   style={{ padding: '6px 12px', cursor: 'pointer' }}
-                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#2c2d30')}
+                  onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
                   onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
                 >
                   Scroll to Bottom
                 </div>
-                <div style={{ height: '1px', backgroundColor: '#333333', margin: '4px 0' }} />
+                <div style={{ height: '1px', backgroundColor: 'var(--border-color)', margin: '4px 0' }} />
                 <div
                   onClick={handleToggleMaximize}
                   style={{ padding: '6px 12px', cursor: 'pointer' }}
@@ -745,7 +745,7 @@ export const PtyTerminal: React.FC = () => {
                 minWidth: 0,
                 position: 'relative',
                 height: '100%',
-                backgroundColor: '#181818',
+                backgroundColor: 'var(--bg-app)',
               }}
             >
               {!rootPath && (
@@ -755,7 +755,7 @@ export const PtyTerminal: React.FC = () => {
                     top: 12,
                     left: 16,
                     fontSize: '12px',
-                    color: '#8c959f',
+                    color: 'var(--text-muted)',
                     zIndex: 5,
                   }}
                 >
@@ -783,8 +783,8 @@ export const PtyTerminal: React.FC = () => {
                 width: '144px',
                 flexShrink: 0,
                 height: '100%',
-                borderLeft: '1px solid #282a2d',
-                backgroundColor: '#181818',
+                borderLeft: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-panel)',
                 display: 'flex',
                 flexDirection: 'column',
                 overflowY: 'auto',
@@ -810,11 +810,11 @@ export const PtyTerminal: React.FC = () => {
                       cursor: 'pointer',
                       fontSize: '12px',
                       backgroundColor: isActive
-                        ? '#2a2d2e'
+                        ? 'var(--bg-selected)'
                         : isHovered
-                        ? 'rgba(255, 255, 255, 0.04)'
+                        ? 'var(--bg-hover)'
                         : 'transparent',
-                      color: isActive ? '#ffffff' : '#cccccc',
+                      color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
                       transition: 'background-color 0.1s ease',
                       position: 'relative',
                     }}

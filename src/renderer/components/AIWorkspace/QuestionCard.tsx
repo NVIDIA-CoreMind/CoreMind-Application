@@ -13,29 +13,29 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
 
   return (
     <div style={{
-      backgroundColor: '#262626',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
+      backgroundColor: 'var(--bg-surface, #28292B)',
+      border: '1px solid var(--border-color, #3C4043)',
       borderRadius: '12px',
       padding: '16px',
       display: 'flex',
       flexDirection: 'column',
       gap: '16px',
-      boxShadow: '0 8px 30px rgba(0, 0, 0, 0.3)',
+      boxShadow: 'none',
       marginTop: '8px',
       marginBottom: '8px'
     }}>
       <div style={{ display: 'flex', gap: '12px' }}>
         <div style={{ 
           width: '22px', height: '22px', 
-          backgroundColor: 'rgba(255, 255, 255, 0.1)', 
+          backgroundColor: 'rgba(138, 180, 248, 0.12)', 
           borderRadius: '4px', 
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           flexShrink: 0,
           marginTop: '2px'
         }}>
-          <HelpCircle size={14} color="#A3A3A3" />
+          <HelpCircle size={14} color="var(--accent, #8AB4F8)" />
         </div>
-        <div style={{ fontSize: '13px', color: '#E5E7EB', lineHeight: '1.5' }}>
+        <div style={{ fontSize: '13px', color: 'var(--text-primary, #E8EAED)', lineHeight: '1.5' }}>
           {event.question}
         </div>
       </div>
@@ -48,19 +48,19 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
               onClick={() => { if (isActive) setSelected(opt); }}
               style={{
                 display: 'flex', alignItems: 'center', gap: '12px', 
-                fontSize: '12.5px', color: '#D1D5DB', 
+                fontSize: '12.5px', color: 'var(--text-secondary, #9AA0A6)', 
                 cursor: isActive ? 'pointer' : 'default',
                 opacity: (selected && selected !== opt) ? 0.5 : 1,
                 transition: 'opacity 0.2s'
               }}
             >
               <div style={{ 
-                backgroundColor: 'rgba(255, 255, 255, 0.08)', 
+                backgroundColor: 'var(--bg-hover, #303134)', 
                 borderRadius: '4px', 
                 width: '18px', height: '18px', 
                 display: 'flex', alignItems: 'center', justifyContent: 'center', 
                 fontSize: '11px', flexShrink: 0,
-                color: '#9CA3AF'
+                color: 'var(--text-secondary, #9AA0A6)'
               }}>
                 {index + 1}
               </div>
@@ -86,13 +86,13 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
             padding: '8px 12px',
             backgroundColor: 'transparent',
             border: 'none',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-            color: '#E5E7EB',
+            borderBottom: '1px solid var(--border-color, #3C4043)',
+            color: 'var(--text-primary, #E8EAED)',
             outline: 'none',
             transition: 'border-color 0.2s'
           }}
-          onFocus={e => e.target.style.borderBottomColor = '#3B82F6'}
-          onBlur={e => e.target.style.borderBottomColor = 'rgba(255, 255, 255, 0.1)'}
+          onFocus={e => e.target.style.borderBottomColor = 'var(--accent, #8AB4F8)'}
+          onBlur={e => e.target.style.borderBottomColor = 'var(--border-color, #3C4043)'}
         />
       </div>
 
@@ -103,7 +103,7 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
             style={{
               padding: '6px 14px',
               backgroundColor: 'transparent',
-              color: '#9CA3AF',
+              color: 'var(--text-muted, #70757A)',
               border: 'none',
               fontSize: '12.5px',
               cursor: 'pointer'
@@ -116,12 +116,12 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
             disabled={!custom && !selected}
             style={{
               padding: '6px 14px',
-              backgroundColor: '#2563EB',
-              color: '#fff',
+              backgroundColor: 'var(--accent, #8AB4F8)',
+              color: '#1E1F20',
               border: 'none',
               borderRadius: '6px',
               fontSize: '12.5px',
-              fontWeight: 500,
+              fontWeight: 600,
               cursor: (!custom && !selected) ? 'default' : 'pointer',
               opacity: (!custom && !selected) ? 0.5 : 1,
               display: 'flex',

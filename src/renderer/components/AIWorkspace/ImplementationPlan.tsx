@@ -68,14 +68,14 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
   const getStatusIcon = (status: TaskStatus) => {
     switch (status) {
       case 'completed':
-        return <CheckCircle2 size={16} color="#22C55E" style={{ flexShrink: 0 }} />;
+        return <CheckCircle2 size={16} color="var(--success, #81C995)" style={{ flexShrink: 0 }} />;
       case 'in_progress':
-        return <Loader2 size={16} color="var(--accent, #3B82F6)" className="animate-spin" style={{ flexShrink: 0 }} />;
+        return <Loader2 size={16} color="var(--accent, #8AB4F8)" className="animate-spin" style={{ flexShrink: 0 }} />;
       case 'failed':
-        return <AlertCircle size={16} color="#EF4444" style={{ flexShrink: 0 }} />;
+        return <AlertCircle size={16} color="var(--error, #F28B82)" style={{ flexShrink: 0 }} />;
       case 'pending':
       default:
-        return <Circle size={16} color="var(--text-muted)" style={{ opacity: 0.5, flexShrink: 0 }} />;
+        return <Circle size={16} color="var(--text-muted, #70757A)" style={{ opacity: 0.5, flexShrink: 0 }} />;
     }
   };
 
@@ -94,8 +94,8 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
       <div
         style={{
           padding: compact ? '8px 12px' : '14px 16px',
-          borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
-          backgroundColor: isDark ? 'rgba(0, 0, 0, 0.15)' : '#F8FAFC',
+          borderBottom: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
+          backgroundColor: isDark ? 'var(--bg-panel, #232426)' : '#F8FAFC',
           flexShrink: 0,
         }}
       >
@@ -110,7 +110,7 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                 fontSize: '11px',
                 padding: '1px 7px',
                 borderRadius: '10px',
-                backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
+                backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#E2E8F0',
                 color: 'var(--text-secondary)',
                 fontWeight: 600,
               }}
@@ -124,7 +124,7 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
               fontSize: '12px',
               fontFamily: 'var(--font-mono)',
               fontWeight: 600,
-              color: progressPercent === 100 ? '#22C55E' : 'var(--accent)',
+              color: progressPercent === 100 ? 'var(--success, #81C995)' : 'var(--accent, #8AB4F8)',
             }}
           >
             {progressPercent}%
@@ -136,7 +136,7 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
           style={{
             height: '5px',
             width: '100%',
-            backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : '#E2E8F0',
+            backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#E2E8F0',
             borderRadius: '3px',
             overflow: 'hidden',
           }}
@@ -147,10 +147,10 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
               width: `${progressPercent}%`,
               backgroundColor:
                 failedCount > 0
-                  ? '#EF4444'
+                  ? 'var(--error, #F28B82)'
                   : progressPercent === 100
-                  ? '#22C55E'
-                  : 'var(--accent, #3B82F6)',
+                  ? 'var(--success, #81C995)'
+                  : 'var(--accent, #8AB4F8)',
               transition: 'width 0.3s ease',
             }}
           />
@@ -192,16 +192,16 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
               style={{
                 borderRadius: '8px',
                 border: isCurrent
-                  ? '1px solid var(--accent)'
+                  ? '1px solid var(--accent, #8AB4F8)'
                   : isDark
-                  ? '1px solid rgba(255, 255, 255, 0.08)'
+                  ? '1px solid var(--border-color, #3C4043)'
                   : '1px solid #E2E8F0',
                 backgroundColor: isCurrent
                   ? isDark
-                    ? 'rgba(59, 130, 246, 0.08)'
+                    ? 'var(--bg-selected, #30343B)'
                     : '#EFF6FF'
                   : isDark
-                  ? '#181818'
+                  ? 'var(--bg-surface, #28292B)'
                   : '#FFFFFF',
                 overflow: 'hidden',
                 transition: 'border-color 0.15s ease',
@@ -249,20 +249,20 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                       textTransform: 'uppercase',
                       backgroundColor:
                         task.status === 'completed'
-                          ? 'rgba(34, 197, 94, 0.15)'
+                          ? 'rgba(129, 201, 149, 0.15)'
                           : task.status === 'in_progress'
-                          ? 'rgba(59, 130, 246, 0.15)'
+                          ? 'rgba(138, 180, 248, 0.15)'
                           : task.status === 'failed'
-                          ? 'rgba(239, 68, 68, 0.15)'
-                          : 'rgba(255, 255, 255, 0.06)',
+                          ? 'rgba(242, 139, 130, 0.15)'
+                          : isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)',
                       color:
                         task.status === 'completed'
-                          ? '#22C55E'
+                          ? 'var(--success, #81C995)'
                           : task.status === 'in_progress'
-                          ? 'var(--accent, #3B82F6)'
+                          ? 'var(--accent, #8AB4F8)'
                           : task.status === 'failed'
-                          ? '#EF4444'
-                          : 'var(--text-muted)',
+                          ? 'var(--error, #F28B82)'
+                          : 'var(--text-muted, #70757A)',
                     }}
                   >
                     {task.status.replace('_', ' ')}
@@ -278,7 +278,7 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                 <div
                   style={{
                     padding: '8px 12px 10px 38px',
-                    borderTop: isDark ? '1px solid rgba(255, 255, 255, 0.05)' : '1px solid #F1F5F9',
+                    borderTop: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #F1F5F9',
                     fontSize: '12px',
                     color: 'var(--text-secondary)',
                     lineHeight: 1.5,
@@ -300,8 +300,8 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                         marginTop: '6px',
                         padding: '6px 8px',
                         borderRadius: '4px',
-                        backgroundColor: isDark ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2',
-                        color: '#EF4444',
+                        backgroundColor: isDark ? 'rgba(242, 139, 130, 0.15)' : '#FEF2F2',
+                        color: 'var(--error, #F28B82)',
                         fontFamily: 'var(--font-mono)',
                         fontSize: '11px',
                       }}
@@ -316,7 +316,7 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
                         marginTop: '6px',
                         padding: '6px 8px',
                         borderRadius: '4px',
-                        backgroundColor: isDark ? 'rgba(255, 255, 255, 0.04)' : '#F8FAFC',
+                        backgroundColor: isDark ? 'var(--bg-panel, #232426)' : '#F8FAFC',
                         fontFamily: 'var(--font-mono)',
                         fontSize: '11px',
                         whiteSpace: 'pre-wrap',
@@ -338,13 +338,13 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
               marginTop: '8px',
               padding: '12px',
               borderRadius: '8px',
-              backgroundColor: isDark ? 'rgba(34, 197, 94, 0.1)' : '#ECFDF5',
-              border: '1px solid rgba(34, 197, 94, 0.25)',
+              backgroundColor: isDark ? 'rgba(129, 201, 149, 0.1)' : '#ECFDF5',
+              border: '1px solid rgba(129, 201, 149, 0.25)',
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
               fontSize: '12.5px',
-              color: isDark ? '#4ADE80' : '#15803D',
+              color: isDark ? 'var(--success, #81C995)' : '#15803D',
             }}
           >
             <CheckCheck size={18} />
@@ -363,13 +363,13 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
               marginTop: '8px',
               padding: '12px',
               borderRadius: '8px',
-              backgroundColor: isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2',
-              border: '1px solid rgba(239, 68, 68, 0.25)',
+              backgroundColor: isDark ? 'rgba(242, 139, 130, 0.1)' : '#FEF2F2',
+              border: '1px solid rgba(242, 139, 130, 0.25)',
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
               fontSize: '12.5px',
-              color: isDark ? '#F87171' : '#B91C1C',
+              color: isDark ? 'var(--error, #F28B82)' : '#B91C1C',
             }}
           >
             <AlertTriangle size={18} />

@@ -64,9 +64,9 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
   const renderIcon = () => {
     if (node.isDirectory) {
       return isExpanded ? (
-        <FolderOpen size={14} color="#818CF8" />
+        <FolderOpen size={14} color="var(--accent, #8AB4F8)" />
       ) : (
-        <Folder size={14} color="#6366F1" />
+        <Folder size={14} color="var(--accent, #8AB4F8)" />
       );
     }
     return <FileIcon path={node.path} size={14} />;
@@ -217,7 +217,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
           {creatingInPath.type === 'file' ? (
             <FileText size={14} color="var(--text-muted)" />
           ) : (
-            <Folder size={14} color="#6366F1" />
+            <Folder size={14} color="var(--accent, #8AB4F8)" />
           )}
           <input
             autoFocus
@@ -245,7 +245,7 @@ export const FileTreeItem: React.FC<FileTreeItemProps> = ({
               flex: 1,
               backgroundColor: 'var(--bg-app)',
               color: 'var(--text-primary)',
-              border: '1px solid var(--accent, #3b82f6)',
+              border: '1px solid var(--accent, #8AB4F8)',
               borderRadius: '2px',
               outline: 'none',
               padding: '1px 4px',

@@ -446,10 +446,10 @@ export const FileExplorer: React.FC = () => {
               margin: '6px 8px',
               padding: '6px 8px',
               borderRadius: '4px',
-              backgroundColor: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.3)',
+              backgroundColor: 'rgba(242, 139, 130, 0.12)',
+              border: '1px solid rgba(242, 139, 130, 0.25)',
               fontSize: '11px',
-              color: '#F87171',
+              color: 'var(--error, #F28B82)',
               display: 'flex',
               flexDirection: 'column',
               gap: '4px',
@@ -479,10 +479,10 @@ export const FileExplorer: React.FC = () => {
               style={{
                 padding: '6px 14px',
                 borderRadius: '5px',
-                backgroundColor: 'var(--accent, #3B82F6)',
-                color: '#ffffff',
+                backgroundColor: 'var(--accent, #8AB4F8)',
+                color: '#1E1F20',
                 fontSize: '12px',
-                fontWeight: 500,
+                fontWeight: 600,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
@@ -492,8 +492,8 @@ export const FileExplorer: React.FC = () => {
                 cursor: 'pointer',
                 transition: 'background-color 0.15s ease',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--accent-hover, #60A5FA)')}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--accent, #3B82F6)')}
+              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--accent-hover, #A8C7FA)')}
+              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'var(--accent, #8AB4F8)')}
             >
               <FolderOpen size={14} />
               Open Folder
@@ -557,9 +557,9 @@ export const FileExplorer: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 {propertiesNode.isDirectory ? (
-                  <Folder size={18} color="#6366F1" />
+                  <Folder size={18} color="var(--accent, #8AB4F8)" />
                 ) : (
-                  <FileText size={18} color="#38BDF8" />
+                  <FileText size={18} color="var(--accent, #8AB4F8)" />
                 )}
                 <span style={{ fontWeight: 600, fontSize: '13px' }}>
                   {propertiesNode.isDirectory ? 'Folder Info' : 'File Info'}
@@ -639,12 +639,12 @@ export const FileExplorer: React.FC = () => {
                 style={{
                   padding: '5px 14px',
                   borderRadius: '4px',
-                  backgroundColor: 'var(--accent)',
-                  color: '#ffffff',
+                  backgroundColor: 'var(--accent, #8AB4F8)',
+                  color: '#1E1F20',
                   fontSize: '12px',
                   border: 'none',
                   cursor: 'pointer',
-                  fontWeight: 500,
+                  fontWeight: 600,
                 }}
               >
                 Close

@@ -307,11 +307,11 @@ export const AIWorkspace: React.FC = () => {
             style={{
               margin: '12px 14px',
               padding: '10px 12px',
-              border: isDark ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #E2E8F0',
+              border: isDark ? '1px solid var(--border-color)' : '1px solid #E2E8F0',
               borderRadius: '8px',
               fontSize: '12px',
               color: 'var(--text-secondary)',
-              backgroundColor: isDark ? 'rgba(255, 255, 255, 0.03)' : '#F8FAFC',
+              backgroundColor: isDark ? 'var(--bg-surface)' : '#F8FAFC',
             }}
           >
             <strong style={{ color: 'var(--text-primary)', display: 'block', marginBottom: '2px' }}>

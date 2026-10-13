@@ -63,8 +63,8 @@ export const WorkspaceHeader: React.FC = () => {
         style={{
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: isDark ? 'rgba(0, 0, 0, 0.25)' : '#F8FAFC',
-          borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
+          backgroundColor: isDark ? 'var(--bg-panel)' : '#F8FAFC',
+          borderBottom: isDark ? '1px solid var(--border-color)' : '1px solid #E2E8F0',
           flexShrink: 0,
           userSelect: 'none',
         }}
@@ -83,7 +83,7 @@ export const WorkspaceHeader: React.FC = () => {
           {/* Left: Agent Title & Status Badge */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Bot size={15} style={{ color: 'var(--accent, #3B82F6)' }} />
+              <Bot size={15} style={{ color: 'var(--accent, #8AB4F8)' }} />
               <span
                 style={{
                   fontSize: '12.5px',
@@ -110,15 +110,15 @@ export const WorkspaceHeader: React.FC = () => {
                 cancelled: 'Cancelled',
               };
               const colors: Record<string, { bg: string; text: string; dot: string }> = {
-                idle: { bg: 'rgba(148, 163, 184, 0.1)', text: '#94A3B8', dot: '#94A3B8' },
-                thinking: { bg: 'rgba(59, 130, 246, 0.12)', text: '#3B82F6', dot: '#3B82F6' },
-                inspecting: { bg: 'rgba(96, 165, 250, 0.12)', text: '#60A5FA', dot: '#60A5FA' },
-                editing: { bg: 'rgba(16, 185, 129, 0.12)', text: '#10B981', dot: '#10B981' },
-                running_command: { bg: 'rgba(245, 158, 11, 0.12)', text: '#F59E0B', dot: '#F59E0B' },
-                testing: { bg: 'rgba(168, 85, 247, 0.12)', text: '#A855F7', dot: '#A855F7' },
-                completed: { bg: 'rgba(34, 197, 94, 0.12)', text: '#22C55E', dot: '#22C55E' },
-                failed: { bg: 'rgba(239, 68, 68, 0.12)', text: '#EF4444', dot: '#EF4444' },
-                cancelled: { bg: 'rgba(148, 163, 184, 0.12)', text: '#94A3B8', dot: '#94A3B8' },
+                idle: { bg: 'rgba(255, 255, 255, 0.05)', text: '#9AA0A6', dot: '#70757A' },
+                thinking: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
+                inspecting: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
+                editing: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
+                running_command: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
+                testing: { bg: 'rgba(138, 180, 248, 0.12)', text: '#8AB4F8', dot: '#8AB4F8' },
+                completed: { bg: 'rgba(129, 201, 149, 0.12)', text: '#81C995', dot: '#81C995' },
+                failed: { bg: 'rgba(242, 139, 130, 0.12)', text: '#F28B82', dot: '#F28B82' },
+                cancelled: { bg: 'rgba(255, 255, 255, 0.05)', text: '#9AA0A6', dot: '#70757A' },
               };
               const c = colors[executionState] || colors.idle;
               return (
@@ -188,8 +188,8 @@ export const WorkspaceHeader: React.FC = () => {
               title="Past Sessions"
               style={{
                 ...btnStyle,
-                color: isHistoryOpen ? 'var(--accent, #3B82F6)' : 'var(--text-secondary)',
-                backgroundColor: isHistoryOpen ? 'rgba(59, 130, 246, 0.12)' : 'transparent',
+                color: isHistoryOpen ? 'var(--accent, #8AB4F8)' : 'var(--text-secondary)',
+                backgroundColor: isHistoryOpen ? 'var(--accent-bg)' : 'transparent',
               }}
             >
               <History size={13} />
@@ -220,21 +220,21 @@ export const WorkspaceHeader: React.FC = () => {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '5px',
-                  padding: '3px 8px',
+                  padding: '4px 9px',
                   borderRadius: '5px',
-                  border: 'none',
+                  border: isActive && isDark ? '1px solid rgba(138, 180, 248, 0.25)' : '1px solid transparent',
                   fontSize: '11.5px',
                   fontWeight: isActive ? 600 : 500,
                   cursor: 'pointer',
                   backgroundColor: isActive
                     ? isDark
-                      ? 'rgba(255, 255, 255, 0.1)'
+                      ? 'var(--accent-bg, rgba(138, 180, 248, 0.12))'
                       : '#FFFFFF'
                     : 'transparent',
                   color: isActive
-                    ? 'var(--text-primary)'
+                    ? 'var(--accent, #8AB4F8)'
                     : 'var(--text-secondary)',
-                  boxShadow: isActive && !isDark ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                  boxShadow: 'none',
                   transition: 'background-color 0.12s ease, color 0.12s ease',
                 }}
               >
@@ -248,11 +248,11 @@ export const WorkspaceHeader: React.FC = () => {
                       padding: '0 4px',
                       borderRadius: '10px',
                       backgroundColor: isActive
-                        ? 'var(--accent, #3B82F6)'
+                        ? 'var(--accent, #8AB4F8)'
                         : isDark
-                        ? 'rgba(255, 255, 255, 0.12)'
+                        ? 'var(--bg-hover)'
                         : 'rgba(0, 0, 0, 0.08)',
-                      color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
+                      color: isActive ? '#1E1F20' : 'var(--text-secondary)',
                       lineHeight: '14px',
                     }}
                   >

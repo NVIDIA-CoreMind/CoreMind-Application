@@ -137,10 +137,10 @@ export const GlobalPrompt: React.FC = () => {
         }}
         style={{
           width: '640px',
-          backgroundColor: 'var(--bg-app)',
-          border: '1px solid var(--ov-15)',
+          backgroundColor: 'var(--bg-surface, #28292B)',
+          border: '1px solid var(--border-color, #3C4043)',
           borderRadius: '12px',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
+          boxShadow: '0 16px 32px rgba(0, 0, 0, 0.4)',
           display: 'flex',
           flexDirection: 'column',
           padding: '16px 18px 12px 18px',
@@ -179,7 +179,7 @@ export const GlobalPrompt: React.FC = () => {
             alignItems: 'center',
             justifyContent: 'space-between',
             paddingTop: '8px',
-            borderTop: '1px solid var(--ov-8)',
+            borderTop: '1px solid var(--border-color, #3C4043)',
             position: 'relative',
           }}
         >
@@ -193,14 +193,14 @@ export const GlobalPrompt: React.FC = () => {
                 color: 'var(--text-secondary)',
                 borderRadius: '6px',
                 background: 'transparent',
-                border: '1px solid var(--ov-8)',
+                border: '1px solid var(--border-color, #3C4043)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
                 fontSize: '11px',
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#ffffff')}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--text-primary)')}
               onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--text-secondary)')}
             >
               <Plus size={14} />
@@ -221,7 +221,7 @@ export const GlobalPrompt: React.FC = () => {
                   gap: '6px',
                   padding: '4px 12px',
                   borderRadius: '9999px',
-                  border: '1px solid var(--ov-12)',
+                  border: '1px solid var(--border-color, #3C4043)',
                   backgroundColor: 'transparent',
                   color: 'var(--text-body)',
                   fontSize: '11px',
@@ -239,8 +239,8 @@ export const GlobalPrompt: React.FC = () => {
                     position: 'absolute',
                     top: '32px',
                     left: '0',
-                    backgroundColor: 'var(--bg-raised)',
-                    border: '1px solid var(--bg-raised-hover)',
+                    backgroundColor: 'var(--bg-surface, #28292B)',
+                    border: '1px solid var(--border-color, #3C4043)',
                     borderRadius: '8px',
                     padding: '4px',
                     width: '240px',
@@ -266,18 +266,17 @@ export const GlobalPrompt: React.FC = () => {
                         padding: '6px 10px',
                         borderRadius: '5px',
                         fontSize: '11px',
-                        color: m === selectedModel ? '#ffffff' : 'var(--text-secondary)',
+                        color: m === selectedModel ? 'var(--text-primary)' : 'var(--text-secondary)',
                         backgroundColor:
-                          m === selectedModel ? 'var(--ov-8)' : 'transparent',
+                          m === selectedModel ? 'var(--bg-selected, #30343B)' : 'transparent',
                         width: '100%',
                         textAlign: 'left',
-                        background: 'transparent',
                         border: 'none',
                         cursor: 'pointer',
                       }}
                     >
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{m}</span>
-                      {m === selectedModel && <Check size={12} color="#3B82F6" />}
+                      {m === selectedModel && <Check size={12} color="var(--accent, #8AB4F8)" />}
                     </button>
                   ))}
                 </div>
@@ -293,7 +292,7 @@ export const GlobalPrompt: React.FC = () => {
               title={isRecording ? 'Listening... click to stop' : 'Voice Input'}
               style={{
                 padding: '4px',
-                color: isRecording ? '#ef4444' : 'var(--text-secondary)',
+                color: isRecording ? 'var(--error, #F28B82)' : 'var(--text-secondary)',
                 borderRadius: '4px',
                 background: 'transparent',
                 border: 'none',
@@ -313,14 +312,14 @@ export const GlobalPrompt: React.FC = () => {
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
-                backgroundColor: input.trim() && !isLoading ? '#0078D4' : 'var(--ov-6)',
-                color: input.trim() && !isLoading ? '#FFFFFF' : 'var(--text-faint)',
+                backgroundColor: input.trim() && !isLoading ? 'var(--accent, #8AB4F8)' : 'var(--bg-hover, #303134)',
+                color: input.trim() && !isLoading ? '#1E1F20' : 'var(--text-muted, #70757A)',
                 cursor: input.trim() && !isLoading ? 'pointer' : 'default',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 border: 'none',
-                boxShadow: input.trim() && !isLoading ? '0 1px 4px rgba(0, 120, 212, 0.35)' : 'none',
+                boxShadow: 'none',
                 transition: 'all 0.15s ease',
               }}
             >

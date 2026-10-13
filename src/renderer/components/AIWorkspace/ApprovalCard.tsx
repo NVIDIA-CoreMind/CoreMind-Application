@@ -40,15 +40,15 @@ export const ApprovalCard: React.FC = () => {
         margin: '10px 0',
         padding: '14px',
         borderRadius: '10px',
-        border: '1px solid #F59E0B',
-        backgroundColor: isDark ? 'rgba(245, 158, 11, 0.08)' : '#FFFBEB',
+        border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
+        backgroundColor: isDark ? 'var(--bg-surface, #28292B)' : '#FFFBEB',
         color: 'var(--text-primary)',
-        boxShadow: '0 2px 10px rgba(245, 158, 11, 0.15)',
+        boxShadow: 'none',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-        <ShieldAlert size={18} color="#F59E0B" />
-        <span style={{ fontSize: '13px', fontWeight: 600, color: '#D97706' }}>
+        <ShieldAlert size={18} color="var(--warning, #FDD663)" />
+        <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--warning, #FDD663)' }}>
           Action Approval Required
         </span>
       </div>
@@ -61,8 +61,8 @@ export const ApprovalCard: React.FC = () => {
         style={{
           padding: '8px',
           borderRadius: '6px',
-          backgroundColor: isDark ? '#141414' : '#FFFFFF',
-          border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #E2E8F0',
+          backgroundColor: isDark ? 'var(--bg-app, #1E1F20)' : '#FFFFFF',
+          border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #E2E8F0',
           fontFamily: 'var(--font-mono)',
           fontSize: '11px',
           marginBottom: '12px',
@@ -88,8 +88,8 @@ export const ApprovalCard: React.FC = () => {
               width: '100%',
               padding: '6px 10px',
               borderRadius: '6px',
-              border: isDark ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid #CBD5E1',
-              backgroundColor: isDark ? '#1A1A1A' : '#FFFFFF',
+              border: isDark ? '1px solid var(--border-color, #3C4043)' : '1px solid #CBD5E1',
+              backgroundColor: isDark ? 'var(--bg-app, #1E1F20)' : '#FFFFFF',
               color: 'var(--text-primary)',
               fontSize: '12px',
               outline: 'none',
@@ -108,8 +108,8 @@ export const ApprovalCard: React.FC = () => {
             gap: '6px',
             padding: '6px 12px',
             borderRadius: '6px',
-            backgroundColor: '#2563EB',
-            color: '#FFFFFF',
+            backgroundColor: 'var(--accent, #8AB4F8)',
+            color: '#1E1F20',
             border: 'none',
             fontSize: '12px',
             fontWeight: 600,
@@ -131,8 +131,8 @@ export const ApprovalCard: React.FC = () => {
               padding: '6px 12px',
               borderRadius: '6px',
               backgroundColor: 'transparent',
-              color: '#DC2626',
-              border: '1px solid rgba(220, 38, 38, 0.3)',
+              color: 'var(--error, #F28B82)',
+              border: '1px solid var(--error, #F28B82)',
               fontSize: '12px',
               fontWeight: 500,
               cursor: 'pointer',
@@ -151,8 +151,8 @@ export const ApprovalCard: React.FC = () => {
               gap: '6px',
               padding: '6px 12px',
               borderRadius: '6px',
-              backgroundColor: '#DC2626',
-              color: '#FFFFFF',
+              backgroundColor: 'var(--error, #F28B82)',
+              color: '#1E1F20',
               border: 'none',
               fontSize: '12px',
               fontWeight: 600,
