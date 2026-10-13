@@ -200,28 +200,19 @@ export function formatTaskCompletedSummary(
         hasVerifications?: boolean;
         verificationPassed?: boolean;
       } = 1,
-  filesChanged: string[] = [],
+  _filesChanged: string[] = [],
   trackedChanges: Record<string, FileChangeInfo> = {},
-  hasVerifications: boolean = false,
-  verificationPassed: boolean = true
+  _hasVerifications: boolean = false,
+  _verificationPassed: boolean = true
 ): string {
   let steps = 1;
-  let finalFiles: string[] = filesChanged;
+  let finalFiles: string[] = _filesChanged;
   let finalTracked: Record<string, FileChangeInfo> = trackedChanges;
-  let finalHasVerifications = hasVerifications;
-  let finalVerificationPassed = verificationPassed;
 
   if (typeof stepsOrOptions === 'object' && stepsOrOptions !== null) {
     steps = stepsOrOptions.steps || 1;
     finalFiles = stepsOrOptions.files_changed || stepsOrOptions.filesChanged || [];
     finalTracked = stepsOrOptions.trackedChanges || {};
-    if (typeof stepsOrOptions.tests_passed === 'number' || typeof stepsOrOptions.tests_failed === 'number') {
-      finalHasVerifications = true;
-      finalVerificationPassed = (stepsOrOptions.tests_failed ?? 0) === 0;
-    } else if (stepsOrOptions.hasVerifications !== undefined) {
-      finalHasVerifications = stepsOrOptions.hasVerifications;
-      finalVerificationPassed = stepsOrOptions.verificationPassed ?? true;
-    }
   } else if (typeof stepsOrOptions === 'number') {
     steps = stepsOrOptions;
   }
@@ -241,18 +232,13 @@ export function formatTaskCompletedSummary(
       const action = info?.action ? ` (${info.action})` : '';
       parts.push(`- \`${clean}\`${action}${diffStat ? ` [${diffStat}]` : ''}`);
     }
-  } else {
-    parts.push('\nNo files were modified during this task.');
   }
 
-  if (finalHasVerifications) {
-    if (typeof stepsOrOptions === 'object' && typeof stepsOrOptions?.tests_passed === 'number') {
-      const passed = stepsOrOptions.tests_passed;
-      const failed = stepsOrOptions.tests_failed ?? 0;
-      parts.push(`\n#### Verification\n✓ ${passed} tests passed${failed > 0 ? `, ✗ ${failed} tests failed` : ''}.`);
-    } else {
-      parts.push(`\n#### Verification\n${finalVerificationPassed ? '✓ All verification checks passed.' : '✗ Verification checks failed.'}`);
-    }
+  // Only output verification if actual test metrics or test results were executed
+  if (typeof stepsOrOptions === 'object' && typeof stepsOrOptions?.tests_passed === 'number') {
+    const passed = stepsOrOptions.tests_passed;
+    const failed = stepsOrOptions.tests_failed ?? 0;
+    parts.push(`\n#### Verification\n✓ ${passed} tests passed${failed > 0 ? `, ✗ ${failed} tests failed` : ''}.`);
   }
 
   return parts.join('\n');

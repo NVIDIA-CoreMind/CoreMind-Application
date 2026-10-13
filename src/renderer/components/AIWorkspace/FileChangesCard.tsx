@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileChangeInfo } from '../../services/aiWorkspaceService';
+import { FileChangeInfo, useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { FileIcon } from '../FileIcon';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -58,19 +58,19 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
 
   const handleReviewClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setIsExpanded((prev) => !prev);
-    if (!isExpanded && files && files.length > 0) {
+    useAIWorkspaceStore.getState().setActiveView('changes');
+    if (files && files.length > 0) {
       handleOpenFile(files[0].file);
     }
   };
 
   return (
-    <div style={{ margin: '10px 0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+    <div style={{ margin: '4px 0', display: 'flex', flexDirection: 'column', gap: '4px' }}>
       {/* Antigravity Change Summary Bar */}
       {hasFiles && (
         <div
           style={{
-            borderRadius: '8px',
+            borderRadius: '6px',
             border: `1px solid ${tokens.border}`,
             backgroundColor: tokens.bgPanel,
             overflow: 'hidden',

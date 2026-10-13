@@ -92,48 +92,45 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
         backgroundColor: tokens.bgPanel,
         border: `1px solid ${tokens.border}`,
         borderRadius: '8px',
-        padding: '10px 12px',
+        padding: '8px 12px',
         display: 'flex',
         flexDirection: 'column',
-        gap: '8px',
+        gap: '6px',
         transition: 'border-color 0.2s, background-color 0.2s',
         boxShadow: 'none',
         position: 'relative',
       }}
     >
-      {/* Context Chips Bar */}
-      {includeContext && (rootPath || activeFileName) && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            flexWrap: 'wrap',
-            paddingBottom: '4px',
-            borderBottom: `1px solid ${tokens.borderSubtle}`,
-          }}
-        >
-          {rootPath && (
-            <span
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                fontSize: '11px',
-                padding: '2px 7px',
-                borderRadius: '5px',
-                backgroundColor: tokens.bgCard,
-                border: `1px solid ${tokens.border}`,
-                color: tokens.textSecondary,
-              }}
-              title={rootPath}
-            >
-              <Folder size={11} color="currentColor" />
-              <span>{rootName || 'workspace'}</span>
-            </span>
-          )}
+      {/* Top Row: Workspace Selector & Detach Control */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '6px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              fontSize: '11px',
+              padding: '2px 7px',
+              borderRadius: '4px',
+              backgroundColor: tokens.bgCard,
+              border: `1px solid ${tokens.border}`,
+              color: tokens.textSecondary,
+              userSelect: 'none',
+            }}
+            title={rootPath || 'Workspace'}
+          >
+            <Folder size={11} color="currentColor" />
+            <span style={{ fontWeight: 500 }}>{rootName || 'CoreMind'}</span>
+          </span>
 
-          {activeFileName && (
+          {includeContext && activeFileName && (
             <span
               style={{
                 display: 'inline-flex',
@@ -141,11 +138,15 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
                 gap: '4px',
                 fontSize: '11px',
                 padding: '2px 7px',
-                borderRadius: '5px',
+                borderRadius: '4px',
                 backgroundColor: tokens.bgCard,
                 border: `1px solid ${tokens.border}`,
                 color: tokens.textPrimary,
                 fontWeight: 500,
+                maxWidth: '140px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
               }}
               title="Active editor file context"
             >
@@ -153,25 +154,31 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
               <span>{activeFileName}</span>
             </span>
           )}
-
-          <button
-            type="button"
-            onClick={() => setIncludeContext(!includeContext)}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: tokens.textMuted,
-              cursor: 'pointer',
-              fontSize: '10.5px',
-              marginLeft: 'auto',
-              padding: '2px 4px',
-            }}
-            title="Toggle context attachment"
-          >
-            {includeContext ? 'Detach' : 'Attach'}
-          </button>
         </div>
-      )}
+
+        <button
+          type="button"
+          onClick={() => setIncludeContext(!includeContext)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: tokens.textMuted,
+            cursor: 'pointer',
+            fontSize: '11px',
+            padding: '2px 4px',
+            transition: 'color 0.15s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = tokens.textPrimary;
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = tokens.textMuted;
+          }}
+          title={includeContext ? 'Detach file context' : 'Attach file context'}
+        >
+          {includeContext ? 'Detach' : 'Attach'}
+        </button>
+      </div>
 
       {/* Multiline Prompt Input */}
       <div style={{ display: 'flex', position: 'relative' }}>

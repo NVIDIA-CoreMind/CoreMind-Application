@@ -10,9 +10,9 @@ import {
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  Terminal,
 } from 'lucide-react';
 import { getAITheme } from './themeTokens';
+import { AICodeBlock } from './AICodeBlock';
 
 interface VerificationCardProps {
   event: TestEvent;
@@ -40,55 +40,6 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
     } catch (err) {
       console.warn('Failed to open error file in editor:', err);
     }
-  };
-
-  // Find file and line references in error text
-  const renderErrorWithLinks = (text: string) => {
-    const fileLocRegex = /(?:([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+):(\d+)(?::(\d+))?)/g;
-    const parts = [];
-    let lastIndex = 0;
-    let match;
-
-    while ((match = fileLocRegex.exec(text)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push(text.slice(lastIndex, match.index));
-      }
-      const fullRef = match[0];
-      const filePath = match[1];
-      const lineNum = match[2];
-
-      parts.push(
-        <button
-          key={`${match.index}-${fullRef}`}
-          onClick={() => handleOpenFile(filePath)}
-          style={{
-            background: tokens.bgCard,
-            border: `1px solid ${tokens.border}`,
-            color: tokens.textPrimary,
-            cursor: 'pointer',
-            padding: '1px 5px',
-            borderRadius: '4px',
-            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-            fontSize: '11px',
-            textDecoration: 'none',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '3px',
-          }}
-          title={`Open ${filePath} line ${lineNum}`}
-        >
-          <span>{fullRef}</span>
-          <ExternalLink size={10} />
-        </button>
-      );
-      lastIndex = fileLocRegex.lastIndex;
-    }
-
-    if (lastIndex < text.length) {
-      parts.push(text.slice(lastIndex));
-    }
-
-    return parts;
   };
 
   return (
@@ -158,28 +109,11 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
         </div>
       </div>
 
-      {/* Expanded Logs & Errors */}
+      {/* Expanded Logs & Errors matching reference screenshot */}
       {expanded && (
-        <div style={{ padding: '10px 12px', fontSize: '12px' }}>
-          {event.command && (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                marginBottom: '8px',
-                color: tokens.textSecondary,
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                fontSize: '11px',
-              }}
-            >
-              <Terminal size={12} />
-              <span>$ {event.command}</span>
-            </div>
-          )}
-
+        <div style={{ padding: '8px 12px', fontSize: '12px' }}>
           {event.location && (
-            <div style={{ marginBottom: '8px' }}>
+            <div style={{ marginBottom: '6px' }}>
               <button
                 onClick={() => handleOpenFile(event.location!.file)}
                 style={{
@@ -205,28 +139,26 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
             </div>
           )}
 
-          {event.error && (
-            <div
-              style={{
-                padding: '8px 10px',
-                borderRadius: '6px',
-                backgroundColor: tokens.bgTerminal,
-                border: `1px solid ${isDark ? 'rgba(242, 139, 130, 0.3)' : '#FCA5A5'}`,
-                color: tokens.textPrimary,
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                fontSize: '11.5px',
-                lineHeight: 1.5,
-                whiteSpace: 'pre-wrap',
-                maxHeight: '180px',
-                overflowY: 'auto',
-              }}
-            >
-              {renderErrorWithLinks(event.error)}
-            </div>
+          {(event.command || event.error) && (
+            <AICodeBlock
+              language="bash"
+              value={[
+                event.command || '',
+                event.error
+                  ? event.error
+                  : isPassed
+                  ? `# Exit code: 0 (No type/lint errors)`
+                  : '',
+              ]
+                .filter(Boolean)
+                .join('\n')}
+              enableOpenFile={true}
+              maxHeight="280px"
+            />
           )}
 
-          {isPassed && (
-            <div style={{ color: tokens.accentSuccess, fontWeight: 500, fontSize: '12px' }}>
+          {isPassed && !event.command && (
+            <div style={{ color: tokens.accentSuccess, fontWeight: 500, fontSize: '12px', padding: '4px 0' }}>
               All tests and verification criteria passed successfully.
             </div>
           )}

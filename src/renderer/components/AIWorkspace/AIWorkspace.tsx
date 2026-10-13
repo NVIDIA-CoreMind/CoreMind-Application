@@ -6,6 +6,7 @@ import { ImplementationPlan } from './ImplementationPlan';
 import { ActivityTimeline } from './ActivityTimeline';
 import { DiffViewer } from './DiffViewer';
 import { ChatHistory } from './ChatHistory';
+import { FileChangesCard } from './FileChangesCard';
 import {
   useAIWorkspaceStore,
   subscribeFileChanges,
@@ -25,6 +26,7 @@ import { getAITheme } from './themeTokens';
 export const AIWorkspace: React.FC = () => {
   const currentState = useAIWorkspaceStore((s) => s.currentState);
   const activeView = useAIWorkspaceStore((s) => s.activeView);
+  const trackedChanges = useAIWorkspaceStore((s) => s.trackedChanges);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
@@ -299,7 +301,7 @@ export const AIWorkspace: React.FC = () => {
       <WorkspaceHeader />
 
       {/* Main Active Panel View */}
-      <div style={{ flex: 1, overflowY: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: tokens.bgMain }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: tokens.bgMain }}>
         {activeView === 'chat' && <ChatThread />}
         {activeView === 'plan' && <ImplementationPlan />}
         {activeView === 'activity' && <ActivityTimeline />}
@@ -308,13 +310,14 @@ export const AIWorkspace: React.FC = () => {
         {(currentState === 'stopped' || currentState === 'cancelled') && activeView === 'chat' && (
           <div
             style={{
-              margin: '12px 14px',
-              padding: '10px 12px',
+              margin: '8px 12px',
+              padding: '8px 12px',
               border: `1px solid ${tokens.border}`,
               borderRadius: '6px',
               fontSize: '12px',
               color: tokens.textSecondary,
               backgroundColor: tokens.bgPanel,
+              flexShrink: 0,
             }}
           >
             <strong style={{ color: tokens.textPrimary, display: 'block', marginBottom: '2px' }}>
@@ -324,6 +327,16 @@ export const AIWorkspace: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Optional file-change summary and review controls (only when actual changes exist) */}
+      {activeView === 'chat' && Object.keys(trackedChanges).length > 0 && (
+        <div style={{ padding: '0 12px 6px 12px', flexShrink: 0 }}>
+          <FileChangesCard
+            files={Object.values(trackedChanges)}
+            isRealtime={currentState === 'running'}
+          />
+        </div>
+      )}
 
       {/* Bottom Composer */}
       <div

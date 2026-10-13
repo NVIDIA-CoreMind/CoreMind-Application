@@ -25,13 +25,13 @@ export interface AIThemeTokens {
 export function getAITheme(isDark: boolean): AIThemeTokens {
   if (isDark) {
     return {
-      bgMain: '#1E1F20',
+      bgMain: '#202124',
       bgHeader: '#202124',
       bgPanel: '#252628',
       bgCard: '#2B2C2F',
-      bgTerminal: '#1A1B1C',
+      bgTerminal: '#191A1B',
       bgHover: '#323438',
-      bgActiveTab: '#37393D',
+      bgActiveTab: '#2B2C2F',
       border: '#3A3C40',
       borderSubtle: '#303236',
       textPrimary: '#E6E6E6',

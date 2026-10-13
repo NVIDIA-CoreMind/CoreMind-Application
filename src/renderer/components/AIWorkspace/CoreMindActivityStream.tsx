@@ -46,35 +46,22 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
     }
   };
 
-  // Helper to render language / file badges like TS, React ⚛, PY, DART
+  // Helper to render language badge matching reference screenshot (e.g., PY in yellow)
   const renderFileBadge = (filename: string) => {
     const ext = filename.split('.').pop()?.toLowerCase() || '';
-    if (ext === 'tsx' || ext === 'jsx') {
-      return (
-        <span
-          style={{
-            color: tokens.iconPrimary,
-            fontSize: '13px',
-            lineHeight: 1,
-            display: 'inline-flex',
-            alignItems: 'center',
-          }}
-          title="React component"
-        >
-          ⚛
-        </span>
-      );
-    }
+    let color = tokens.textSecondary;
+    if (ext === 'py') color = isDark ? '#E5C07B' : '#B45309';
+    else if (ext === 'ts' || ext === 'tsx') color = isDark ? '#8AB4F8' : '#2563EB';
+    else if (ext === 'js' || ext === 'jsx') color = isDark ? '#FACC15' : '#D97706';
+    else if (ext === 'rs') color = isDark ? '#F97316' : '#C2410C';
+    else if (ext === 'go') color = isDark ? '#38BDF8' : '#0284C7';
+
     return (
       <span
         style={{
-          color: tokens.textSecondary,
-          backgroundColor: tokens.bgCard,
-          border: `1px solid ${tokens.border}`,
-          padding: '1px 4px',
-          borderRadius: '3px',
+          color,
           fontWeight: 700,
-          fontSize: '9.5px',
+          fontSize: '11px',
           fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
           textTransform: 'uppercase',
           lineHeight: 1,
