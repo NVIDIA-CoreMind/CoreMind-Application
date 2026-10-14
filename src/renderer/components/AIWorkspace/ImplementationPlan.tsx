@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 import { TaskNode, TaskStatus } from '../../types/aiWorkspace';
 import {
@@ -23,7 +23,7 @@ export const ImplementationPlan: React.FC<ImplementationPlanProps> = ({ compact 
   const taskGraph = useAIWorkspaceStore((s) => s.taskGraph);
   const currentState = useAIWorkspaceStore((s) => s.currentState);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});

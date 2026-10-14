@@ -4,7 +4,7 @@ import { ChevronRight, ChevronDown } from 'lucide-react';
 import { FileIcon } from '../FileIcon';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 
 export const FileActivity: React.FC<{ event: FileExploredEvent | FileReadEvent | FileChangedEvent }> = ({ event }) => {
@@ -12,7 +12,7 @@ export const FileActivity: React.FC<{ event: FileExploredEvent | FileReadEvent |
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const handleOpenFile = async (relPath: string) => {

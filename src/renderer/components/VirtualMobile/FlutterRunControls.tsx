@@ -291,13 +291,13 @@ export const FlutterRunControls: React.FC = () => {
       <div
         style={{
           flex: 1,
-          backgroundColor: '#070a10',
+          backgroundColor: 'var(--bg-app)',
           padding: '10px 14px',
           overflowY: 'auto',
           fontFamily: 'monospace',
           fontSize: '11px',
           lineHeight: '1.6',
-          color: '#d1d5db',
+          color: 'var(--text-primary)',
         }}
       >
         {filteredOutput.length === 0 ? (

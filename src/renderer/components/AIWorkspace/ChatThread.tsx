@@ -38,7 +38,7 @@ const getBadgeForPathOrSymbol = (text: string): { label: string; color: string; 
   return null;
 };
 
-function renderMarkdownContent(rawText: string, isDark: boolean = true) {
+function renderMarkdownContent(rawText: string, isDark: boolean = true, isUser: boolean = false) {
   const { formattedText: text } = extractToolCalls(rawText);
 
   const markdownComponents = {
@@ -64,7 +64,12 @@ function renderMarkdownContent(rawText: string, isDark: boolean = true) {
       </h4>
     ),
     p: ({ children }: any) => (
-      <p style={{ margin: '0 0 12px 0', lineHeight: 1.65, color: isDark ? '#d4d4d4' : '#374151', fontSize: '13.5px' }}>
+      <p style={{
+        margin: isUser ? 0 : '0 0 12px 0',
+        lineHeight: 1.5,
+        color: isUser ? (isDark ? '#f4f4f5' : '#111827') : (isDark ? '#d4d4d4' : '#374151'),
+        fontSize: '13.5px',
+      }}>
         {children}
       </p>
     ),
@@ -92,7 +97,7 @@ function renderMarkdownContent(rawText: string, isDark: boolean = true) {
       const match = /language-(\w+)/.exec(className || '');
       const codeString = String(children).replace(/\n$/, '');
       if (!inline && (match || codeString.includes('\n'))) {
-        return <AICodeBlock language={match ? match[1] : 'bash'} value={codeString} />;
+        return <AICodeBlock language={match ? match[1] : 'bash'} value={codeString} isDark={isDark} />;
       }
       const badge = getBadgeForPathOrSymbol(codeString);
       return (
@@ -331,22 +336,22 @@ export const ChatThread: React.FC = () => {
                 margin: '4px 0 16px 0',
               }}
             >
-              {/* User prompt card matching Antigravity */}
+              {/* User prompt pill card matching screenshot */}
               <div
                 style={{
                   backgroundColor: isDark ? '#262626' : '#f0f2f5',
-                  border: `1px solid ${isDark ? '#383838' : '#e2e8f0'}`,
-                  borderRadius: '14px',
-                  padding: '12px 16px',
+                  border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
+                  borderRadius: '20px',
+                  padding: '10px 18px',
                   color: isDark ? '#f4f4f5' : '#111827',
                   fontSize: '13.5px',
                   lineHeight: 1.5,
                   width: '100%',
                   wordBreak: 'break-word',
-                  boxShadow: isDark ? '0 1px 3px rgba(0, 0, 0, 0.25)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
+                  boxShadow: isDark ? '0 1px 2px rgba(0, 0, 0, 0.2)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
                 }}
               >
-                {renderMarkdownContent(msg.content, isDark)}
+                {renderMarkdownContent(msg.content, isDark, true)}
               </div>
             </div>
           );

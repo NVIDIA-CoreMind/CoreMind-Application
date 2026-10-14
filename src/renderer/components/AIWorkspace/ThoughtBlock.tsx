@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { ThoughtEvent } from '../../types/aiWorkspace';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 
 export const ThoughtBlock: React.FC<{ event: ThoughtEvent }> = ({ event }) => {
   const [expanded, setExpanded] = useState(false);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   return (

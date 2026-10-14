@@ -9,7 +9,7 @@ import { ApprovalCard } from './ApprovalCard';
 import { FinalResult } from './FinalResult';
 import { ErrorState } from './ErrorState';
 import { VerificationCard } from './VerificationCard';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 import {
   Wrench,
@@ -31,7 +31,7 @@ function formatEventTime(timestamp: number): string {
 export const ActivityItem: React.FC<{ event: AIWorkspaceEvent }> = ({ event }) => {
   const [toolExpanded, setToolExpanded] = useState(false);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   let content: React.ReactNode = null;

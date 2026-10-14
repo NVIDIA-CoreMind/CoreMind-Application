@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TestEvent } from '../../types/aiWorkspace';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import {
   ShieldCheck,
   ShieldAlert,
@@ -23,7 +23,7 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const isPassed = event.status === 'passed';
@@ -154,6 +154,7 @@ export const VerificationCard: React.FC<VerificationCardProps> = ({ event }) => 
                 .join('\n')}
               enableOpenFile={true}
               maxHeight="280px"
+              isDark={isDark}
             />
           )}
 

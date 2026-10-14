@@ -4,7 +4,7 @@ import { AIWorkspaceEvent, TerminalEvent, FileReadEvent } from '../../types/aiWo
 import { FileChangeInfo } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { TerminalActivity } from './TerminalActivity';
 import { getAITheme } from './themeTokens';
 
@@ -31,7 +31,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const handleOpenFile = async (filePath: string, _line?: number) => {

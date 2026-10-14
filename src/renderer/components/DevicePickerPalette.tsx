@@ -370,14 +370,14 @@ export const DevicePickerPalette: React.FC = () => {
         style={{
           width: '620px',
           maxWidth: '92vw',
-          backgroundColor: '#1e1e1e',
-          border: '1px solid #3c3c3c',
+          backgroundColor: 'var(--bg-surface)',
+          border: '1px solid var(--border-color)',
           borderRadius: '6px',
           boxShadow: '0 8px 28px rgba(0, 0, 0, 0.55), 0 0 1px rgba(0, 0, 0, 0.8)',
           display: 'flex',
           flexDirection: 'column',
           padding: '6px',
-          color: '#cccccc',
+          color: 'var(--text-primary)',
           fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
           userSelect: 'none',
         }}

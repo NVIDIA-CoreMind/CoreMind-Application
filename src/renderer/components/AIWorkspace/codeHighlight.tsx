@@ -4,6 +4,7 @@ export interface CodeHighlightProps {
   code: string;
   language?: string;
   onOpenFile?: (fileRef: string) => void;
+  isDark?: boolean;
 }
 
 // Strip ANSI escape codes from terminal streaming output
@@ -47,30 +48,74 @@ const PY_LITERALS = new Set([
   'True', 'False', 'None', 'self',
 ]);
 
-// Color tokens matching the reference screenshot & modern dark theme
-export const TOKEN_COLORS = {
-  comment: '#81c995', // Soft green (matches "# > tsc --noEmit" & "# Exit code: 0")
-  command: '#f08c78', // Warm peach/coral for CLI commands (npm, npx, git, etc.)
-  subcommand: '#e5c07b', // Warm yellow/cream for verbs (run, typecheck, lint, build)
-  flag: '#7dd3fc', // Soft blue for CLI flags (--noEmit, -rf)
-  string: '#fca5a5', // Coral peach for string literals
-  variable: '#c678dd', // Soft violet for shell variables ($VAR)
-  keyword: '#c678dd', // Soft violet for language keywords (import, const, def)
+export interface TokenColors {
+  comment: string;
+  command: string;
+  subcommand: string;
+  flag: string;
+  string: string;
+  variable: string;
+  keyword: string;
+  literal: string;
+  number: string;
+  type: string;
+  func: string;
+  link: string;
+  text: string;
+  dim: string;
+  punctuation: string;
+}
+
+export const DARK_TOKEN_COLORS: TokenColors = {
+  comment: '#81c995', // Soft green
+  command: '#f08c78', // Warm peach/coral for CLI commands
+  subcommand: '#e5c07b', // Warm yellow/cream for verbs
+  flag: '#7dd3fc', // Soft blue for CLI flags
+  string: '#fca5a5', // Coral peach for strings
+  variable: '#c678dd', // Soft violet for shell variables
+  keyword: '#c678dd', // Soft violet for language keywords
   literal: '#d19a66', // Warm amber for booleans & primitives
-  number: '#d19a66', // Warm amber for numeric literals
-  type: '#4ec9b0', // Soft teal for types & interfaces
-  func: '#61afef', // Soft blue for function calls
-  link: '#93c5fd', // Link color for file:line locations
+  number: '#d19a66', // Warm amber for numbers
+  type: '#4ec9b0', // Soft teal for types
+  func: '#61afef', // Soft blue for functions
+  link: '#93c5fd', // Link color
   text: '#e4e4e7', // Clean light neutral text
-  dim: '#71717a', // Muted prompt/divider text
+  dim: '#71717a', // Muted text
+  punctuation: '#9ca3af',
 };
+
+export const LIGHT_TOKEN_COLORS: TokenColors = {
+  comment: '#15803d', // Crisp forest green
+  command: '#b91c1c', // Rich dark coral/red
+  subcommand: '#b45309', // Amber bronze
+  flag: '#0284c7', // Crisp azure
+  string: '#b91c1c', // Ruby red
+  variable: '#7c3aed', // Purple
+  keyword: '#7c3aed', // Purple
+  literal: '#b45309', // Warm bronze
+  number: '#0284c7', // Sky blue
+  type: '#0d9488', // Teal
+  func: '#2563eb', // Royal blue
+  link: '#2563eb', // Royal blue
+  text: '#0f172a', // Deep slate neutral text
+  dim: '#64748b', // Slate muted
+  punctuation: '#64748b',
+};
+
+export function getTokenColors(isDark: boolean = true): TokenColors {
+  return isDark ? DARK_TOKEN_COLORS : LIGHT_TOKEN_COLORS;
+}
+
+export const TOKEN_COLORS = DARK_TOKEN_COLORS;
 
 function renderFileLinks(
   text: string,
   keyPrefix: string,
+  tokens: TokenColors,
   onOpenFile?: (fileRef: string) => void,
-  defaultColor = TOKEN_COLORS.text
+  defaultColor?: string
 ): React.ReactNode[] {
+  const fallbackColor = defaultColor || tokens.text;
   const fileLocRegex = /(?:([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+):(\d+)(?::(\d+))?)/g;
   const nodes: React.ReactNode[] = [];
   let lastIndex = 0;
@@ -79,7 +124,7 @@ function renderFileLinks(
   while ((match = fileLocRegex.exec(text)) !== null) {
     if (match.index > lastIndex) {
       nodes.push(
-        <span key={`${keyPrefix}-t-${lastIndex}`} style={{ color: defaultColor }}>
+        <span key={`${keyPrefix}-t-${lastIndex}`} style={{ color: fallbackColor }}>
           {text.slice(lastIndex, match.index)}
         </span>
       );
@@ -98,7 +143,7 @@ function renderFileLinks(
           style={{
             background: 'transparent',
             border: 'none',
-            color: TOKEN_COLORS.link,
+            color: tokens.link,
             textDecoration: 'underline',
             textUnderlineOffset: '2px',
             fontFamily: 'inherit',
@@ -116,7 +161,7 @@ function renderFileLinks(
       nodes.push(
         <span
           key={`${keyPrefix}-ref-${match.index}`}
-          style={{ color: TOKEN_COLORS.link, textDecoration: 'underline' }}
+          style={{ color: tokens.link, textDecoration: 'underline' }}
         >
           {fullRef}
         </span>
@@ -127,7 +172,7 @@ function renderFileLinks(
 
   if (lastIndex < text.length) {
     nodes.push(
-      <span key={`${keyPrefix}-t-end`} style={{ color: defaultColor }}>
+      <span key={`${keyPrefix}-t-end`} style={{ color: fallbackColor }}>
         {text.slice(lastIndex)}
       </span>
     );
@@ -139,19 +184,19 @@ function renderFileLinks(
 function highlightBashLine(
   line: string,
   lineIdx: number,
+  tokens: TokenColors,
   onOpenFile?: (fileRef: string) => void
 ): React.ReactNode {
   // If line is purely a comment (starts with optional whitespace and #)
   if (/^\s*#/.test(line)) {
     return (
-      <span key={lineIdx} style={{ color: TOKEN_COLORS.comment }}>
+      <span key={lineIdx} style={{ color: tokens.comment }}>
         {line}
       </span>
     );
   }
 
-  const tokens: React.ReactNode[] = [];
-  // Tokenize strings, inline comments, flags, variables, words, or whitespace
+  const nodes: React.ReactNode[] = [];
   const tokenRegex =
     /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[^\n]*|--[a-zA-Z0-9_-]+|-[a-zA-Z0-9_-]+|\$\{[^}]+\}|\$[a-zA-Z0-9_]+|[^\s"'#]+|\s+)/g;
   let match: RegExpExecArray | null;
@@ -164,14 +209,14 @@ function highlightBashLine(
 
     // Pure whitespace
     if (/^\s+$/.test(text)) {
-      tokens.push(<React.Fragment key={key}>{text}</React.Fragment>);
+      nodes.push(<React.Fragment key={key}>{text}</React.Fragment>);
       continue;
     }
 
     // Comment (#...)
     if (text.startsWith('#')) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.comment }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.comment }}>
           {text}
         </span>
       );
@@ -180,8 +225,8 @@ function highlightBashLine(
 
     // Strings
     if (text.startsWith('"') || text.startsWith("'")) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.string }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.string }}>
           {text}
         </span>
       );
@@ -191,8 +236,8 @@ function highlightBashLine(
 
     // Flags (--flag, -f)
     if (text.startsWith('-')) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.flag }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.flag }}>
           {text}
         </span>
       );
@@ -202,40 +247,8 @@ function highlightBashLine(
 
     // Variables ($VAR, ${VAR})
     if (text.startsWith('$')) {
-      if (text === '$') {
-        // Muted prompt symbol
-        tokens.push(
-          <span key={key} style={{ color: TOKEN_COLORS.dim }}>
-            {text}
-          </span>
-        );
-        isFirstCommandWord = true;
-      } else {
-        tokens.push(
-          <span key={key} style={{ color: TOKEN_COLORS.variable }}>
-            {text}
-          </span>
-        );
-        isFirstCommandWord = false;
-      }
-      continue;
-    }
-
-    // Separators (|, &&, ||, ;) reset first command word
-    if (/^(?:\||&&|\|\||;)$/.test(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.dim }}>
-          {text}
-        </span>
-      );
-      isFirstCommandWord = true;
-      continue;
-    }
-
-    // Numeric literals
-    if (/^\d+$/.test(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.number }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.variable }}>
           {text}
         </span>
       );
@@ -243,10 +256,22 @@ function highlightBashLine(
       continue;
     }
 
-    // Commands (npm, npx, git, etc.)
-    if (isFirstCommandWord && BASH_COMMANDS.has(text.toLowerCase())) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.command, fontWeight: 500 }}>
+    // Prompt glyph ($ or > or # at start)
+    if ((text === '$' || text === '>' || text === '%') && isFirstCommandWord) {
+      nodes.push(
+        <span key={key} style={{ color: tokens.dim, userSelect: 'none' }}>
+          {text}
+        </span>
+      );
+      continue;
+    }
+
+    // Check if word is known command or subcommand
+    const cleanWord = text.replace(/[^a-zA-Z0-9_-]/g, '');
+
+    if (isFirstCommandWord || BASH_COMMANDS.has(cleanWord)) {
+      nodes.push(
+        <span key={key} style={{ color: tokens.command, fontWeight: 500 }}>
           {text}
         </span>
       );
@@ -254,10 +279,9 @@ function highlightBashLine(
       continue;
     }
 
-    // Subcommands (run, typecheck, lint, etc.)
-    if (BASH_SUBCOMMANDS.has(text.toLowerCase())) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.subcommand }}>
+    if (BASH_SUBCOMMANDS.has(cleanWord)) {
+      nodes.push(
+        <span key={key} style={{ color: tokens.subcommand }}>
           {text}
         </span>
       );
@@ -265,13 +289,13 @@ function highlightBashLine(
       continue;
     }
 
-    // Check if word contains a clickable file reference
-    if (text.includes(':') && (text.includes('.') || text.includes('/'))) {
-      const nodes = renderFileLinks(text, key, onOpenFile);
-      tokens.push(<React.Fragment key={key}>{nodes}</React.Fragment>);
+    // Check for clickable file:line pattern in output
+    if (onOpenFile && text.includes(':') && (text.includes('.') || text.includes('/'))) {
+      const linkNodes = renderFileLinks(text, key, tokens, onOpenFile);
+      nodes.push(<React.Fragment key={key}>{linkNodes}</React.Fragment>);
     } else {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.text }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.text }}>
           {text}
         </span>
       );
@@ -279,26 +303,27 @@ function highlightBashLine(
     isFirstCommandWord = false;
   }
 
-  return <React.Fragment key={lineIdx}>{tokens}</React.Fragment>;
+  return <React.Fragment key={lineIdx}>{nodes}</React.Fragment>;
 }
 
 function highlightJsLine(
   line: string,
   lineIdx: number,
+  tokens: TokenColors,
   onOpenFile?: (fileRef: string) => void
 ): React.ReactNode {
   // Line comment
   if (/^\s*\/\//.test(line)) {
     return (
-      <span key={lineIdx} style={{ color: TOKEN_COLORS.comment }}>
+      <span key={lineIdx} style={{ color: tokens.comment }}>
         {line}
       </span>
     );
   }
 
-  const tokens: React.ReactNode[] = [];
+  const nodes: React.ReactNode[] = [];
   const tokenRegex =
-    /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/[^\n]*|[a-zA-Z_$][a-zA-Z0-9_$]*|[0-9]+(?:\.[0-9]+)?|[{}()[\];,.<>:=+\-*/&|!%^~?]+|\s+)/g;
+    /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\/\/[^\n]*|[a-zA-Z_$][a-zA-Z0-9_$]*|[0-9]+(?:\.[0-9]+)?|[{}\[\]();,.<>:=+\-*\/&|!%^~?]+|\s+)/g;
   let match: RegExpExecArray | null;
   let tokenIdx = 0;
 
@@ -307,13 +332,13 @@ function highlightJsLine(
     const key = `${lineIdx}-${tokenIdx++}`;
 
     if (/^\s+$/.test(text)) {
-      tokens.push(<React.Fragment key={key}>{text}</React.Fragment>);
+      nodes.push(<React.Fragment key={key}>{text}</React.Fragment>);
       continue;
     }
 
     if (text.startsWith('//')) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.comment }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.comment }}>
           {text}
         </span>
       );
@@ -321,8 +346,8 @@ function highlightJsLine(
     }
 
     if (text.startsWith('"') || text.startsWith("'") || text.startsWith('`')) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.string }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.string }}>
           {text}
         </span>
       );
@@ -330,8 +355,8 @@ function highlightJsLine(
     }
 
     if (JS_KEYWORDS.has(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.keyword }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.keyword }}>
           {text}
         </span>
       );
@@ -339,8 +364,8 @@ function highlightJsLine(
     }
 
     if (JS_LITERALS.has(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.literal }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.literal }}>
           {text}
         </span>
       );
@@ -348,8 +373,8 @@ function highlightJsLine(
     }
 
     if (/^[0-9]+(?:\.[0-9]+)?$/.test(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.number }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.number }}>
           {text}
         </span>
       );
@@ -358,8 +383,8 @@ function highlightJsLine(
 
     // Capitalized word -> Likely a Type / Component
     if (/^[A-Z][a-zA-Z0-9_$]*$/.test(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.type }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.type }}>
           {text}
         </span>
       );
@@ -367,9 +392,9 @@ function highlightJsLine(
     }
 
     // Check punctuation or regular text
-    if (/^[{}()[\];,.<>:=+\-*/&|!%^~?]+$/.test(text)) {
-      tokens.push(
-        <span key={key} style={{ color: '#9ca3af' }}>
+    if (/^[{}()[\];,.<>:=+\-*\/&|!%^~?]+$/.test(text)) {
+      nodes.push(
+        <span key={key} style={{ color: tokens.punctuation }}>
           {text}
         </span>
       );
@@ -377,36 +402,37 @@ function highlightJsLine(
     }
 
     if (onOpenFile && text.includes(':') && (text.includes('.') || text.includes('/'))) {
-      const nodes = renderFileLinks(text, key, onOpenFile);
-      tokens.push(<React.Fragment key={key}>{nodes}</React.Fragment>);
+      const linkNodes = renderFileLinks(text, key, tokens, onOpenFile);
+      nodes.push(<React.Fragment key={key}>{linkNodes}</React.Fragment>);
       continue;
     }
 
-    tokens.push(
-      <span key={key} style={{ color: TOKEN_COLORS.text }}>
+    nodes.push(
+      <span key={key} style={{ color: tokens.text }}>
         {text}
       </span>
     );
   }
 
-  return <React.Fragment key={lineIdx}>{tokens}</React.Fragment>;
+  return <React.Fragment key={lineIdx}>{nodes}</React.Fragment>;
 }
 
 function highlightPyLine(
   line: string,
-  lineIdx: number
+  lineIdx: number,
+  tokens: TokenColors
 ): React.ReactNode {
   if (/^\s*#/.test(line)) {
     return (
-      <span key={lineIdx} style={{ color: TOKEN_COLORS.comment }}>
+      <span key={lineIdx} style={{ color: tokens.comment }}>
         {line}
       </span>
     );
   }
 
-  const tokens: React.ReactNode[] = [];
+  const nodes: React.ReactNode[] = [];
   const tokenRegex =
-    /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[^\n]*|[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+(?:\.[0-9]+)?|[{}()[\];,.<>:=+\-*/&|!%^~?]+|\s+)/g;
+    /("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|#[^\n]*|[a-zA-Z_][a-zA-Z0-9_]*|[0-9]+(?:\.[0-9]+)?|[{}\[\]();,.<>:=+\-*\/&|!%^~?]+|\s+)/g;
   let match: RegExpExecArray | null;
   let tokenIdx = 0;
 
@@ -415,13 +441,13 @@ function highlightPyLine(
     const key = `${lineIdx}-${tokenIdx++}`;
 
     if (/^\s+$/.test(text)) {
-      tokens.push(<React.Fragment key={key}>{text}</React.Fragment>);
+      nodes.push(<React.Fragment key={key}>{text}</React.Fragment>);
       continue;
     }
 
     if (text.startsWith('#')) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.comment }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.comment }}>
           {text}
         </span>
       );
@@ -429,8 +455,8 @@ function highlightPyLine(
     }
 
     if (text.startsWith('"') || text.startsWith("'")) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.string }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.string }}>
           {text}
         </span>
       );
@@ -438,8 +464,8 @@ function highlightPyLine(
     }
 
     if (PY_KEYWORDS.has(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.keyword }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.keyword }}>
           {text}
         </span>
       );
@@ -447,8 +473,8 @@ function highlightPyLine(
     }
 
     if (PY_LITERALS.has(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.literal }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.literal }}>
           {text}
         </span>
       );
@@ -456,31 +482,32 @@ function highlightPyLine(
     }
 
     if (/^[0-9]+(?:\.[0-9]+)?$/.test(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.number }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.number }}>
           {text}
         </span>
       );
       continue;
     }
 
-    tokens.push(
-      <span key={key} style={{ color: TOKEN_COLORS.text }}>
+    nodes.push(
+      <span key={key} style={{ color: tokens.text }}>
         {text}
       </span>
     );
   }
 
-  return <React.Fragment key={lineIdx}>{tokens}</React.Fragment>;
+  return <React.Fragment key={lineIdx}>{nodes}</React.Fragment>;
 }
 
 function highlightJsonLine(
   line: string,
-  lineIdx: number
+  lineIdx: number,
+  tokens: TokenColors
 ): React.ReactNode {
-  const tokens: React.ReactNode[] = [];
+  const nodes: React.ReactNode[] = [];
   const tokenRegex =
-    /("(?:\\.|[^"\\])*"(?:\s*:)?|[0-9]+(?:\.[0-9]+)?|true|false|null|[{}[\],:]|\s+)/g;
+    /("(?:\\.|[^"\\])*"(?:\s*:)?|[0-9]+(?:\.[0-9]+)?|true|false|null|[{}\[\],:]|\s+)/g;
   let match: RegExpExecArray | null;
   let tokenIdx = 0;
 
@@ -489,14 +516,14 @@ function highlightJsonLine(
     const key = `${lineIdx}-${tokenIdx++}`;
 
     if (/^\s+$/.test(text)) {
-      tokens.push(<React.Fragment key={key}>{text}</React.Fragment>);
+      nodes.push(<React.Fragment key={key}>{text}</React.Fragment>);
       continue;
     }
 
     if (text.endsWith(':')) {
       // Key
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.func }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.func }}>
           {text}
         </span>
       );
@@ -504,8 +531,8 @@ function highlightJsonLine(
     }
 
     if (text.startsWith('"')) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.string }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.string }}>
           {text}
         </span>
       );
@@ -513,32 +540,34 @@ function highlightJsonLine(
     }
 
     if (/^(?:true|false|null|[0-9]+(?:\.[0-9]+)?)$/.test(text)) {
-      tokens.push(
-        <span key={key} style={{ color: TOKEN_COLORS.literal }}>
+      nodes.push(
+        <span key={key} style={{ color: tokens.literal }}>
           {text}
         </span>
       );
       continue;
     }
 
-    tokens.push(
-      <span key={key} style={{ color: '#9ca3af' }}>
+    nodes.push(
+      <span key={key} style={{ color: tokens.punctuation }}>
         {text}
       </span>
     );
   }
 
-  return <React.Fragment key={lineIdx}>{tokens}</React.Fragment>;
+  return <React.Fragment key={lineIdx}>{nodes}</React.Fragment>;
 }
 
 export const CodeHighlight: React.FC<CodeHighlightProps> = ({
   code,
   language = 'bash',
   onOpenFile,
+  isDark = true,
 }) => {
   const cleaned = stripAnsi(code || '');
   const lines = cleaned.split('\n');
   const lang = (language || 'bash').toLowerCase().trim();
+  const tokens = getTokenColors(isDark);
 
   const isBash = ['bash', 'sh', 'shell', 'zsh', 'terminal', 'cmd'].includes(lang);
   const isJsTs = ['javascript', 'js', 'jsx', 'typescript', 'ts', 'tsx'].includes(lang);
@@ -550,26 +579,26 @@ export const CodeHighlight: React.FC<CodeHighlightProps> = ({
       {lines.map((line, idx) => {
         let content: React.ReactNode;
         if (isBash) {
-          content = highlightBashLine(line, idx, onOpenFile);
+          content = highlightBashLine(line, idx, tokens, onOpenFile);
         } else if (isJsTs) {
-          content = highlightJsLine(line, idx, onOpenFile);
+          content = highlightJsLine(line, idx, tokens, onOpenFile);
         } else if (isPy) {
-          content = highlightPyLine(line, idx);
+          content = highlightPyLine(line, idx, tokens);
         } else if (isJson) {
-          content = highlightJsonLine(line, idx);
+          content = highlightJsonLine(line, idx, tokens);
         } else {
           // Fallback: check comments & file links
           if (/^\s*#/.test(line) || /^\s*\/\//.test(line)) {
             content = (
-              <span key={idx} style={{ color: TOKEN_COLORS.comment }}>
+              <span key={idx} style={{ color: tokens.comment }}>
                 {line}
               </span>
             );
           } else if (line.includes(':') && onOpenFile) {
-            content = renderFileLinks(line, `gen-${idx}`, onOpenFile);
+            content = renderFileLinks(line, `gen-${idx}`, tokens, onOpenFile);
           } else {
             content = (
-              <span key={idx} style={{ color: TOKEN_COLORS.text }}>
+              <span key={idx} style={{ color: tokens.text }}>
                 {line}
               </span>
             );

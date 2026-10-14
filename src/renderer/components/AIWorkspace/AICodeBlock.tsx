@@ -12,6 +12,7 @@ import { CodeHighlight } from './codeHighlight';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 
 export interface AICodeBlockProps {
   language?: string;
@@ -27,6 +28,7 @@ export interface AICodeBlockProps {
   className?: string;
   style?: React.CSSProperties;
   enableOpenFile?: boolean;
+  isDark?: boolean;
 }
 
 export const AICodeBlock: React.FC<AICodeBlockProps> = ({
@@ -43,6 +45,7 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
   className = '',
   style,
   enableOpenFile = true,
+  isDark: propIsDark,
 }) => {
   const [copied, setCopied] = useState(false);
   const [inserted, setInserted] = useState(false);
@@ -51,6 +54,8 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
 
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = propIsDark !== undefined ? propIsDark : resolveEffectiveTheme(theme) === 'dark';
 
   const normalizedLang = (language || 'bash').toLowerCase().trim();
 
@@ -123,16 +128,31 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
     }
   };
 
+  const actionBtnStyle: React.CSSProperties = {
+    background: 'transparent',
+    border: 'none',
+    color: isDark ? '#9ca3af' : '#64748b',
+    cursor: 'pointer',
+    padding: '4px',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: '4px',
+    fontSize: '12px',
+    lineHeight: 1,
+    transition: 'all 0.15s ease',
+  };
+
   return (
     <div
       className={`cm-code-block ${className}`}
       style={{
         margin: '10px 0',
         borderRadius: '12px',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        backgroundColor: '#18181b',
+        border: isDark ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid #e2e8f0',
+        backgroundColor: isDark ? '#18181b' : '#f8fafc',
         overflow: 'hidden',
-        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.25)',
+        boxShadow: isDark ? '0 1px 3px rgba(0, 0, 0, 0.25)' : '0 1px 3px rgba(0, 0, 0, 0.04)',
         fontFamily: 'ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace',
         display: 'flex',
         flexDirection: 'column',
@@ -147,8 +167,8 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '7px 14px',
-          backgroundColor: '#18181b',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+          backgroundColor: isDark ? '#18181b' : '#f1f5f9',
+          borderBottom: isDark ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid #e2e8f0',
           userSelect: 'none',
           minHeight: '34px',
         }}
@@ -161,7 +181,7 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
               fontSize: '13px',
               fontWeight: 400,
-              color: '#9ca3af',
+              color: isDark ? '#9ca3af' : '#64748b',
               textTransform: 'lowercase',
               letterSpacing: '0.01em',
             }}
@@ -175,7 +195,7 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
                 width: '6px',
                 height: '6px',
                 borderRadius: '50%',
-                backgroundColor: '#8ab4f8',
+                backgroundColor: isDark ? '#8ab4f8' : '#2563eb',
                 animation: 'pulse 1.5s infinite ease-in-out',
                 display: 'inline-block',
               }}
@@ -187,7 +207,7 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
             <span
               style={{
                 fontSize: '11px',
-                color: '#71717a',
+                color: isDark ? '#71717a' : '#94a3b8',
                 fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
               }}
             >
@@ -207,9 +227,9 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
               className="cm-code-btn"
               style={{
                 ...actionBtnStyle,
-                color: '#f28b82',
+                color: isDark ? '#f28b82' : '#dc2626',
                 padding: '3px 7px',
-                backgroundColor: 'rgba(242, 139, 130, 0.12)',
+                backgroundColor: isDark ? 'rgba(242, 139, 130, 0.12)' : 'rgba(220, 38, 38, 0.1)',
               }}
               title="Terminate running process"
             >
@@ -224,6 +244,14 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
               className="cm-code-btn"
               style={actionBtnStyle}
               title="Open Workbench Terminal"
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = isDark ? '#ffffff' : '#0f172a';
+                e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = isDark ? '#9ca3af' : '#64748b';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               <Terminal size={12.5} strokeWidth={1.8} />
             </button>
@@ -235,9 +263,17 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
               className="cm-code-btn"
               style={actionBtnStyle}
               title={inserted ? 'Inserted into active file' : 'Insert into active file'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = isDark ? '#ffffff' : '#0f172a';
+                e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = isDark ? '#9ca3af' : '#64748b';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               {inserted ? (
-                <Check size={13} color="#81c995" />
+                <Check size={13} color={isDark ? '#81c995' : '#16a34a'} />
               ) : (
                 <ArrowDownRight size={13.5} strokeWidth={1.8} />
               )}
@@ -250,9 +286,17 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
               className="cm-code-btn"
               style={actionBtnStyle}
               title={applied ? 'Applied to file' : 'Apply changes to file'}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = isDark ? '#ffffff' : '#0f172a';
+                e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = isDark ? '#9ca3af' : '#64748b';
+                e.currentTarget.style.backgroundColor = 'transparent';
+              }}
             >
               {applied ? (
-                <Check size={13} color="#81c995" />
+                <Check size={13} color={isDark ? '#81c995' : '#16a34a'} />
               ) : (
                 <FileCheck size={13.5} strokeWidth={1.8} />
               )}
@@ -265,9 +309,17 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
             className="cm-code-btn"
             style={actionBtnStyle}
             title={atMentioned ? 'Added to prompt composer' : 'Add snippet to prompt composer (@)'}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = isDark ? '#ffffff' : '#0f172a';
+              e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = isDark ? '#9ca3af' : '#64748b';
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             {atMentioned ? (
-              <Check size={13} color="#81c995" />
+              <Check size={13} color={isDark ? '#81c995' : '#16a34a'} />
             ) : (
               <AtSign size={13.5} strokeWidth={1.8} />
             )}
@@ -279,9 +331,17 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
             className="cm-code-btn"
             style={actionBtnStyle}
             title={copied ? 'Copied to clipboard' : 'Copy'}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = isDark ? '#ffffff' : '#0f172a';
+              e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = isDark ? '#9ca3af' : '#64748b';
+              e.currentTarget.style.backgroundColor = 'transparent';
+            }}
           >
             {copied ? (
-              <Check size={13.5} color="#81c995" />
+              <Check size={13.5} color={isDark ? '#81c995' : '#16a34a'} />
             ) : (
               <Copy size={13.5} strokeWidth={1.8} />
             )}
@@ -295,8 +355,8 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
         style={{
           margin: 0,
           padding: '12px 16px',
-          backgroundColor: '#18181b',
-          color: '#e4e4e7',
+          backgroundColor: isDark ? '#18181b' : '#f8fafc',
+          color: isDark ? '#e4e4e7' : '#0f172a',
           fontFamily: 'ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, "Liberation Mono", monospace',
           fontSize: '12.5px',
           lineHeight: 1.6,
@@ -312,23 +372,9 @@ export const AICodeBlock: React.FC<AICodeBlockProps> = ({
           code={value}
           language={normalizedLang}
           onOpenFile={enableOpenFile ? handleOpenFileRef : undefined}
+          isDark={isDark}
         />
       </div>
     </div>
   );
-};
-
-const actionBtnStyle: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: '#9ca3af',
-  cursor: 'pointer',
-  padding: '4px',
-  display: 'inline-flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  borderRadius: '4px',
-  fontSize: '12px',
-  lineHeight: 1,
-  transition: 'all 0.15s ease',
 };

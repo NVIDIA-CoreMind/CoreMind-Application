@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { QuestionEvent } from '../../types/aiWorkspace';
 import { HelpCircle } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 
 export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
@@ -11,7 +11,7 @@ export const QuestionCard: React.FC<{ event: QuestionEvent }> = ({ event }) => {
   const submitAnswer = useAIWorkspaceStore(s => s.submitAnswer);
   const currentState = useAIWorkspaceStore(s => s.currentState);
   const theme = useThemeStore(s => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const isActive = currentState === 'waiting';

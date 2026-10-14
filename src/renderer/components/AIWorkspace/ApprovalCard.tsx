@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import {
   ShieldAlert,
   Check,
@@ -21,7 +21,7 @@ export const ApprovalCard: React.FC = () => {
   const approveAction = useAIWorkspaceStore((s) => s.approveAction);
   const denyAction = useAIWorkspaceStore((s) => s.denyAction);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const [denyReason, setDenyReason] = useState('');

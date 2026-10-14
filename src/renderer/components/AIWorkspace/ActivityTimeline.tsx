@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { ActivityItem } from './ActivityItem';
 import { Activity, Wrench, FileCode, Terminal, ShieldCheck } from 'lucide-react';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 
 import { getAITheme } from './themeTokens';
 
@@ -11,7 +11,7 @@ export const ActivityTimeline: React.FC = () => {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<'all' | 'tools' | 'files' | 'terminal' | 'tests'>('all');
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   useEffect(() => {

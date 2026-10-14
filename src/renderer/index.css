@@ -326,7 +326,7 @@ button:hover {
   text-decoration: underline;
 }
 
-/* CoreMind Code & Terminal Block (Antigravity Reference Design) */
+/* CoreMind Code & Terminal Block (Antigravity Reference Design - Theme-Aware) */
 .cm-code-block {
   margin: 10px 0;
   border-radius: 12px;
@@ -334,11 +334,21 @@ button:hover {
   background-color: #18181b;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+:root[data-theme='light'] .cm-code-block {
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .cm-code-block:hover {
   border-color: rgba(255, 255, 255, 0.12);
+}
+
+:root[data-theme='light'] .cm-code-block:hover {
+  border-color: #cbd5e1;
 }
 
 .cm-code-toolbar {
@@ -351,6 +361,11 @@ button:hover {
   user-select: none;
 }
 
+:root[data-theme='light'] .cm-code-toolbar {
+  background-color: #f1f5f9;
+  border-bottom: 1px solid #e2e8f0;
+}
+
 .cm-code-language {
   font-family: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
@@ -358,6 +373,10 @@ button:hover {
   color: #9ca3af;
   text-transform: lowercase;
   letter-spacing: 0.01em;
+}
+
+:root[data-theme='light'] .cm-code-language {
+  color: #64748b;
 }
 
 .cm-code-actions {
@@ -381,9 +400,18 @@ button:hover {
   transition: all 0.15s ease;
 }
 
+:root[data-theme='light'] .cm-code-btn {
+  color: #64748b;
+}
+
 .cm-code-btn:hover {
   color: #ffffff;
   background-color: rgba(255, 255, 255, 0.08);
+}
+
+:root[data-theme='light'] .cm-code-btn:hover {
+  color: #0f172a;
+  background-color: rgba(0, 0, 0, 0.06);
 }
 
 .cm-code-body {
@@ -401,6 +429,11 @@ button:hover {
   -webkit-user-select: text;
 }
 
+:root[data-theme='light'] .cm-code-body {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
 .cm-code-body::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -415,7 +448,15 @@ button:hover {
   border-radius: 3px;
 }
 
+:root[data-theme='light'] .cm-code-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
 .cm-code-body::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.22);
+}
+
+:root[data-theme='light'] .cm-code-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 

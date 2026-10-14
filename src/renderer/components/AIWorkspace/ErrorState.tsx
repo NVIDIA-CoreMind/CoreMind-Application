@@ -2,13 +2,13 @@ import React from 'react';
 import { ErrorEvent } from '../../types/aiWorkspace';
 import { AlertCircle } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 
 export const ErrorState: React.FC<{ event: ErrorEvent }> = ({ event }) => {
   const { setState, setExecutionState, setDraftPrompt, chatHistory, draftPrompt } = useAIWorkspaceStore();
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const handleRetry = () => {

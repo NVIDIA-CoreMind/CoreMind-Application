@@ -1,12 +1,12 @@
 import React from 'react';
 import { CompletedEvent } from '../../types/aiWorkspace';
 import { CheckCircle2 } from 'lucide-react';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 
 export const FinalResult: React.FC<{ event: CompletedEvent }> = ({ event }) => {
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   return (

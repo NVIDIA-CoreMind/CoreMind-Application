@@ -13,7 +13,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 
 interface AiSettingsModalProps {
   isOpen: boolean;
@@ -23,7 +23,7 @@ interface AiSettingsModalProps {
 export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ isOpen, onClose }) => {
   const { selectedModel, setSelectedModel } = useAIWorkspaceStore();
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
 
   const [provider, setProvider] = useState<'gemini' | 'openai' | 'anthropic' | 'nebius' | 'custom'>(() => {
     return (localStorage.getItem('coremind:ai-provider') as any) || 'nebius';

@@ -166,7 +166,7 @@ export const DeviceLogsViewer: React.FC = () => {
         style={{
           flex: 1,
           overflowY: 'auto',
-          backgroundColor: '#070a10',
+          backgroundColor: 'var(--bg-app)',
           fontFamily: 'monospace',
           lineHeight: '1.5',
           padding: '6px',

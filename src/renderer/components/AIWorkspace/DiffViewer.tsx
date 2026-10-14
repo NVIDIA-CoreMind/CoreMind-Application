@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAIWorkspaceStore, FileChangeInfo } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { parseUnifiedDiff } from './diffParser';
 import { FileIcon } from '../FileIcon';
 import { getAITheme } from './themeTokens';
@@ -35,7 +35,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const fileList: FileChangeInfo[] = propFiles && propFiles.length > 0

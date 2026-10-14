@@ -3,7 +3,7 @@ import { FileChangeInfo, useAIWorkspaceStore } from '../../services/aiWorkspaceS
 import { FileIcon } from '../FileIcon';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import {
   ExternalLink,
   FileText,
@@ -26,7 +26,7 @@ export const FileChangesCard: React.FC<FileChangesCardProps> = ({
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const [isExpanded, setIsExpanded] = useState(false);

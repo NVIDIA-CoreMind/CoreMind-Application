@@ -3,7 +3,7 @@ import { TerminalEvent } from '../../types/aiWorkspace';
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useUiStore } from '../../stores/uiStore';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 import { AICodeBlock } from './AICodeBlock';
 
@@ -11,7 +11,7 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
   const [expanded, setExpanded] = useState(true);
   const updateEvent = useAIWorkspaceStore((s) => s.updateEvent);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   const handleStop = () => {
@@ -99,6 +99,7 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
           onOpenTerminal={handleOpenTerminal}
           maxHeight="380px"
           enableOpenFile={true}
+          isDark={isDark}
         />
       )}
     </div>

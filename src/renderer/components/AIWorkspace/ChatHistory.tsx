@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Trash2, Edit3, Check, X, Clock, Search } from 'lucide-react';
 import { useAIWorkspaceStore, ChatSession } from '../../services/aiWorkspaceService';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 
 /** Format a relative time string like "2m", "1h", "3d" */
 function formatRelativeTime(timestamp: number): string {
@@ -69,7 +69,7 @@ export const ChatHistory: React.FC = () => {
   } = useAIWorkspaceStore();
 
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
 
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);

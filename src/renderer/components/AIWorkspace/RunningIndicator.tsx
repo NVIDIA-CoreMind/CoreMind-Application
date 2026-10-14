@@ -19,7 +19,7 @@ import {
   AgentExecutionState,
   AGENT_STATE_LABELS,
 } from '../../types/aiWorkspace';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 
 interface RunningIndicatorProps {
@@ -36,7 +36,7 @@ export const RunningIndicator: React.FC<RunningIndicatorProps> = ({
   const { currentState, executionState, agentPhase, agentPhaseDetail, events } = useAIWorkspaceStore();
   const [dots, setDots] = useState('');
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   // Determine active execution state
