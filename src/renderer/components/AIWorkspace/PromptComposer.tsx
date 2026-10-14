@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 
 const BACKEND_MODEL = {
@@ -34,7 +34,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
   const [includeContext, setIncludeContext] = useState(true);
 
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

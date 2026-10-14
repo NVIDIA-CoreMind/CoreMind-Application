@@ -17,7 +17,7 @@ import {
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useFilesStore } from '../../stores/filesStore';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { useAgentStore } from '../../stores/agentStore';
 import { coremindWs } from '../../services/coremind/websocket';
 import { TerminalEvent } from '../../types/aiWorkspace';
@@ -30,7 +30,7 @@ export const AIWorkspace: React.FC = () => {
   const pendingApproval = useAIWorkspaceStore((s) => s.pendingApproval);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
 
   // Global WebSocket listener initialization for CoreMind backend
   useEffect(() => {

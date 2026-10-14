@@ -1,11 +1,11 @@
 import React from 'react';
 import { UserRequestEvent } from '../../types/aiWorkspace';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 
 export const UserRequest: React.FC<{ event: UserRequestEvent }> = ({ event }) => {
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
 
   return (

@@ -25,22 +25,22 @@ export interface AIThemeTokens {
 export function getAITheme(isDark: boolean): AIThemeTokens {
   if (isDark) {
     return {
-      bgMain: '#202124',
-      bgHeader: '#202124',
-      bgPanel: '#252628',
-      bgCard: '#2B2C2F',
-      bgTerminal: '#191A1B',
-      bgHover: '#323438',
-      bgActiveTab: '#2B2C2F',
-      border: '#3A3C40',
-      borderSubtle: '#303236',
-      textPrimary: '#E6E6E6',
-      textSecondary: '#A6A8AB',
-      textMuted: '#777B80',
-      iconPrimary: '#C4C6C9',
-      accentRunning: '#8AB4F8',
-      accentSuccess: '#81C995',
-      accentError: '#F28B82',
+      bgMain: '#171717',
+      bgHeader: '#171717',
+      bgPanel: '#1f1f1f',
+      bgCard: '#262626',
+      bgTerminal: '#121212',
+      bgHover: '#2b2b2b',
+      bgActiveTab: '#262626',
+      border: '#303030',
+      borderSubtle: '#262626',
+      textPrimary: '#f4f4f5',
+      textSecondary: '#a1a1aa',
+      textMuted: '#71717a',
+      iconPrimary: '#c4c6c9',
+      accentRunning: '#38bdf8',
+      accentSuccess: '#81c995',
+      accentError: '#f28b82',
     };
   }
 

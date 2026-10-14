@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { useUiStore } from '../../stores/uiStore';
 import { useAIWorkspaceStore, WorkspaceViewTab } from '../../services/aiWorkspaceService';
-import { useThemeStore } from '../../stores/themeStore';
+import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { AiSettingsModal } from './AiSettingsModal';
 import { getAITheme } from './themeTokens';
 
@@ -32,7 +32,7 @@ export const WorkspaceHeader: React.FC = () => {
   const trackedChanges = useAIWorkspaceStore((s) => s.trackedChanges);
 
   const theme = useThemeStore((s) => s.theme);
-  const isDark = theme === 'dark';
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
 
   const tokens = getAITheme(isDark);
 
