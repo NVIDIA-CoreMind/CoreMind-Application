@@ -19,6 +19,17 @@ import {
 import { FileNode, FileSearchResult, FileStat } from '../shared/types/file';
 import { GitStatusResult, GitBranchInfo } from '../shared/types/git';
 import { PlatformInfo, PlatformType } from '../shared/types/platform';
+import type {
+  SdkStatus,
+  FlutterSdkStatus,
+  AndroidDevice,
+  AvdDefinition,
+  EmulatorState,
+  ScreenshotResult,
+  FlutterDevice,
+  FlutterRunState,
+  VirtualMobileEvent,
+} from '../shared/types/virtualMobile';
 
 const currentPlatformName: PlatformType =
   process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : 'linux';
@@ -78,6 +89,44 @@ export interface CoreMindWindowAPI {
   setTitleBarOverlay: (overlay: { color: string; symbolColor: string; height?: number }) => Promise<void>;
 }
 
+export interface CoreMindVirtualMobileAPI {
+  getSdkStatus: () => Promise<IpcResult<SdkStatus>>;
+  getFlutterSdkStatus: () => Promise<IpcResult<FlutterSdkStatus>>;
+  listDevices: () => Promise<IpcResult<AndroidDevice[]>>;
+  listAvds: () => Promise<IpcResult<AvdDefinition[]>>;
+  refreshDevices: () => Promise<IpcResult<AndroidDevice[]>>;
+  startEmulator: (avdName: string) => Promise<IpcResult<EmulatorState>>;
+  stopEmulator: () => Promise<IpcResult<EmulatorState>>;
+  getEmulatorState: () => Promise<IpcResult<EmulatorState>>;
+  takeScreenshot: (serial: string) => Promise<IpcResult<ScreenshotResult | null>>;
+  startLogStream: (serial: string) => Promise<IpcResult<boolean>>;
+  stopLogStream: () => Promise<IpcResult<boolean>>;
+  getFlutterDevices: () => Promise<IpcResult<FlutterDevice[]>>;
+  flutterRun: (deviceId: string, mode?: 'debug' | 'release' | 'profile') => Promise<IpcResult<FlutterRunState>>;
+  flutterHotReload: () => Promise<IpcResult<boolean>>;
+  flutterHotRestart: () => Promise<IpcResult<boolean>>;
+  flutterStop: () => Promise<IpcResult<FlutterRunState>>;
+  flutterPubGet: () => Promise<IpcResult<boolean>>;
+  getFlutterRunState: () => Promise<IpcResult<FlutterRunState>>;
+  checkFlutterProject: () => Promise<IpcResult<boolean>>;
+  sendTouch: (serial: string, xPercent: number, yPercent: number) => Promise<IpcResult<boolean>>;
+  sendSwipe: (
+    serial: string,
+    x1Percent: number,
+    y1Percent: number,
+    x2Percent: number,
+    y2Percent: number,
+    durationMs?: number
+  ) => Promise<IpcResult<boolean>>;
+  sendKey: (serial: string, key: number | string) => Promise<IpcResult<boolean>>;
+  sendText: (serial: string, text: string) => Promise<IpcResult<boolean>>;
+  setOrientation: (serial: string, orientation: 'portrait' | 'landscape') => Promise<IpcResult<boolean>>;
+  openAndroidStudio: () => Promise<IpcResult<boolean>>;
+  startScreenStream: (serial: string, intervalMs?: number) => Promise<IpcResult<boolean>>;
+  stopScreenStream: () => Promise<IpcResult<boolean>>;
+  onEvent: (callback: (event: VirtualMobileEvent) => void) => () => void;
+}
+
 export interface CoreMindAPI extends CoreMindFilesAPI {
   // Direct terminal methods (backwards-compat)
   createTerminal: (id: string, options?: TerminalSpawnOptions) => Promise<IpcResult<boolean>>;
@@ -122,6 +171,7 @@ export interface CoreMindAPI extends CoreMindFilesAPI {
   git: CoreMindGitAPI;
   platform: CoreMindPlatformAPI;
   window: CoreMindWindowAPI;
+  virtualMobile: CoreMindVirtualMobileAPI;
 }
 
 const filesAPI: CoreMindFilesAPI = {
@@ -203,6 +253,56 @@ const windowAPI: CoreMindWindowAPI = {
   setTitleBarOverlay: (overlay) => ipcRenderer.invoke(IPC_CHANNELS.APP_WINDOW_SET_TITLE_BAR_OVERLAY, overlay),
 };
 
+const virtualMobileAPI: CoreMindVirtualMobileAPI = {
+  getSdkStatus: () => ipcRenderer.invoke(IPC_CHANNELS.VM_GET_SDK_STATUS),
+  getFlutterSdkStatus: () => ipcRenderer.invoke(IPC_CHANNELS.VM_GET_FLUTTER_SDK_STATUS),
+  listDevices: () => ipcRenderer.invoke(IPC_CHANNELS.VM_LIST_DEVICES),
+  listAvds: () => ipcRenderer.invoke(IPC_CHANNELS.VM_LIST_AVDS),
+  refreshDevices: () => ipcRenderer.invoke(IPC_CHANNELS.VM_REFRESH_DEVICES),
+  startEmulator: (avdName) => ipcRenderer.invoke(IPC_CHANNELS.VM_START_EMULATOR, { avdName }),
+  stopEmulator: () => ipcRenderer.invoke(IPC_CHANNELS.VM_STOP_EMULATOR),
+  getEmulatorState: () => ipcRenderer.invoke(IPC_CHANNELS.VM_GET_EMULATOR_STATE),
+  takeScreenshot: (serial) => ipcRenderer.invoke(IPC_CHANNELS.VM_TAKE_SCREENSHOT, { serial }),
+  startLogStream: (serial) => ipcRenderer.invoke(IPC_CHANNELS.VM_START_LOG_STREAM, { serial }),
+  stopLogStream: () => ipcRenderer.invoke(IPC_CHANNELS.VM_STOP_LOG_STREAM),
+  getFlutterDevices: () => ipcRenderer.invoke(IPC_CHANNELS.VM_GET_FLUTTER_DEVICES),
+  flutterRun: (deviceId, mode) => ipcRenderer.invoke(IPC_CHANNELS.VM_FLUTTER_RUN, { deviceId, mode }),
+  flutterHotReload: () => ipcRenderer.invoke(IPC_CHANNELS.VM_FLUTTER_HOT_RELOAD),
+  flutterHotRestart: () => ipcRenderer.invoke(IPC_CHANNELS.VM_FLUTTER_HOT_RESTART),
+  flutterStop: () => ipcRenderer.invoke(IPC_CHANNELS.VM_FLUTTER_STOP),
+  flutterPubGet: () => ipcRenderer.invoke(IPC_CHANNELS.VM_FLUTTER_PUB_GET),
+  getFlutterRunState: () => ipcRenderer.invoke(IPC_CHANNELS.VM_GET_FLUTTER_RUN_STATE),
+  checkFlutterProject: () => ipcRenderer.invoke(IPC_CHANNELS.VM_CHECK_FLUTTER_PROJECT),
+  sendTouch: (serial, xPercent, yPercent) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VM_SEND_TOUCH, { serial, xPercent, yPercent }),
+  sendSwipe: (serial, x1Percent, y1Percent, x2Percent, y2Percent, durationMs) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VM_SEND_SWIPE, {
+      serial,
+      x1Percent,
+      y1Percent,
+      x2Percent,
+      y2Percent,
+      durationMs,
+    }),
+  sendKey: (serial, key) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VM_SEND_KEY, { serial, key }),
+  sendText: (serial, text) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VM_SEND_TEXT, { serial, text }),
+  setOrientation: (serial, orientation) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VM_SET_ORIENTATION, { serial, orientation }),
+  openAndroidStudio: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.VM_OPEN_ANDROID_STUDIO),
+  startScreenStream: (serial, intervalMs) =>
+    ipcRenderer.invoke(IPC_CHANNELS.VM_START_SCREEN_STREAM, { serial, intervalMs }),
+  stopScreenStream: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.VM_STOP_SCREEN_STREAM),
+  onEvent: (callback) => {
+    const handler = (_event: unknown, eventData: VirtualMobileEvent) => callback(eventData);
+    ipcRenderer.on(IPC_CHANNELS.VM_EVENT, handler);
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.VM_EVENT, handler);
+  },
+};
+
 const api: CoreMindAPI = {
   ...filesAPI,
 
@@ -264,6 +364,7 @@ const api: CoreMindAPI = {
   git: gitAPI,
   platform: platformAPI,
   window: windowAPI,
+  virtualMobile: virtualMobileAPI,
 };
 
 contextBridge.exposeInMainWorld('coreMindAPI', api);

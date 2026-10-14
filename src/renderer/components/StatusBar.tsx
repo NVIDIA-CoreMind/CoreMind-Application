@@ -1,19 +1,32 @@
 import React from 'react';
-import { GitBranch, XCircle, AlertTriangle, Settings, Radio } from 'lucide-react';
+import { GitBranch, XCircle, AlertTriangle, Settings, Radio, Smartphone } from 'lucide-react';
 import { useTabsStore } from '../stores/tabsStore';
 import { useEditorStore } from '../stores/editorStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useUiStore } from '../stores/uiStore';
 import { useBackendStore } from '../stores/backendStore';
 import { useAgentStore } from '../stores/agentStore';
+import { useVirtualMobileStore } from '../stores/virtualMobileStore';
 
 export const StatusBar: React.FC = () => {
   const { tabs, activeTabId } = useTabsStore();
   const { cursorPosition } = useEditorStore();
   const { rootName } = useWorkspaceStore();
-  const { setActiveSidebarTab } = useUiStore();
+  const { setActiveSidebarTab, setDevicePickerOpen } = useUiStore();
   const { isHealthy, wsStatus, httpUrl, reconnect, checkHealth } = useBackendStore();
   const { selectedModel, tokenUsage } = useAgentStore();
+  const { devices, selectedSerial, emulatorState } = useVirtualMobileStore();
+
+  const selectedDevice = devices.find((d) => d.serial === selectedSerial);
+  const activeDeviceLabel = emulatorState.status === 'starting'
+    ? 'Emulator: Starting...'
+    : emulatorState.status === 'running'
+    ? `AVD: ${emulatorState.avdName ?? 'Running'}`
+    : selectedDevice
+    ? selectedDevice.name
+    : devices.length > 0
+    ? `${devices.length} Device${devices.length > 1 ? 's' : ''}`
+    : 'No Device';
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
 
@@ -99,6 +112,26 @@ export const StatusBar: React.FC = () => {
           />
           <span style={{ color: isConnected ? 'var(--text-primary)' : statusColor, fontSize: '10.5px', fontWeight: 500 }}>
             {statusLabel}
+          </span>
+        </div>
+
+        {/* Virtual Mobile Device Status Indicator */}
+        <div
+          onClick={() => setDevicePickerOpen(true)}
+          title={`Target Device: ${activeDeviceLabel} (Click to open Target & Emulator selector)`}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '5px',
+            cursor: 'pointer',
+            padding: '1px 6px',
+            borderRadius: '4px',
+            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+          }}
+        >
+          <Smartphone size={11} color="var(--accent)" />
+          <span style={{ color: 'var(--text-secondary)', fontSize: '10.5px' }}>
+            {activeDeviceLabel}
           </span>
         </div>
       </div>

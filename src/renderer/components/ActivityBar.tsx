@@ -1,20 +1,25 @@
 import React from 'react';
-import { Files, Search, GitBranch, Play, Boxes, Settings } from 'lucide-react';
+import { Files, Search, GitBranch, Play, Boxes, Settings, Smartphone } from 'lucide-react';
 import { useUiStore, SidebarTab } from '../stores/uiStore';
 import { isMacClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
 
 export const ActivityBar: React.FC = () => {
-  const { activeSidebarTab, isSidebarOpen, setActiveSidebarTab } = useUiStore();
+  const { activeSidebarTab, isSidebarOpen, setActiveSidebarTab, isDevicePickerOpen, setDevicePickerOpen } = useUiStore();
   const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
 
-  const topItems: { id: SidebarTab; label: string; icon: React.ReactNode }[] = [
+  const topItems: Array<{
+    id: SidebarTab | 'device-picker';
+    label: string;
+    icon: React.ReactNode;
+    isAction?: boolean;
+  }> = [
     { id: 'explorer', label: 'Explorer', icon: <Files size={18} /> },
     { id: 'search', label: `Search (${getShortcutDisplay('search', isMac)})`, icon: <Search size={18} /> },
     { id: 'git', label: 'Source Control', icon: <GitBranch size={18} /> },
     { id: 'debug', label: 'Run & Debug', icon: <Play size={18} /> },
+    { id: 'device-picker', label: 'Select Target Device (Web, Android Emulator)', icon: <Smartphone size={18} />, isAction: true },
     { id: 'extensions', label: 'Extensions', icon: <Boxes size={18} /> },
   ];
-
 
   return (
     <div
@@ -34,11 +39,22 @@ export const ActivityBar: React.FC = () => {
       {/* Top Nav Items */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', alignItems: 'center' }}>
         {topItems.map((item) => {
-          const isActive = isSidebarOpen && activeSidebarTab === item.id;
+          const isActive = item.isAction
+            ? isDevicePickerOpen
+            : isSidebarOpen && activeSidebarTab === item.id;
+
+          const handleClick = () => {
+            if (item.isAction) {
+              setDevicePickerOpen(!isDevicePickerOpen);
+            } else {
+              setActiveSidebarTab(item.id as SidebarTab);
+            }
+          };
+
           return (
             <button
               key={item.id}
-              onClick={() => setActiveSidebarTab(item.id)}
+              onClick={handleClick}
               title={item.label}
               style={{
                 width: '36px',

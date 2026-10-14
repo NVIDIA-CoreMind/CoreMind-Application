@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { UI_DIMENSIONS } from '@shared/constants';
 
-export type SidebarTab = 'explorer' | 'search' | 'git' | 'debug' | 'extensions' | 'settings';
+export type SidebarTab = 'explorer' | 'search' | 'git' | 'debug' | 'extensions' | 'settings' | 'virtual-mobile';
 
 interface UiStore {
   activeSidebarTab: SidebarTab;
@@ -17,6 +17,7 @@ interface UiStore {
   isCommandPaletteOpen: boolean;
   isQuickOpenOpen: boolean;
   isGlobalPromptOpen: boolean;
+  isDevicePickerOpen: boolean;
 
   setActiveSidebarTab: (tab: SidebarTab) => void;
   toggleSidebar: () => void;
@@ -31,6 +32,7 @@ interface UiStore {
   setCommandPaletteOpen: (open: boolean) => void;
   setQuickOpenOpen: (open: boolean) => void;
   setGlobalPromptOpen: (open: boolean) => void;
+  setDevicePickerOpen: (open: boolean) => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -47,6 +49,7 @@ export const useUiStore = create<UiStore>((set) => ({
   isCommandPaletteOpen: false,
   isQuickOpenOpen: false,
   isGlobalPromptOpen: false,
+  isDevicePickerOpen: false,
 
   setActiveSidebarTab: (tab) => {
     set((state) => {
@@ -110,5 +113,9 @@ export const useUiStore = create<UiStore>((set) => ({
 
   setGlobalPromptOpen: (open) => {
     set({ isGlobalPromptOpen: open });
+  },
+
+  setDevicePickerOpen: (open) => {
+    set({ isDevicePickerOpen: open });
   },
 }));

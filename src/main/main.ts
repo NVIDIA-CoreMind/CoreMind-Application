@@ -3,6 +3,8 @@ import { createMainWindow, getMainWindow } from './windows/mainWindow';
 import { registerIpcHandlers } from './ipc/registerIpcHandlers';
 import { setupApplicationMenu } from './menu';
 import { terminalService } from './services/terminalService';
+import { androidDeviceService } from './services/androidDeviceService';
+import { flutterRunService } from './services/flutterRunService';
 import { logger } from './services/logger';
 
 import path from 'node:path';
@@ -104,6 +106,9 @@ if (!gotTheLock) {
   app.on('will-quit', () => {
     logger.info('CoreMind shutting down.');
     terminalService.closeAllSessions();
+    // Clean up virtual mobile services
+    void androidDeviceService.cleanup();
+    void flutterRunService.cleanup();
   });
 }
 

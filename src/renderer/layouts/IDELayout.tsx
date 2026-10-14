@@ -6,6 +6,7 @@ import { ResizableSplitter } from '../components/ResizableSplitter';
 import { FileExplorer } from '../explorer/FileExplorer';
 import { SearchPanel } from '../search/SearchPanel';
 import { SettingsPanel } from '../settings/SettingsPanel';
+import { DevicePickerPalette } from '../components/DevicePickerPalette';
 import { MonacoEditor } from '../editor/MonacoEditor';
 import { PtyTerminal } from '../terminal/PtyTerminal';
 import { AIWorkspace } from '../components/AIWorkspace/AIWorkspace';
@@ -171,6 +172,7 @@ export const IDELayout: React.FC = () => {
       <CommandPalette />
       <QuickOpen />
       <GlobalPrompt />
+      <DevicePickerPalette />
     </div>
   );
 };

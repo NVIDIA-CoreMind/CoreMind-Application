@@ -28,6 +28,8 @@ import { startWorkspaceWatch } from '../services/workspaceWatcher';
 import { authorizeWorkspace, getAuthorizedWorkspace, restoreWorkspace } from '../services/workspaceAuthorization';
 import { isMac, getPlatform, getPlatformInfo } from '../platform/platform';
 import { platformWindow } from '../platform/window/platformWindow';
+import { androidDeviceService } from '../services/androidDeviceService';
+import { flutterRunService } from '../services/flutterRunService';
 
 const activeTasks = new Map<number, AbortController>();
 
@@ -717,7 +719,7 @@ export function registerIpcHandlers(): void {
     }
   );
 
-  ipcMain.handle(
+    ipcMain.handle(
     IPC_CHANNELS.AUTH_OPEN_IN_CHROME,
     async (_event, { url }: { url: string }): Promise<IpcResult<{ opened: boolean }>> => {
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
@@ -780,4 +782,444 @@ export function registerIpcHandlers(): void {
       });
     }
   );
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // Virtual Mobile Device Handlers
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // Wire event callback to push real-time updates to renderer
+  const setupVmEventBroadcast = () => {
+    const broadcastEvent = (event: import('../../shared/types/virtualMobile').VirtualMobileEvent) => {
+      const win = getMainWindow();
+      if (win && !win.isDestroyed()) {
+        win.webContents.send(IPC_CHANNELS.VM_EVENT, event);
+      }
+    };
+    androidDeviceService.setEventCallback(broadcastEvent);
+    flutterRunService.setEventCallback(broadcastEvent);
+  };
+  setupVmEventBroadcast();
+
+  // SDK Status
+  ipcMain.handle(
+    IPC_CHANNELS.VM_GET_SDK_STATUS,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').SdkStatus>> => {
+      try {
+        const status = await androidDeviceService.discoverSdk();
+        return { success: true, data: status };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'SDK_DISCOVERY_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Flutter SDK Status
+  ipcMain.handle(
+    IPC_CHANNELS.VM_GET_FLUTTER_SDK_STATUS,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').FlutterSdkStatus>> => {
+      try {
+        const status = await flutterRunService.discoverFlutterSdk();
+        return { success: true, data: status };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'FLUTTER_SDK_DISCOVERY_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // List Devices
+  ipcMain.handle(
+    IPC_CHANNELS.VM_LIST_DEVICES,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').AndroidDevice[]>> => {
+      try {
+        const devices = await androidDeviceService.listDevices();
+        return { success: true, data: devices };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'LIST_DEVICES_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // List AVDs
+  ipcMain.handle(
+    IPC_CHANNELS.VM_LIST_AVDS,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').AvdDefinition[]>> => {
+      try {
+        const avds = await androidDeviceService.listAvds();
+        return { success: true, data: avds };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'LIST_AVDS_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Refresh Devices (re-discover SDK + list)
+  ipcMain.handle(
+    IPC_CHANNELS.VM_REFRESH_DEVICES,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').AndroidDevice[]>> => {
+      try {
+        await androidDeviceService.discoverSdk();
+        const devices = await androidDeviceService.listDevices();
+        return { success: true, data: devices };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'REFRESH_DEVICES_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Start Emulator
+  ipcMain.handle(
+    IPC_CHANNELS.VM_START_EMULATOR,
+    async (
+      _event,
+      { avdName }: { avdName: string }
+    ): Promise<IpcResult<import('../../shared/types/virtualMobile').EmulatorState>> => {
+      if (typeof avdName !== 'string' || !avdName.trim()) {
+        return {
+          success: false,
+          error: { code: 'INVALID_AVD', message: 'AVD name is required.' },
+        };
+      }
+      try {
+        const state = await androidDeviceService.startEmulator(avdName.trim());
+        return { success: true, data: state };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'START_EMULATOR_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Stop Emulator
+  ipcMain.handle(
+    IPC_CHANNELS.VM_STOP_EMULATOR,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').EmulatorState>> => {
+      try {
+        const state = await androidDeviceService.stopEmulator();
+        return { success: true, data: state };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'STOP_EMULATOR_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Get Emulator State
+  ipcMain.handle(
+    IPC_CHANNELS.VM_GET_EMULATOR_STATE,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').EmulatorState>> => {
+      return { success: true, data: androidDeviceService.getEmulatorState() };
+    }
+  );
+
+  // Take Screenshot
+  ipcMain.handle(
+    IPC_CHANNELS.VM_TAKE_SCREENSHOT,
+    async (
+      _event,
+      { serial }: { serial: string }
+    ): Promise<IpcResult<import('../../shared/types/virtualMobile').ScreenshotResult | null>> => {
+      if (typeof serial !== 'string' || !serial.trim()) {
+        return {
+          success: false,
+          error: { code: 'INVALID_SERIAL', message: 'Device serial is required.' },
+        };
+      }
+      try {
+        const screenshot = await androidDeviceService.takeScreenshot(serial.trim());
+        return { success: true, data: screenshot };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'SCREENSHOT_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Start Log Stream
+  ipcMain.handle(
+    IPC_CHANNELS.VM_START_LOG_STREAM,
+    async (_event, { serial }: { serial: string }): Promise<IpcResult<boolean>> => {
+      if (typeof serial !== 'string' || !serial.trim()) {
+        return {
+          success: false,
+          error: { code: 'INVALID_SERIAL', message: 'Device serial is required.' },
+        };
+      }
+      androidDeviceService.startLogStream(serial.trim());
+      return { success: true, data: true };
+    }
+  );
+
+  // Stop Log Stream
+  ipcMain.handle(
+    IPC_CHANNELS.VM_STOP_LOG_STREAM,
+    async (): Promise<IpcResult<boolean>> => {
+      androidDeviceService.stopLogStream();
+      return { success: true, data: true };
+    }
+  );
+
+  // Flutter Devices
+  ipcMain.handle(
+    IPC_CHANNELS.VM_GET_FLUTTER_DEVICES,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').FlutterDevice[]>> => {
+      try {
+        const devices = await flutterRunService.listFlutterDevices();
+        return { success: true, data: devices };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'FLUTTER_DEVICES_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Flutter Run
+  ipcMain.handle(
+    IPC_CHANNELS.VM_FLUTTER_RUN,
+    async (
+      event,
+      { deviceId, mode }: { deviceId: string; mode?: 'debug' | 'release' | 'profile' }
+    ): Promise<IpcResult<import('../../shared/types/virtualMobile').FlutterRunState>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      if (!rootPath) return noWorkspaceError();
+      if (typeof deviceId !== 'string' || !deviceId.trim()) {
+        return {
+          success: false,
+          error: { code: 'INVALID_DEVICE', message: 'Device ID is required.' },
+        };
+      }
+      try {
+        const state = await flutterRunService.startRun(rootPath, deviceId.trim(), mode);
+        return { success: true, data: state };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'FLUTTER_RUN_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Flutter Hot Reload
+  ipcMain.handle(
+    IPC_CHANNELS.VM_FLUTTER_HOT_RELOAD,
+    async (): Promise<IpcResult<boolean>> => {
+      try {
+        const result = await flutterRunService.hotReload();
+        return { success: true, data: result };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'HOT_RELOAD_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Flutter Hot Restart
+  ipcMain.handle(
+    IPC_CHANNELS.VM_FLUTTER_HOT_RESTART,
+    async (): Promise<IpcResult<boolean>> => {
+      try {
+        const result = await flutterRunService.hotRestart();
+        return { success: true, data: result };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'HOT_RESTART_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Flutter Stop
+  ipcMain.handle(
+    IPC_CHANNELS.VM_FLUTTER_STOP,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').FlutterRunState>> => {
+      try {
+        const state = await flutterRunService.stopRun();
+        return { success: true, data: state };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'FLUTTER_STOP_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Flutter Run State
+  ipcMain.handle(
+    IPC_CHANNELS.VM_GET_FLUTTER_RUN_STATE,
+    async (): Promise<IpcResult<import('../../shared/types/virtualMobile').FlutterRunState>> => {
+      return { success: true, data: flutterRunService.getRunState() };
+    }
+  );
+
+  // Check Flutter Project
+  ipcMain.handle(
+    IPC_CHANNELS.VM_CHECK_FLUTTER_PROJECT,
+    async (event): Promise<IpcResult<boolean>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      if (!rootPath) return { success: true, data: false };
+      return { success: true, data: flutterRunService.checkFlutterProject(rootPath) };
+    }
+  );
+
+  // Flutter Pub Get
+  ipcMain.handle(
+    IPC_CHANNELS.VM_FLUTTER_PUB_GET,
+    async (event): Promise<IpcResult<boolean>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      if (!rootPath) return noWorkspaceError();
+      try {
+        const result = await flutterRunService.pubGet(rootPath);
+        return { success: true, data: result };
+      } catch (err: unknown) {
+        return {
+          success: false,
+          error: { code: 'PUB_GET_FAILED', message: (err as Error).message },
+        };
+      }
+    }
+  );
+
+  // Interactive Touch
+  ipcMain.handle(
+    IPC_CHANNELS.VM_SEND_TOUCH,
+    async (
+      _event,
+      { serial, xPercent, yPercent }: { serial: string; xPercent: number; yPercent: number }
+    ): Promise<IpcResult<boolean>> => {
+      if (!serial) return { success: false, error: { code: 'INVALID_SERIAL', message: 'Serial required' } };
+      const success = await androidDeviceService.sendTap(serial, xPercent, yPercent);
+      return { success: true, data: success };
+    }
+  );
+
+  // Interactive Swipe
+  ipcMain.handle(
+    IPC_CHANNELS.VM_SEND_SWIPE,
+    async (
+      _event,
+      {
+        serial,
+        x1Percent,
+        y1Percent,
+        x2Percent,
+        y2Percent,
+        durationMs,
+      }: {
+        serial: string;
+        x1Percent: number;
+        y1Percent: number;
+        x2Percent: number;
+        y2Percent: number;
+        durationMs?: number;
+      }
+    ): Promise<IpcResult<boolean>> => {
+      if (!serial) return { success: false, error: { code: 'INVALID_SERIAL', message: 'Serial required' } };
+      const success = await androidDeviceService.sendSwipe(
+        serial,
+        x1Percent,
+        y1Percent,
+        x2Percent,
+        y2Percent,
+        durationMs
+      );
+      return { success: true, data: success };
+    }
+  );
+
+  // Interactive Key Event
+  ipcMain.handle(
+    IPC_CHANNELS.VM_SEND_KEY,
+    async (
+      _event,
+      { serial, key }: { serial: string; key: number | string }
+    ): Promise<IpcResult<boolean>> => {
+      if (!serial) return { success: false, error: { code: 'INVALID_SERIAL', message: 'Serial required' } };
+      const success = await androidDeviceService.sendKeyEvent(serial, key);
+      return { success: true, data: success };
+    }
+  );
+
+  // Interactive Text
+  ipcMain.handle(
+    IPC_CHANNELS.VM_SEND_TEXT,
+    async (
+      _event,
+      { serial, text }: { serial: string; text: string }
+    ): Promise<IpcResult<boolean>> => {
+      if (!serial) return { success: false, error: { code: 'INVALID_SERIAL', message: 'Serial required' } };
+      const success = await androidDeviceService.sendText(serial, text);
+      return { success: true, data: success };
+    }
+  );
+
+  // Orientation
+  ipcMain.handle(
+    IPC_CHANNELS.VM_SET_ORIENTATION,
+    async (
+      _event,
+      { serial, orientation }: { serial: string; orientation: 'portrait' | 'landscape' }
+    ): Promise<IpcResult<boolean>> => {
+      if (!serial) return { success: false, error: { code: 'INVALID_SERIAL', message: 'Serial required' } };
+      const success = await androidDeviceService.setOrientation(serial, orientation);
+      return { success: true, data: success };
+    }
+  );
+
+  // Open Android Studio
+  ipcMain.handle(
+    IPC_CHANNELS.VM_OPEN_ANDROID_STUDIO,
+    async (): Promise<IpcResult<boolean>> => {
+      const opened = await androidDeviceService.openAndroidStudio();
+      return { success: true, data: opened };
+    }
+  );
+
+  // Real-time Screen Streaming
+  ipcMain.handle(
+    IPC_CHANNELS.VM_START_SCREEN_STREAM,
+    async (
+      _event,
+      { serial, intervalMs }: { serial: string; intervalMs?: number }
+    ): Promise<IpcResult<boolean>> => {
+      if (!serial) return { success: false, error: { code: 'INVALID_SERIAL', message: 'Serial required' } };
+      androidDeviceService.startScreenStream(serial, intervalMs ?? 350);
+      return { success: true, data: true };
+    }
+  );
+
+  ipcMain.handle(
+    IPC_CHANNELS.VM_STOP_SCREEN_STREAM,
+    async (): Promise<IpcResult<boolean>> => {
+      androidDeviceService.stopScreenStream();
+      return { success: true, data: true };
+    }
+  );
 }
+
