@@ -12,7 +12,6 @@ import { extractToolCalls } from '../../services/aiToolExecution';
 import { RunningIndicator } from './RunningIndicator';
 import { ImplementationPlan } from './ImplementationPlan';
 import { QuestionCard } from './QuestionCard';
-import { ApprovalCard } from './ApprovalCard';
 import { AntigravityActivityStream } from './CoreMindActivityStream';
 import { TerminalEvent } from '../../types/aiWorkspace';
 import { getAITheme } from './themeTokens';
@@ -103,7 +102,6 @@ export const ChatThread: React.FC = () => {
     taskGraph,
     trackedChanges,
     pendingQuestion,
-    pendingApproval,
     activeTurnStartTime,
   } = useAIWorkspaceStore();
 
@@ -396,7 +394,7 @@ export const ChatThread: React.FC = () => {
         </div>
       )}
 
-      {/* Pending Question or Approval Cards */}
+      {/* Pending Question */}
       {pendingQuestion && (
         <QuestionCard
           event={{
@@ -409,8 +407,6 @@ export const ChatThread: React.FC = () => {
           }}
         />
       )}
-
-      {pendingApproval && <ApprovalCard />}
 
       <div ref={bottomRef} />
 

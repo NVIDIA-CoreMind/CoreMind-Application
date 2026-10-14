@@ -50,6 +50,12 @@ export const ApprovalCard: React.FC = () => {
     return null;
   }, [args]);
 
+  const cwd = useMemo(() => {
+    if (args.cwd && typeof args.cwd === 'string') return args.cwd;
+    if (args.working_dir && typeof args.working_dir === 'string') return args.working_dir;
+    return null;
+  }, [args]);
+
   const timeoutDisplay = useMemo(() => {
     const raw = args.timeout_ms ?? args.timeout;
     if (typeof raw === 'number') {
@@ -130,14 +136,14 @@ export const ApprovalCard: React.FC = () => {
       aria-modal="false"
       aria-labelledby="approval-card-title"
       style={{
-        margin: '10px 0',
+        margin: 0,
         borderRadius: '10px',
-        border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.10)' : 'rgba(0, 0, 0, 0.12)'}`,
+        border: `1px solid ${isDark ? 'rgba(251, 191, 36, 0.35)' : 'rgba(217, 119, 6, 0.35)'}`,
         backgroundColor: isDark ? '#1E1F22' : '#FFFFFF',
         color: tokens.textPrimary,
         boxShadow: isDark
-          ? '0 4px 16px rgba(0, 0, 0, 0.35), 0 1px 3px rgba(0, 0, 0, 0.2)'
-          : '0 4px 12px rgba(0, 0, 0, 0.08)',
+          ? '0 4px 16px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(251, 191, 36, 0.08)'
+          : '0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(217, 119, 6, 0.08)',
         fontFamily: 'var(--font-sans)',
         overflow: 'hidden',
         transition: 'all 0.2s ease',
@@ -260,66 +266,83 @@ export const ApprovalCard: React.FC = () => {
               backgroundColor: isDark ? '#141517' : '#F6F8FA',
               padding: '8px 12px',
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '8px',
-              fontFamily: 'ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace',
-              fontSize: '12px',
-              lineHeight: 1.5,
+              flexDirection: 'column',
+              gap: '4px',
             }}
           >
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                minWidth: 0,
-                overflowX: 'auto',
-                whiteSpace: 'nowrap',
-                flex: 1,
-                scrollbarWidth: 'none',
+                justifyContent: 'space-between',
+                gap: '8px',
+                fontFamily: 'ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Monaco, Consolas, monospace',
+                fontSize: '12px',
+                lineHeight: 1.5,
               }}
             >
-              <span style={{ color: isDark ? '#71717A' : '#9CA3AF', userSelect: 'none' }}>$</span>
-              <span
+              <div
                 style={{
-                  color: isDark ? '#F3F4F6' : '#1F2328',
-                  fontWeight: 500,
-                  userSelect: 'text',
-                  WebkitUserSelect: 'text',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  minWidth: 0,
+                  overflowX: 'auto',
+                  whiteSpace: 'nowrap',
+                  flex: 1,
+                  scrollbarWidth: 'none',
                 }}
               >
-                {command}
-              </span>
+                <span style={{ color: isDark ? '#71717A' : '#9CA3AF', userSelect: 'none' }}>$</span>
+                <span
+                  style={{
+                    color: isDark ? '#F3F4F6' : '#1F2328',
+                    fontWeight: 500,
+                    userSelect: 'text',
+                    WebkitUserSelect: 'text',
+                  }}
+                >
+                  {command}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleCopyCommand}
+                title={copiedCmd ? 'Copied to clipboard' : 'Copy command'}
+                aria-label="Copy command"
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: copiedCmd ? tokens.accentSuccess : tokens.textMuted,
+                  cursor: 'pointer',
+                  padding: '3px 5px',
+                  borderRadius: '4px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+              >
+                {copiedCmd ? <Check size={12.5} color={tokens.accentSuccess} /> : <Copy size={12.5} />}
+              </button>
             </div>
 
-            <button
-              type="button"
-              onClick={handleCopyCommand}
-              title={copiedCmd ? 'Copied to clipboard' : 'Copy command'}
-              aria-label="Copy command"
-              style={{
-                background: 'transparent',
-                border: 'none',
-                color: copiedCmd ? tokens.accentSuccess : tokens.textMuted,
-                cursor: 'pointer',
-                padding: '3px 5px',
-                borderRadius: '4px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.15s ease',
-                flexShrink: 0,
-              }}
-              onMouseEnter={(e) => {
-                if (!copiedCmd) e.currentTarget.style.color = tokens.textPrimary;
-              }}
-              onMouseLeave={(e) => {
-                if (!copiedCmd) e.currentTarget.style.color = tokens.textMuted;
-              }}
-            >
-              {copiedCmd ? <Check size={12.5} color={tokens.accentSuccess} /> : <Copy size={12.5} />}
-            </button>
+            {cwd && (
+              <div
+                style={{
+                  fontSize: '10.5px',
+                  color: tokens.textMuted,
+                  fontFamily: 'ui-monospace, SFMono-Regular, monospace',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                in: {cwd}
+              </div>
+            )}
           </div>
         )}
 

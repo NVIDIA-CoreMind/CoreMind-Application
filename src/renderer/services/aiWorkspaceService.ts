@@ -1330,6 +1330,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
         case 'agent.approval.required': {
           set({
             currentState: 'waiting',
+            activeView: 'chat',
             pendingApproval: {
               approval_id: event.data?.approval_id,
               tool: event.data?.tool,

@@ -7,6 +7,7 @@ import { ActivityTimeline } from './ActivityTimeline';
 import { DiffViewer } from './DiffViewer';
 import { ChatHistory } from './ChatHistory';
 import { FileChangesCard } from './FileChangesCard';
+import { ApprovalCard } from './ApprovalCard';
 import {
   useAIWorkspaceStore,
   subscribeFileChanges,
@@ -16,7 +17,6 @@ import {
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useFilesStore } from '../../stores/filesStore';
-import { useUiStore } from '../../stores/uiStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { useAgentStore } from '../../stores/agentStore';
 import { coremindWs } from '../../services/coremind/websocket';
@@ -27,6 +27,7 @@ export const AIWorkspace: React.FC = () => {
   const currentState = useAIWorkspaceStore((s) => s.currentState);
   const activeView = useAIWorkspaceStore((s) => s.activeView);
   const trackedChanges = useAIWorkspaceStore((s) => s.trackedChanges);
+  const pendingApproval = useAIWorkspaceStore((s) => s.pendingApproval);
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const theme = useThemeStore((s) => s.theme);
   const isDark = theme === 'dark';
@@ -127,7 +128,7 @@ export const AIWorkspace: React.FC = () => {
               status: 'running',
               timestamp: now,
             });
-            useUiStore.setState({ isTerminalOpen: true });
+            // Do not force-open the bottom IDE terminal panel; commands stream inline in the chat timeline
           } else if (/search|grep|find|read|scan/i.test(event.tool)) {
             store.setExecutionState('inspecting', event.tool);
           } else if (/create|write|edit/i.test(event.tool)) {
@@ -327,6 +328,13 @@ export const AIWorkspace: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Docked Approval Card - pinned at bottom, right above the chat composer like Antigravity */}
+      {pendingApproval && (
+        <div style={{ padding: '0 12px 8px 12px', flexShrink: 0, zIndex: 10 }}>
+          <ApprovalCard />
+        </div>
+      )}
 
       {/* Optional file-change summary and review controls (only when actual changes exist) */}
       {activeView === 'chat' && Object.keys(trackedChanges).length > 0 && (
