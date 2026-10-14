@@ -153,6 +153,79 @@ describe('FileSystemService & Workspace Security', () => {
     });
   });
 
+  describe('Image Reading Operations (PNG, JPG, JPEG)', () => {
+    // 1x1 transparent PNG buffer
+    const mockPngBuffer = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      'base64'
+    );
+    // Minimal JPEG header buffer
+    const mockJpgBuffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0xff, 0xd9]);
+
+    it('reads a PNG image file as data URL via readFile and readImage', async () => {
+      const pngPath = path.join(tempDir, 'sample.png');
+      await fs.writeFile(pngPath, mockPngBuffer);
+
+      // 1. Test readFile returns base64 data URL
+      const readRes = await service.readFile(pngPath, tempDir);
+      expect(readRes.success).toBe(true);
+      if (readRes.success) {
+        expect(readRes.data).toContain('data:image/png;base64,');
+      }
+
+      // 2. Test readImage returns structured metadata
+      const imgRes = await service.readImage(pngPath, tempDir);
+      expect(imgRes.success).toBe(true);
+      if (imgRes.success) {
+        expect(imgRes.data.mimeType).toBe('image/png');
+        expect(imgRes.data.name).toBe('sample.png');
+        expect(imgRes.data.size).toBe(mockPngBuffer.length);
+        expect(imgRes.data.dataUrl).toContain('data:image/png;base64,');
+        expect(imgRes.data.base64).toBe(mockPngBuffer.toString('base64'));
+      }
+    });
+
+    it('reads JPG and JPEG image files correctly', async () => {
+      const jpgPath = path.join(tempDir, 'photo.jpg');
+      const jpegPath = path.join(tempDir, 'photo.jpeg');
+      await fs.writeFile(jpgPath, mockJpgBuffer);
+      await fs.writeFile(jpegPath, mockJpgBuffer);
+
+      const jpgRes = await service.readImage(jpgPath, tempDir);
+      expect(jpgRes.success).toBe(true);
+      if (jpgRes.success) {
+        expect(jpgRes.data.mimeType).toBe('image/jpeg');
+        expect(jpgRes.data.dataUrl).toContain('data:image/jpeg;base64,');
+      }
+
+      const jpegRes = await service.readImage(jpegPath, tempDir);
+      expect(jpegRes.success).toBe(true);
+      if (jpegRes.success) {
+        expect(jpegRes.data.mimeType).toBe('image/jpeg');
+        expect(jpegRes.data.dataUrl).toContain('data:image/jpeg;base64,');
+      }
+    });
+
+    it('rejects readImage for non-image files', async () => {
+      const txtPath = path.join(tempDir, 'not-an-image.txt');
+      await fs.writeFile(txtPath, 'text content');
+
+      const res = await service.readImage(txtPath, tempDir);
+      expect(res.success).toBe(false);
+      if (!res.success) {
+        expect(res.error.code).toBe('INVALID_IMAGE_FORMAT');
+      }
+    });
+
+    it('rejects readImage for paths outside the workspace', async () => {
+      const res = await service.readImage('/etc/unauthorized.png', tempDir);
+      expect(res.success).toBe(false);
+      if (!res.success) {
+        expect(res.error.code).toBe('ACCESS_DENIED');
+      }
+    });
+  });
+
   describe('Search functionality', () => {
     it('finds query matches across workspace files', async () => {
       const file1 = path.join(tempDir, 'app.ts');

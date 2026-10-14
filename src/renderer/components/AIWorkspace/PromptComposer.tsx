@@ -9,6 +9,7 @@ import {
   Plus,
   Mic,
   ChevronDown,
+  X,
 } from 'lucide-react';
 import { useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
@@ -32,11 +33,13 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
 
   const [input, setInput] = useState('');
   const [includeContext, setIncludeContext] = useState(true);
+  const [attachedImages, setAttachedImages] = useState<Array<{ name: string; dataUrl: string; size: number }>>([]);
 
   const theme = useThemeStore((s) => s.theme);
   const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isRunning =
     currentState === 'running' ||
@@ -62,7 +65,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (!isRunning && input.trim()) {
+      if (!isRunning && (input.trim() || attachedImages.length > 0)) {
         handleSubmit();
       }
     } else if (e.key === 'Escape' && isRunning) {
@@ -71,9 +74,103 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
     }
   };
 
+  const handleAttachImage = async () => {
+    if (window.coreMindAPI?.openImageDialog) {
+      try {
+        const res = await window.coreMindAPI.openImageDialog();
+        if (res.success && res.data) {
+          setAttachedImages((prev) => [
+            ...prev,
+            { name: res.data!.name, dataUrl: res.data!.dataUrl, size: res.data!.size },
+          ]);
+          textareaRef.current?.focus();
+          return;
+        }
+      } catch (err) {
+        console.warn('Native image dialog failed, falling back to input:', err);
+      }
+    }
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          setAttachedImages((prev) => [
+            ...prev,
+            { name: file.name, dataUrl: reader.result as string, size: file.size },
+          ]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = '';
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (e.clipboardData.files && e.clipboardData.files.length > 0) {
+      const imgFiles = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith('image/'));
+      if (imgFiles.length > 0) {
+        e.preventDefault();
+        imgFiles.forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              setAttachedImages((prev) => [
+                ...prev,
+                { name: file.name || `image_${Date.now()}.png`, dataUrl: reader.result as string, size: file.size },
+              ]);
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const imgFiles = Array.from(e.dataTransfer.files).filter((f) =>
+        f.type.startsWith('image/') || /\.(png|jpg|jpeg|webp|gif|ico|bmp)$/i.test(f.name)
+      );
+      if (imgFiles.length > 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        imgFiles.forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (typeof reader.result === 'string') {
+              setAttachedImages((prev) => [
+                ...prev,
+                { name: file.name, dataUrl: reader.result as string, size: file.size },
+              ]);
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+    }
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setAttachedImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
+
   const handleSubmit = () => {
-    if (isRunning || !input.trim()) return;
-    const textToSend = input.trim();
+    if (isRunning || (!input.trim() && attachedImages.length === 0)) return;
+    let textToSend = input.trim();
+    if (attachedImages.length > 0) {
+      const imageEmbeds = attachedImages
+        .map((img) => `![${img.name}](${img.dataUrl})`)
+        .join('\n\n');
+      textToSend = textToSend ? `${textToSend}\n\n${imageEmbeds}` : imageEmbeds;
+      setAttachedImages([]);
+    }
     setInput('');
     onSubmit(textToSend);
   };
@@ -149,15 +246,12 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
 
           <button
             type="button"
-            title="Attach image or screenshot"
-            onClick={() => {
-              setInput((prev) => (prev ? prev + ' [image] ' : '[image] '));
-              textareaRef.current?.focus();
-            }}
+            title="Attach image (PNG, JPG, JPEG) or screenshot"
+            onClick={handleAttachImage}
             style={{
               background: 'transparent',
               border: 'none',
-              color: isDark ? '#8c8c8c' : '#6b7280',
+              color: attachedImages.length > 0 ? (isDark ? '#38bdf8' : '#0284c7') : isDark ? '#8c8c8c' : '#6b7280',
               cursor: 'pointer',
               padding: '2px',
               display: 'flex',
@@ -166,10 +260,18 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
               transition: 'color 0.15s ease',
             }}
             onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#ffffff' : '#111827')}
-            onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#6b7280')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = attachedImages.length > 0 ? (isDark ? '#38bdf8' : '#0284c7') : isDark ? '#8c8c8c' : '#6b7280')}
           >
             <ImageIcon size={14} />
           </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+            style={{ display: 'none' }}
+            onChange={handleFileInputChange}
+            multiple
+          />
 
           <button
             type="button"
@@ -226,6 +328,11 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
 
       {/* Main Composer Box */}
       <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDrop={handleDrop}
         style={{
           backgroundColor: isDark ? '#222222' : '#ffffff',
           border: `1px solid ${isDark ? '#333333' : '#e2e8f0'}`,
@@ -239,6 +346,69 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
           position: 'relative',
         }}
       >
+        {/* Attached Images Preview Row */}
+        {attachedImages.length > 0 && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingBottom: '4px' }}>
+            {attachedImages.map((img, idx) => (
+              <div
+                key={`${img.name}-${idx}`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  backgroundColor: isDark ? '#2a2b2e' : '#f1f5f9',
+                  border: `1px solid ${isDark ? '#3c4043' : '#e2e8f0'}`,
+                  borderRadius: '6px',
+                  padding: '3px 6px',
+                  fontSize: '11px',
+                  color: isDark ? '#e3e3e3' : '#334155',
+                  position: 'relative',
+                }}
+              >
+                <img
+                  src={img.dataUrl}
+                  alt={img.name}
+                  style={{
+                    width: '24px',
+                    height: '24px',
+                    objectFit: 'cover',
+                    borderRadius: '4px',
+                    border: '1px solid var(--border-color)',
+                  }}
+                />
+                <span
+                  style={{
+                    maxWidth: '120px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    fontWeight: 500,
+                  }}
+                >
+                  {img.name}
+                </span>
+                <button
+                  type="button"
+                  title="Remove image"
+                  onClick={() => handleRemoveImage(idx)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                    padding: '2px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '3px',
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div style={{ display: 'flex', position: 'relative' }}>
           <textarea
             ref={textareaRef}
@@ -246,10 +416,11 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
             disabled={isRunning}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onPaste={handlePaste}
             placeholder={
               isRunning
                 ? 'Executing request... Click Stop to cancel.'
-                : 'Ask anything, @ to mention, / for actions'
+                : 'Ask anything, attach image, @ to mention, / for actions'
             }
             rows={2}
             style={{

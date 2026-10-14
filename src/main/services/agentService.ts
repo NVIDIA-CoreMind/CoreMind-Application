@@ -436,6 +436,11 @@ export class AgentService {
         return fileSystemService.readFile(filePath, rootPath);
       }
 
+      case 'readImage': {
+        const filePath = action.params.filePath as string;
+        return fileSystemService.readImage(filePath, rootPath);
+      }
+
       case 'writeFile': {
         const filePath = action.params.filePath as string;
         const content = action.params.content as string;

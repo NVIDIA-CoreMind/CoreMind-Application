@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { useAIWorkspaceStore, FileChangeInfo } from '../../services/aiWorkspaceService';
+import { useTabsStore } from '../../stores/tabsStore';
+import { useWorkspaceStore } from '../../stores/workspaceStore';
 import ReactMarkdown from 'react-markdown';
 import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import {
@@ -167,6 +169,39 @@ function renderMarkdownContent(rawText: string, isDark: boolean = true, isUser: 
         >
           {children}
         </a>
+      );
+    },
+    img: ({ src, alt, ...props }: any) => {
+      return (
+        <span style={{ display: 'block', margin: '8px 0' }}>
+          <img
+            src={src}
+            alt={alt || 'Image'}
+            style={{
+              maxWidth: '100%',
+              maxHeight: '260px',
+              borderRadius: '8px',
+              border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.1)'}`,
+              display: 'block',
+              objectFit: 'contain',
+              boxShadow: isDark ? '0 4px 12px rgba(0, 0, 0, 0.4)' : '0 2px 8px rgba(0, 0, 0, 0.08)',
+              cursor: 'zoom-in',
+            }}
+            onClick={() => {
+              if (src) {
+                const fileName = alt || 'image.png';
+                const rootPath = useWorkspaceStore.getState().rootPath || '';
+                void useTabsStore.getState().openFile(fileName, fileName, rootPath);
+              }
+            }}
+            {...props}
+          />
+          {alt && (
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginTop: '4px' }}>
+              {alt}
+            </span>
+          )}
+        </span>
       );
     },
   };

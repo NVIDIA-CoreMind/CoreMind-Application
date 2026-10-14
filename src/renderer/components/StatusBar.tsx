@@ -1,5 +1,5 @@
 import React from 'react';
-import { GitBranch, XCircle, AlertTriangle, Settings, Radio, Smartphone } from 'lucide-react';
+import { GitBranch, XCircle, AlertTriangle, Settings, Radio, Smartphone, Loader2 } from 'lucide-react';
 import { useTabsStore } from '../stores/tabsStore';
 import { useEditorStore } from '../stores/editorStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
@@ -117,21 +117,49 @@ export const StatusBar: React.FC = () => {
 
         {/* Virtual Mobile Device Status Indicator */}
         <div
-          onClick={() => setDevicePickerOpen(true)}
-          title={`Target Device: ${activeDeviceLabel} (Click to open Target & Emulator selector)`}
+          onClick={() => {
+            if (emulatorState.status === 'starting') {
+              setActiveSidebarTab('virtual-mobile');
+            } else {
+              setDevicePickerOpen(true);
+            }
+          }}
+          title={
+            emulatorState.status === 'starting'
+              ? `Opening ${emulatorState.avdName || 'emulator'} (Click to view screen)`
+              : `Target Device: ${activeDeviceLabel} (Click to open Target & Emulator selector)`
+          }
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: '5px',
             cursor: 'pointer',
-            padding: '1px 6px',
+            padding: '1px 7px',
             borderRadius: '4px',
-            backgroundColor: 'rgba(255, 255, 255, 0.04)',
+            backgroundColor: emulatorState.status === 'starting' ? 'var(--accent-bg)' : 'rgba(255, 255, 255, 0.04)',
+            border: `1px solid ${emulatorState.status === 'starting' ? 'var(--accent)' : 'transparent'}`,
+            transition: 'all 0.2s ease',
           }}
         >
-          <Smartphone size={11} color="var(--accent)" />
-          <span style={{ color: 'var(--text-secondary)', fontSize: '10.5px' }}>
-            {activeDeviceLabel}
+          {emulatorState.status === 'starting' ? (
+            <Loader2
+              size={11}
+              color="var(--accent)"
+              style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }}
+            />
+          ) : (
+            <Smartphone size={11} color="var(--accent)" />
+          )}
+          <span
+            style={{
+              color: emulatorState.status === 'starting' ? 'var(--accent)' : 'var(--text-secondary)',
+              fontSize: '10.5px',
+              fontWeight: emulatorState.status === 'starting' ? 600 : 400,
+            }}
+          >
+            {emulatorState.status === 'starting'
+              ? `Opening ${emulatorState.avdName ? emulatorState.avdName.replace(/_/g, ' ') : 'Emulator'}...`
+              : activeDeviceLabel}
           </span>
         </div>
       </div>

@@ -33,6 +33,14 @@ describe('Editor Language Detection', () => {
     expect(detectLanguage('style.css')).toBe('css');
   });
 
+  it('detects image files (png, jpg, jpeg, etc.)', () => {
+    expect(detectLanguage('screenshot.png')).toBe('image');
+    expect(detectLanguage('photo.jpg')).toBe('image');
+    expect(detectLanguage('banner.jpeg')).toBe('image');
+    expect(detectLanguage('graphic.webp')).toBe('image');
+    expect(detectLanguage('icon.ico')).toBe('image');
+  });
+
   it('falls back to plaintext for unknown files', () => {
     expect(detectLanguage('unknown.xyz')).toBe('plaintext');
     expect(detectLanguage('Dockerfile')).toBe('plaintext');

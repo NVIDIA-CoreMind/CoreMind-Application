@@ -1,9 +1,12 @@
 import { ipcMain, dialog, app, BrowserWindow, shell } from 'electron';
 import os from 'node:os';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import { execFile } from 'node:child_process';
 import {
   IPC_CHANNELS,
   IpcResult,
+  ImageReadResult,
   SystemInfo,
   TerminalSpawnOptions,
   AgentMessage,
@@ -158,6 +161,83 @@ export function registerIpcHandlers(): void {
     ): Promise<IpcResult<string>> => {
       const rootPath = getWorkspaceForSender(event.sender.id);
       return rootPath ? fileSystemService.readFile(filePath, rootPath) : noWorkspaceError();
+    }
+  );
+
+  // 3b. Read Image File
+  ipcMain.handle(
+    IPC_CHANNELS.FILE_READ_IMAGE,
+    async (
+      event,
+      { filePath }: { filePath: string; rootPath: string }
+    ): Promise<IpcResult<ImageReadResult>> => {
+      const rootPath = getWorkspaceForSender(event.sender.id);
+      return rootPath ? fileSystemService.readImage(filePath, rootPath) : noWorkspaceError();
+    }
+  );
+
+  // 3c. Open Image File Dialog
+  ipcMain.handle(
+    IPC_CHANNELS.FILE_OPEN_IMAGE_DIALOG,
+    async (): Promise<IpcResult<ImageReadResult | null>> => {
+      try {
+        if (isMac()) {
+          app.focus({ steal: true });
+        }
+
+        const result = await dialog.showOpenDialog({
+          title: 'Select Image (PNG, JPG, JPEG)',
+          buttonLabel: 'Select Image',
+          filters: [
+            { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif'] },
+            { name: 'All Files', extensions: ['*'] },
+          ],
+          properties: ['openFile'],
+        });
+
+        if (result.canceled || result.filePaths.length === 0) {
+          return { success: true, data: null };
+        }
+
+        const chosenPath = result.filePaths[0];
+        const ext = path.extname(chosenPath).toLowerCase();
+        const stat = await fs.stat(chosenPath);
+        if (stat.size > 20 * 1024 * 1024) {
+          return {
+            success: false,
+            error: {
+              code: 'FILE_TOO_LARGE',
+              message: 'Selected image exceeds 20MB limit.',
+            },
+          };
+        }
+
+        const buffer = await fs.readFile(chosenPath);
+        const mimeType = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.png' ? 'image/png' : 'image/webp';
+        const base64 = buffer.toString('base64');
+        const dataUrl = `data:${mimeType};base64,${base64}`;
+
+        return {
+          success: true,
+          data: {
+            dataUrl,
+            base64,
+            mimeType,
+            size: stat.size,
+            name: path.basename(chosenPath),
+            filePath: chosenPath,
+          },
+        };
+      } catch (err: unknown) {
+        const error = err as Error;
+        return {
+          success: false,
+          error: {
+            code: 'DIALOG_ERROR',
+            message: error.message || 'Failed to open image picker.',
+          },
+        };
+      }
     }
   );
 

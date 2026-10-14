@@ -15,9 +15,22 @@ interface TabsStore {
   insertSnippetToActiveTab: (snippet: string) => void;
 }
 
+export function isImageFileName(fileName: string): boolean {
+  const ext = fileName.split('.').pop()?.toLowerCase();
+  return ext === 'png' || ext === 'jpg' || ext === 'jpeg' || ext === 'webp' || ext === 'gif' || ext === 'ico' || ext === 'bmp';
+}
+
 export function detectLanguage(fileName: string): string {
   const ext = fileName.split('.').pop()?.toLowerCase();
   switch (ext) {
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'webp':
+    case 'gif':
+    case 'ico':
+    case 'bmp':
+      return 'image';
     case 'ts':
     case 'tsx':
       return 'typescript';
@@ -80,11 +93,20 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
 
     // Read file content
     let content = '';
-    const result = await window.coreMindAPI.readFile(filePath, rootPath);
-    if (result.success) {
-      content = result.data;
-    } else {
-      console.warn('Failed to read file for tab, creating empty:', result.error);
+    const isImage = isImageFileName(fileName);
+    if (isImage && window.coreMindAPI?.readImage) {
+      const imgRes = await window.coreMindAPI.readImage(filePath, rootPath);
+      if (imgRes.success) {
+        content = imgRes.data.dataUrl;
+      }
+    }
+    if (!content && window.coreMindAPI?.readFile) {
+      const result = await window.coreMindAPI.readFile(filePath, rootPath);
+      if (result.success) {
+        content = result.data;
+      } else {
+        console.warn('Failed to read file for tab, creating empty:', result.error);
+      }
     }
     const newTab: TabItem = {
       id: filePath,
@@ -145,6 +167,10 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
 
   updateTabContent: (tabId: string, content: string) => {
     const { tabs } = get();
+    const target = tabs.find((t) => t.id === tabId);
+    if (target && (target.language === 'image' || isImageFileName(target.fileName))) {
+      return;
+    }
     const updated = tabs.map((tab) => {
       if (tab.id === tabId) {
         return {
@@ -168,6 +194,9 @@ export const useTabsStore = create<TabsStore>((set, get) => ({
     const { tabs } = get();
     const tab = tabs.find((t) => t.id === tabId);
     if (!tab) return false;
+    if (tab.language === 'image' || isImageFileName(tab.fileName)) {
+      return true;
+    }
 
     const result = await window.coreMindAPI.writeFile(tab.filePath, tab.content, rootPath);
     if (result.success) {

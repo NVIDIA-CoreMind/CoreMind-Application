@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useUiStore } from '../stores/uiStore';
 import { useVirtualMobileStore } from '../stores/virtualMobileStore';
+import { useThemeStore, resolveEffectiveTheme } from '../stores/themeStore';
 
 type TargetCategory = 'root' | 'mobile' | 'web';
 
@@ -15,6 +16,8 @@ interface QuickPickItem {
 
 export const DevicePickerPalette: React.FC = () => {
   const { isDevicePickerOpen, setDevicePickerOpen } = useUiStore();
+  const theme = useThemeStore((s) => s.theme);
+  const isDark = resolveEffectiveTheme(theme) === 'dark';
   const {
     avds,
     devices,
@@ -97,11 +100,11 @@ export const DevicePickerPalette: React.FC = () => {
               : avd.apiLevel
               ? `Android ${avd.apiLevel} • ${avd.abi || 'arm64'}`
               : 'Android Emulator',
-            action: async () => {
-              if (!running) {
-                await startEmulator(avd.name);
-              }
+            action: () => {
               setDevicePickerOpen(false);
+              if (!running) {
+                void startEmulator(avd.name);
+              }
             },
           });
         }
@@ -115,9 +118,9 @@ export const DevicePickerPalette: React.FC = () => {
         results.push({
           id: 'open-device-manager',
           label: 'Open Android Studio Device Manager...',
-          action: async () => {
-            await openAndroidStudio();
+          action: () => {
             setDevicePickerOpen(false);
+            void openAndroidStudio();
           },
         });
       }
@@ -131,16 +134,16 @@ export const DevicePickerPalette: React.FC = () => {
           id: 'cat-web',
           label: 'Web App (Chrome)',
           action: () => {
-            if (typeof window !== 'undefined') window.open('http://localhost:3000', '_blank');
             setDevicePickerOpen(false);
+            if (typeof window !== 'undefined') window.open('http://localhost:3000', '_blank');
           },
         },
         {
           id: 'cat-web-edge',
           label: 'Web App (Edge)',
           action: () => {
-            if (typeof window !== 'undefined') window.open('http://localhost:3000', '_blank');
             setDevicePickerOpen(false);
+            if (typeof window !== 'undefined') window.open('http://localhost:3000', '_blank');
           },
         },
         {
@@ -158,6 +161,31 @@ export const DevicePickerPalette: React.FC = () => {
           label: '',
           isSeparator: true,
         },
+      ];
+
+      // List downloaded Android emulators directly in root for 1-click launch
+      if (avds.length > 0) {
+        for (const avd of avds) {
+          const running = getRunningDevice(avd.name);
+          items.push({
+            id: `root-avd-${avd.name}`,
+            label: avd.name.replace(/_/g, ' '),
+            description: running
+              ? `Running (${running.serial})`
+              : avd.apiLevel
+              ? `Android ${avd.apiLevel} • ${avd.abi || 'arm64'}`
+              : 'Android Emulator',
+            action: () => {
+              setDevicePickerOpen(false);
+              if (!running) {
+                void startEmulator(avd.name);
+              }
+            },
+          });
+        }
+      }
+
+      items.push(
         {
           id: 'cat-mobile',
           label: 'Mobile (Android Studio Emulators)',
@@ -166,9 +194,18 @@ export const DevicePickerPalette: React.FC = () => {
               ? `${avds.length} downloaded (${avds.map((a) => a.name).join(', ')})`
               : 'View downloaded emulators & Device Manager',
           action: () => {
-            setCategory('mobile');
-            setQuery('');
-            setSelectedIndex(0);
+            if (avds.length === 1) {
+              const singleAvd = avds[0];
+              const running = getRunningDevice(singleAvd.name);
+              setDevicePickerOpen(false);
+              if (!running) {
+                void startEmulator(singleAvd.name);
+              }
+            } else {
+              setCategory('mobile');
+              setQuery('');
+              setSelectedIndex(0);
+            }
           },
         },
         {
@@ -179,12 +216,12 @@ export const DevicePickerPalette: React.FC = () => {
         {
           id: 'action-device-mgr',
           label: 'Open Android Studio Device Manager...',
-          action: async () => {
-            await openAndroidStudio();
+          action: () => {
             setDevicePickerOpen(false);
+            void openAndroidStudio();
           },
-        },
-      ];
+        }
+      );
 
       return items;
     }
@@ -230,11 +267,11 @@ export const DevicePickerPalette: React.FC = () => {
               : avd.apiLevel
               ? `Android ${avd.apiLevel} • ${avd.abi || 'arm64'}`
               : 'Android Emulator',
-            action: async () => {
-              if (!running) {
-                await startEmulator(avd.name);
-              }
+            action: () => {
               setDevicePickerOpen(false);
+              if (!running) {
+                void startEmulator(avd.name);
+              }
             },
           });
         }
@@ -249,9 +286,9 @@ export const DevicePickerPalette: React.FC = () => {
         {
           id: 'mobile-open-studio',
           label: 'Open Android Studio Device Manager...',
-          action: async () => {
-            await openAndroidStudio();
+          action: () => {
             setDevicePickerOpen(false);
+            void openAndroidStudio();
           },
         },
         {
@@ -373,7 +410,9 @@ export const DevicePickerPalette: React.FC = () => {
           backgroundColor: 'var(--bg-surface)',
           border: '1px solid var(--border-color)',
           borderRadius: '6px',
-          boxShadow: '0 8px 28px rgba(0, 0, 0, 0.55), 0 0 1px rgba(0, 0, 0, 0.8)',
+          boxShadow: isDark
+            ? '0 8px 28px rgba(0, 0, 0, 0.55), 0 0 1px rgba(0, 0, 0, 0.8)'
+            : '0 8px 28px rgba(0, 0, 0, 0.15), 0 0 1px rgba(0, 0, 0, 0.1)',
           display: 'flex',
           flexDirection: 'column',
           padding: '6px',
@@ -382,7 +421,7 @@ export const DevicePickerPalette: React.FC = () => {
           userSelect: 'none',
         }}
       >
-        {/* VS Code QuickPick Input Box with Blue Focus Outline */}
+        {/* VS Code QuickPick Input Box */}
         <div style={{ padding: '2px 2px 4px 2px' }}>
           <input
             ref={inputRef}
@@ -403,10 +442,10 @@ export const DevicePickerPalette: React.FC = () => {
             style={{
               width: '100%',
               boxSizing: 'border-box',
-              backgroundColor: '#313131',
-              border: '1px solid #007acc',
+              backgroundColor: isDark ? '#313131' : 'var(--bg-panel)',
+              border: `1px solid ${isDark ? '#007acc' : 'var(--accent)'}`,
               borderRadius: '2px',
-              color: '#ffffff',
+              color: 'var(--text-primary)',
               fontSize: '13px',
               height: '30px',
               padding: '4px 8px',
@@ -431,7 +470,7 @@ export const DevicePickerPalette: React.FC = () => {
               style={{
                 padding: '8px 10px',
                 fontSize: '13px',
-                color: '#858585',
+                color: 'var(--text-muted)',
               }}
             >
               No matching targets or emulators found
@@ -444,7 +483,7 @@ export const DevicePickerPalette: React.FC = () => {
                     key={item.id}
                     style={{
                       height: '1px',
-                      backgroundColor: '#333333',
+                      backgroundColor: isDark ? '#333333' : 'var(--border-color)',
                       margin: '4px 6px',
                     }}
                   />
@@ -469,8 +508,12 @@ export const DevicePickerPalette: React.FC = () => {
                     fontSize: '13px',
                     borderRadius: '3px',
                     cursor: 'pointer',
-                    backgroundColor: isSelected ? '#04395e' : 'transparent',
-                    color: isSelected ? '#ffffff' : '#cccccc',
+                    backgroundColor: isSelected
+                      ? isDark
+                        ? '#04395e'
+                        : 'var(--accent)'
+                      : 'transparent',
+                    color: isSelected ? '#ffffff' : 'var(--text-primary)',
                     transition: 'none',
                   }}
                 >
@@ -488,7 +531,9 @@ export const DevicePickerPalette: React.FC = () => {
                     <span
                       style={{
                         fontSize: '12px',
-                        color: isSelected ? 'rgba(255, 255, 255, 0.8)' : '#858585',
+                        color: isSelected
+                          ? 'rgba(255, 255, 255, 0.85)'
+                          : 'var(--text-muted)',
                         marginLeft: '12px',
                         flexShrink: 0,
                       }}

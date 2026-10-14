@@ -4,6 +4,7 @@ import { useUiStore } from '../stores/uiStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTabsStore } from '../stores/tabsStore';
 import { isMacClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
+import { editorModelManager } from '../editor/EditorModelManager';
 
 interface CommandItem {
   id: string;
@@ -47,7 +48,10 @@ export const CommandPalette: React.FC = () => {
       shortcut: getShortcutDisplay('closeTab', isMac),
       icon: <X size={14} />,
       action: () => {
-        if (activeTabId) closeTab(activeTabId);
+        if (activeTabId) {
+          closeTab(activeTabId);
+          editorModelManager.disposeModel(activeTabId);
+        }
       },
     },
     {

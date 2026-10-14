@@ -54,8 +54,17 @@ export interface AgentContext {
   terminalOutput?: string | null;
 }
 
+export interface ImageReadResult {
+  dataUrl: string;
+  base64: string;
+  mimeType: string;
+  size: number;
+  name: string;
+  filePath: string;
+}
+
 export interface AgentToolAction {
-  tool: 'readFile' | 'writeFile' | 'createFile' | 'createFolder' | 'rename' | 'delete' | 'terminal';
+  tool: 'readFile' | 'readImage' | 'writeFile' | 'createFile' | 'createFolder' | 'rename' | 'delete' | 'terminal';
   params: Record<string, unknown>;
   status?: 'pending' | 'approved' | 'rejected' | 'executed' | 'failed';
 }
@@ -138,6 +147,8 @@ export const IPC_CHANNELS = {
   WORKSPACE_FILES_CHANGED: 'workspace:files-changed',
   FILE_READ_DIRECTORY: 'file:read-directory',
   FILE_READ: 'file:read',
+  FILE_READ_IMAGE: 'file:read-image',
+  FILE_OPEN_IMAGE_DIALOG: 'file:open-image-dialog',
   FILE_WRITE: 'file:write',
   FILE_CREATE_FILE: 'file:create-file',
   FILE_CREATE_DIRECTORY: 'file:create-directory',

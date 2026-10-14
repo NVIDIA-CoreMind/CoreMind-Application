@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { X, Circle, Play, Loader2 } from 'lucide-react';
-import { useTabsStore } from '../stores/tabsStore';
+import { X, Circle, Play, Loader2, Image as ImageIcon } from 'lucide-react';
+import { useTabsStore, isImageFileName } from '../stores/tabsStore';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTerminalStore } from '../stores/terminalStore';
 import { editorModelManager } from './EditorModelManager';
@@ -23,8 +23,9 @@ export const EditorTabs: React.FC = () => {
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const ext = activeTab?.fileName.split('.').pop()?.toLowerCase();
+  const isImage = isImageFileName(activeTab?.fileName || '') || activeTab?.language === 'image';
   const isPython = activeTab?.language === 'python' || ext === 'py';
-  const isRunnable = isPython || ext === 'js' || ext === 'ts' || ext === 'sh' || ext === 'bash';
+  const isRunnable = !isImage && (isPython || ext === 'js' || ext === 'ts' || ext === 'sh' || ext === 'bash');
 
   const handleRun = async () => {
     if (!activeTab || isRunning) return;
@@ -61,8 +62,8 @@ export const EditorTabs: React.FC = () => {
       );
       if (!confirm) return;
     }
-    editorModelManager.disposeModel(tabId);
     closeTab(tabId);
+    editorModelManager.disposeModel(tabId);
   };
 
   const handleMouseDown = (e: React.MouseEvent, tabId: string, isDirty: boolean, fileName: string) => {
@@ -124,6 +125,9 @@ export const EditorTabs: React.FC = () => {
                 transition: 'background-color 0.15s ease',
               }}
             >
+              {isImageFileName(tab.fileName) || tab.language === 'image' ? (
+                <ImageIcon size={13} style={{ color: '#38bdf8', flexShrink: 0 }} />
+              ) : null}
               <span>{tab.fileName}</span>
 
               {/* Dirty Indicator / Close Button */}

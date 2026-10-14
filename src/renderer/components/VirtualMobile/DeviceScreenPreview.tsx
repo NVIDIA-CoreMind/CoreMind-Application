@@ -415,17 +415,17 @@ export const DeviceScreenPreview: React.FC = () => {
                     width: '46px',
                     height: '46px',
                     borderRadius: '50%',
-                    border: '3px solid rgba(255, 255, 255, 0.1)',
+                    border: '3px solid var(--border-color)',
                     borderTopColor: 'var(--accent)',
                     animation: 'spin 1s linear infinite',
                   }}
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 600, color: '#f3f4f6' }}>
-                    Booting Android...
+                  <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>
+                    Opening Android Emulator...
                   </span>
-                  <span style={{ fontSize: '11px', color: '#9ca3af' }}>
-                    {selectedAvd ?? 'Virtual Device'}
+                  <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {selectedAvd ? selectedAvd.replace(/_/g, ' ') : 'Virtual Device'}
                   </span>
                 </div>
               </div>

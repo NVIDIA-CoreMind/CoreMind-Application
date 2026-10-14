@@ -48,7 +48,7 @@ export const VSCodeFrame: React.FC = () => {
     <div
       ref={containerRef}
       className="vscode-container"
-      style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: '#1e1e1e' }}
+      style={{ width: '100%', height: '100%', overflow: 'hidden', backgroundColor: 'var(--bg-editor, var(--bg-app))' }}
     />
   );
 };

@@ -15,6 +15,7 @@ import { StatusBar } from '../components/StatusBar';
 import { CommandPalette } from '../components/CommandPalette';
 import { QuickOpen } from '../components/QuickOpen';
 import { GlobalPrompt } from '../components/GlobalPrompt';
+import { EmulatorLaunchingToast } from '../components/VirtualMobile/EmulatorLaunchingToast';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTabsStore } from '../stores/tabsStore';
 import { useUiStore } from '../stores/uiStore';
@@ -168,11 +169,12 @@ export const IDELayout: React.FC = () => {
       {/* 4. Bottom Status Bar */}
       <StatusBar />
 
-      {/* Global Quick Modals */}
+      {/* Global Quick Modals & Notifications */}
       <CommandPalette />
       <QuickOpen />
       <GlobalPrompt />
       <DevicePickerPalette />
+      <EmulatorLaunchingToast />
     </div>
   );
 };

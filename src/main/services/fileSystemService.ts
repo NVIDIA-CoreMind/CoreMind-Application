@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 
 import { FileNode, FileSearchResult } from '../../shared/types/file';
-import { IpcResult } from '../../shared/types/ipc';
+import { IpcResult, ImageReadResult } from '../../shared/types/ipc';
 import { logger } from './logger';
 
 import { platformFileSystem } from '../platform/filesystem/platformFileSystem';
@@ -133,8 +133,34 @@ export class FileSystemService {
     }
   }
 
+  public isImageExtension(filePath: string): boolean {
+    const ext = path.extname(filePath).toLowerCase();
+    return ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.ico', '.bmp'].includes(ext);
+  }
+
+  public getImageMimeType(filePath: string): string {
+    const ext = path.extname(filePath).toLowerCase();
+    switch (ext) {
+      case '.jpg':
+      case '.jpeg':
+        return 'image/jpeg';
+      case '.png':
+        return 'image/png';
+      case '.webp':
+        return 'image/webp';
+      case '.gif':
+        return 'image/gif';
+      case '.ico':
+        return 'image/x-icon';
+      case '.bmp':
+        return 'image/bmp';
+      default:
+        return 'application/octet-stream';
+    }
+  }
+
   /**
-   * Read file content.
+   * Read file content. For image files (PNG, JPG, JPEG, etc.), returns a base64 data URL.
    */
   public async readFile(filePath: string, rootPath: string): Promise<IpcResult<string>> {
     try {
@@ -149,15 +175,24 @@ export class FileSystemService {
       }
 
       const stat = await fs.stat(filePath);
-      // Safeguard against opening giant binary files (over 10MB) directly in editor
-      if (stat.size > 10 * 1024 * 1024) {
+      // Safeguard against opening giant files (over 20MB for images, 10MB for text) directly in editor
+      const isImg = this.isImageExtension(filePath);
+      const maxSize = isImg ? 20 * 1024 * 1024 : 10 * 1024 * 1024;
+      if (stat.size > maxSize) {
         return {
           success: false,
           error: {
             code: 'FILE_TOO_LARGE',
-            message: 'File size exceeds maximum editor limit (10MB).',
+            message: `File size exceeds maximum editor limit (${isImg ? '20MB' : '10MB'}).`,
           },
         };
+      }
+
+      if (isImg) {
+        const buffer = await fs.readFile(filePath);
+        const mimeType = this.getImageMimeType(filePath);
+        const dataUrl = `data:${mimeType};base64,${buffer.toString('base64')}`;
+        return { success: true, data: dataUrl };
       }
 
       const content = await fs.readFile(filePath, 'utf-8');
@@ -170,6 +205,71 @@ export class FileSystemService {
         error: {
           code: 'FILE_READ_FAILED',
           message: error.message || 'Failed to read file.',
+        },
+      };
+    }
+  }
+
+  /**
+   * Read image file content (PNG, JPG, JPEG, etc.) returning structured image metadata and base64/dataUrl.
+   */
+  public async readImage(filePath: string, rootPath: string): Promise<IpcResult<ImageReadResult>> {
+    try {
+      if (!this.validateWorkspacePath(filePath, rootPath)) {
+        return {
+          success: false,
+          error: {
+            code: 'ACCESS_DENIED',
+            message: 'Cannot read image file outside of workspace.',
+          },
+        };
+      }
+
+      if (!this.isImageExtension(filePath)) {
+        return {
+          success: false,
+          error: {
+            code: 'INVALID_IMAGE_FORMAT',
+            message: `Unsupported image format ${path.extname(filePath)}. Supported formats: PNG, JPG, JPEG, WEBP, GIF, ICO, BMP.`,
+          },
+        };
+      }
+
+      const stat = await fs.stat(filePath);
+      if (stat.size > 20 * 1024 * 1024) {
+        return {
+          success: false,
+          error: {
+            code: 'FILE_TOO_LARGE',
+            message: 'Image file size exceeds maximum limit (20MB).',
+          },
+        };
+      }
+
+      const buffer = await fs.readFile(filePath);
+      const mimeType = this.getImageMimeType(filePath);
+      const base64 = buffer.toString('base64');
+      const dataUrl = `data:${mimeType};base64,${base64}`;
+
+      return {
+        success: true,
+        data: {
+          dataUrl,
+          base64,
+          mimeType,
+          size: stat.size,
+          name: path.basename(filePath),
+          filePath,
+        },
+      };
+    } catch (err: unknown) {
+      const error = err as Error;
+      logger.error('Error reading image file', { filePath, message: error.message });
+      return {
+        success: false,
+        error: {
+          code: 'IMAGE_READ_FAILED',
+          message: error.message || 'Failed to read image file.',
         },
       };
     }

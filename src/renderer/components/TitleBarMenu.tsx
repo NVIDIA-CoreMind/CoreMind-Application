@@ -3,6 +3,7 @@ import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTabsStore } from '../stores/tabsStore';
 import { useUiStore } from '../stores/uiStore';
 import { isMacClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
+import { editorModelManager } from '../editor/EditorModelManager';
 
 export interface MenuItem {
   label?: string;
@@ -77,7 +78,10 @@ export const TitleBarMenu: React.FC = () => {
         label: 'Close Tab',
         shortcut: getShortcutDisplay('closeTab', isMac),
         action: () => {
-          if (activeTabId) closeTab(activeTabId);
+          if (activeTabId) {
+            closeTab(activeTabId);
+            editorModelManager.disposeModel(activeTabId);
+          }
         },
         disabled: !activeTabId,
       },

@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import {
   IPC_CHANNELS,
   IpcResult,
+  ImageReadResult,
   SystemInfo,
   TerminalSpawnOptions,
   ShellInfo,
@@ -42,6 +43,8 @@ export interface CoreMindFilesAPI {
   stat: (filePath: string, rootPath: string) => Promise<IpcResult<FileStat>>;
   readDirectory: (dirPath: string, rootPath: string) => Promise<IpcResult<FileNode[]>>;
   readFile: (filePath: string, rootPath: string) => Promise<IpcResult<string>>;
+  readImage: (filePath: string, rootPath: string) => Promise<IpcResult<ImageReadResult>>;
+  openImageDialog: () => Promise<IpcResult<ImageReadResult | null>>;
   writeFile: (filePath: string, content: string, rootPath: string) => Promise<IpcResult<void>>;
   createFile: (filePath: string, rootPath: string) => Promise<IpcResult<void>>;
   createDirectory: (dirPath: string, rootPath: string) => Promise<IpcResult<void>>;
@@ -189,6 +192,10 @@ const filesAPI: CoreMindFilesAPI = {
     ipcRenderer.invoke(IPC_CHANNELS.FILE_READ_DIRECTORY, { dirPath, rootPath }),
   readFile: (filePath, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.FILE_READ, { filePath, rootPath }),
+  readImage: (filePath, rootPath) =>
+    ipcRenderer.invoke(IPC_CHANNELS.FILE_READ_IMAGE, { filePath, rootPath }),
+  openImageDialog: () =>
+    ipcRenderer.invoke(IPC_CHANNELS.FILE_OPEN_IMAGE_DIALOG),
   writeFile: (filePath, content, rootPath) =>
     ipcRenderer.invoke(IPC_CHANNELS.FILE_WRITE, { filePath, content, rootPath }),
   createFile: (filePath, rootPath) =>

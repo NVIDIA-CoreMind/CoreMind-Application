@@ -9,6 +9,7 @@ import {
   EyeOff,
   Zap,
   RotateCw,
+  Loader2,
 } from 'lucide-react';
 import { useVirtualMobileStore } from '../../stores/virtualMobileStore';
 
@@ -163,7 +164,7 @@ export const DeviceToolbar: React.FC = () => {
           <button
             onClick={() => void startEmulator()}
             disabled={isLoading || isEmulatorStarting || (!selectedAvd && avds.length === 0)}
-            title={isEmulatorStarting ? 'Emulator starting...' : 'Start Android Emulator'}
+            title={isEmulatorStarting ? 'Emulator opening...' : 'Start Android Emulator'}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -171,16 +172,20 @@ export const DeviceToolbar: React.FC = () => {
               padding: '4px 8px',
               borderRadius: '4px',
               backgroundColor: isEmulatorStarting ? 'var(--bg-hover)' : 'var(--accent)',
-              color: isEmulatorStarting ? 'var(--text-muted)' : '#ffffff',
-              border: 'none',
+              color: isEmulatorStarting ? 'var(--accent)' : '#ffffff',
+              border: isEmulatorStarting ? '1px solid var(--accent)' : 'none',
               fontSize: '11px',
               cursor: isEmulatorStarting ? 'wait' : 'pointer',
               fontWeight: 500,
               opacity: !selectedAvd && avds.length === 0 ? 0.5 : 1,
             }}
           >
-            <Play size={11} fill={isEmulatorStarting ? 'none' : '#ffffff'} />
-            <span>{isEmulatorStarting ? 'Starting...' : 'Start'}</span>
+            {isEmulatorStarting ? (
+              <Loader2 size={11} color="var(--accent)" style={{ animation: 'spin 1s linear infinite' }} />
+            ) : (
+              <Play size={11} fill="#ffffff" />
+            )}
+            <span>{isEmulatorStarting ? 'Opening...' : 'Start'}</span>
           </button>
         )}
 

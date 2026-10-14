@@ -9,6 +9,8 @@ import { useUiStore } from './stores/uiStore';
 import { useBackendStore } from './stores/backendStore';
 import { useAuthStore } from './stores/authStore';
 import { isMacClient } from '../shared/utils/shortcuts';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { editorModelManager } from './editor/EditorModelManager';
 
 export const App: React.FC = () => {
   const [isOnboardingCompleted, setIsOnboardingCompleted] = useState<boolean>(() =>
@@ -149,6 +151,7 @@ export const App: React.FC = () => {
         const curActiveTabId = useTabsStore.getState().activeTabId;
         if (curActiveTabId) {
           useTabsStore.getState().closeTab(curActiveTabId);
+          editorModelManager.disposeModel(curActiveTabId);
         }
         return;
       }
@@ -186,7 +189,11 @@ export const App: React.FC = () => {
     );
   }
 
-  return <IDELayout />;
+  return (
+    <ErrorBoundary>
+      <IDELayout />
+    </ErrorBoundary>
+  );
 };
 
 export default App;
