@@ -308,25 +308,6 @@ export const AIWorkspace: React.FC = () => {
         {activeView === 'activity' && <ActivityTimeline />}
         {activeView === 'changes' && <DiffViewer />}
 
-        {(currentState === 'stopped' || currentState === 'cancelled') && activeView === 'chat' && (
-          <div
-            style={{
-              margin: '8px 12px',
-              padding: '8px 12px',
-              border: `1px solid ${tokens.border}`,
-              borderRadius: '6px',
-              fontSize: '12px',
-              color: tokens.textSecondary,
-              backgroundColor: tokens.bgPanel,
-              flexShrink: 0,
-            }}
-          >
-            <strong style={{ color: tokens.textPrimary, display: 'block', marginBottom: '2px' }}>
-              Execution Stopped
-            </strong>
-            The active operation was cancelled.
-          </div>
-        )}
       </div>
 
       {/* Docked Approval Card - pinned at bottom, right above the chat composer like Antigravity */}

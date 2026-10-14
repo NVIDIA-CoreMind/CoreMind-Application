@@ -12,14 +12,15 @@ export const UserRequest: React.FC<{ event: UserRequestEvent }> = ({ event }) =>
     <div style={{
       backgroundColor: tokens.bgCard,
       border: `1px solid ${tokens.border}`,
-      borderRadius: '8px',
+      borderRadius: '14px',
       padding: '12px 16px',
-      margin: '12px 14px 16px 14px',
+      margin: '4px 0 16px 0',
       color: tokens.textPrimary,
-      fontSize: '13px',
+      fontSize: '13.5px',
       lineHeight: '1.5',
       wordBreak: 'break-word',
-      whiteSpace: 'pre-wrap'
+      whiteSpace: 'pre-wrap',
+      boxShadow: isDark ? '0 1px 3px rgba(0, 0, 0, 0.25)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
     }}>
       {event.content}
     </div>

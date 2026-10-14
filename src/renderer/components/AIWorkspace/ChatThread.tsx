@@ -4,9 +4,10 @@ import ReactMarkdown from 'react-markdown';
 import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import {
   Copy,
-  RotateCcw,
   Sparkles,
   Bot,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import { extractToolCalls } from '../../services/aiToolExecution';
 import { RunningIndicator } from './RunningIndicator';
@@ -16,21 +17,6 @@ import { AntigravityActivityStream } from './CoreMindActivityStream';
 import { TerminalEvent } from '../../types/aiWorkspace';
 import { getAITheme } from './themeTokens';
 import { AICodeBlock } from './AICodeBlock';
-
-const codeActionBtnStyle: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--text-secondary)',
-  cursor: 'pointer',
-  padding: '3px 6px',
-  display: 'inline-flex',
-  alignItems: 'center',
-  gap: '4px',
-  borderRadius: '4px',
-  fontSize: '11px',
-  fontWeight: 500,
-  transition: 'background-color 0.15s, color 0.15s',
-};
 
 const getBadgeForPathOrSymbol = (text: string): { label: string; color: string; bg: string } | null => {
   const clean = text.trim();
@@ -342,23 +328,22 @@ export const ChatThread: React.FC = () => {
               style={{
                 display: 'flex',
                 width: '100%',
-                justifyContent: 'flex-start',
-                margin: '4px 0 6px 0',
+                margin: '4px 0 16px 0',
               }}
             >
-              {/* User capsule pill matching Antigravity */}
+              {/* User prompt card matching Antigravity */}
               <div
                 style={{
                   backgroundColor: isDark ? '#262626' : '#f0f2f5',
                   border: `1px solid ${isDark ? '#383838' : '#e2e8f0'}`,
-                  borderRadius: '20px',
-                  padding: '7px 16px',
+                  borderRadius: '14px',
+                  padding: '12px 16px',
                   color: isDark ? '#f4f4f5' : '#111827',
                   fontSize: '13.5px',
-                  lineHeight: 1.4,
-                  maxWidth: '92%',
+                  lineHeight: 1.5,
+                  width: '100%',
                   wordBreak: 'break-word',
-                  boxShadow: isDark ? '0 1px 3px rgba(0, 0, 0, 0.2)' : '0 1px 2px rgba(0, 0, 0, 0.05)',
+                  boxShadow: isDark ? '0 1px 3px rgba(0, 0, 0, 0.25)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
                 }}
               >
                 {renderMarkdownContent(msg.content, isDark)}
@@ -367,7 +352,107 @@ export const ChatThread: React.FC = () => {
           );
         }
 
-        // Assistant Message
+        // Check if this turn was cancelled
+        const isCancelled =
+          msg.content?.toLowerCase().includes('user cancelled') ||
+          msg.content?.toLowerCase().includes('execution stopped') ||
+          msg.content?.toLowerCase().includes('task was cancelled') ||
+          msg.content?.toLowerCase().includes('chat request was cancelled');
+
+        if (isCancelled) {
+          return (
+            <div
+              key={msg.id}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                width: '100%',
+                margin: '0 0 16px 0',
+              }}
+            >
+              <div
+                style={{
+                  color: isDark ? '#a1a1aa' : '#57606a',
+                  fontSize: '13.5px',
+                  lineHeight: 1.5,
+                  padding: '2px 0 6px 0',
+                }}
+              >
+                User cancelled agent execution.
+              </div>
+
+              {/* Action icons right-aligned */}
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                  marginTop: '4px',
+                  color: isDark ? '#71717a' : '#9ca3af',
+                }}
+              >
+                <button
+                  onClick={() => navigator.clipboard.writeText('User cancelled agent execution.')}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '4px',
+                    transition: 'color 0.15s ease',
+                  }}
+                  title="Copy"
+                  onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#ffffff' : '#111827')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
+                >
+                  <Copy size={15} />
+                </button>
+                <button
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '4px',
+                    transition: 'color 0.15s ease',
+                  }}
+                  title="Good response"
+                  onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#ffffff' : '#111827')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
+                >
+                  <ThumbsUp size={15} />
+                </button>
+                <button
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '4px',
+                    transition: 'color 0.15s ease',
+                  }}
+                  title="Bad response"
+                  onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#ffffff' : '#111827')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
+                >
+                  <ThumbsDown size={15} />
+                </button>
+              </div>
+            </div>
+          );
+        }
+
+        // Regular Assistant Message
         const prevUserMsg = chatHistory.slice(0, index).reverse().find((m) => m.role === 'user');
         let durationText = 'Worked for 1s';
         if (prevUserMsg && msg.timestamp > prevUserMsg.timestamp) {
@@ -391,7 +476,7 @@ export const ChatThread: React.FC = () => {
               display: 'flex',
               flexDirection: 'column',
               width: '100%',
-              margin: '2px 0 10px 0',
+              margin: '2px 0 16px 0',
             }}
           >
             {/* Worked for <duration> > header */}
@@ -467,44 +552,73 @@ export const ChatThread: React.FC = () => {
               </div>
             ) : null}
 
-            {/* Footer Action buttons */}
+            {/* Footer Action buttons: Right-aligned Copy, ThumbsUp, ThumbsDown */}
             {!isGenerating && msg.content && (
               <div
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  marginTop: '12px',
-                  paddingTop: '8px',
-                  borderTop: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.06)'}`,
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                  marginTop: '10px',
+                  paddingTop: '6px',
+                  color: isDark ? '#71717a' : '#9ca3af',
                 }}
               >
                 <button
                   onClick={() => navigator.clipboard.writeText(msg.content)}
                   style={{
-                    ...codeActionBtnStyle,
-                    color: isDark ? '#9ca3af' : '#64748b',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '4px',
+                    transition: 'color 0.15s ease',
                   }}
                   title="Copy response"
+                  onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#ffffff' : '#111827')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
                 >
-                  <Copy size={12} />
-                  <span>Copy</span>
+                  <Copy size={15} />
                 </button>
                 <button
-                  onClick={() => {
-                    const prevUser = chatHistory.slice(0, index).reverse().find((m) => m.role === 'user');
-                    if (prevUser) {
-                      setDraftPrompt(prevUser.content);
-                    }
-                  }}
                   style={{
-                    ...codeActionBtnStyle,
-                    color: isDark ? '#9ca3af' : '#64748b',
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '4px',
+                    transition: 'color 0.15s ease',
                   }}
-                  title="Regenerate prompt"
+                  title="Good response"
+                  onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#ffffff' : '#111827')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
                 >
-                  <RotateCcw size={12} />
-                  <span>Regenerate</span>
+                  <ThumbsUp size={15} />
+                </button>
+                <button
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'inherit',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    borderRadius: '4px',
+                    transition: 'color 0.15s ease',
+                  }}
+                  title="Bad response"
+                  onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#ffffff' : '#111827')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = 'inherit')}
+                >
+                  <ThumbsDown size={15} />
                 </button>
               </div>
             )}

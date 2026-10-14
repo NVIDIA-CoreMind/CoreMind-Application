@@ -688,7 +688,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
         set({
           currentState: 'stopped',
           executionState: 'cancelled',
-          agentPhaseDetail: 'Task was cancelled.',
+          agentPhaseDetail: 'User cancelled agent execution.',
           abortController: null,
         });
         get().finalizeActiveAssistantTurn({ status: 'cancelled' });
@@ -1416,7 +1416,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
           set({
             currentState: 'stopped',
             executionState: 'cancelled',
-            agentPhaseDetail: 'Task was cancelled.',
+            agentPhaseDetail: 'User cancelled agent execution.',
             abortController: null,
           });
           get().finalizeActiveAssistantTurn({
@@ -1461,7 +1461,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
               } else if (params.status === 'failed') {
                 content = `### Agent Task Failed\n\n${params.error || 'Execution encountered an error.'}`;
               } else if (params.status === 'cancelled') {
-                content = '### Execution Stopped\n\nThe active operation was cancelled by the user.';
+                content = 'User cancelled agent execution.';
               }
             }
             return {
