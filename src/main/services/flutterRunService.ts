@@ -254,6 +254,25 @@ export class FlutterRunService {
     });
 
     try {
+      // Auto-generate missing Android platform files if running on an Android target
+      if (
+        deviceId !== 'chrome' &&
+        deviceId !== 'macos' &&
+        deviceId !== 'windows' &&
+        !fs.existsSync(path.join(workspacePath, 'android'))
+      ) {
+        logger.info('Android platform missing. Auto-generating Android files via flutter create...', { workspacePath });
+        this.emitEvent({
+          type: 'flutter-output',
+          data: 'Android platform missing. Auto-generating Android files via flutter create...\n',
+          stream: 'stdout',
+        });
+        await execFileAsync(this.flutterPath, ['create', '--platforms=android', '.'], {
+          cwd: workspacePath,
+          timeout: 45_000,
+        });
+      }
+
       const args = ['run', '-d', deviceId];
       if (mode === 'release') args.push('--release');
       if (mode === 'profile') args.push('--profile');
@@ -261,6 +280,7 @@ export class FlutterRunService {
       args.push('--machine');
 
       logger.info('Starting Flutter run', { deviceId, mode, workspacePath });
+
 
       const child = spawn(this.flutterPath, args, {
         cwd: workspacePath,

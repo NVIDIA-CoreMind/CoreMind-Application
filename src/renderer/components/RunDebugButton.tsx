@@ -92,13 +92,22 @@ export const RunDebugButton: React.FC<RunDebugButtonProps> = ({ compact = false 
     }
   };
 
-  // Helper to ensure Flutter binary in ~/flutter/bin is in PATH across all terminal sessions
+  // Helper to ensure Flutter binary in ~/flutter/bin is in PATH and Android platform files exist
   const getFlutterCommand = (subcommand: string) => {
+    const isRunOnAndroid = subcommand.startsWith('run') && !subcommand.includes('-d chrome') && !subcommand.includes('-d macos');
     if (isWindows) {
+      if (isRunOnAndroid) {
+        return `if (-not (Test-Path android)) { flutter create --platforms=android . }; flutter ${subcommand}`;
+      }
       return `flutter ${subcommand}`;
     }
-    return `export PATH="$HOME/flutter/bin:$HOME/development/flutter/bin:$PATH" && flutter ${subcommand}`;
+    const pathExport = 'export PATH="$HOME/flutter/bin:$HOME/development/flutter/bin:$PATH"';
+    if (isRunOnAndroid) {
+      return `${pathExport} && if [ ! -d android ]; then flutter create --platforms=android .; fi && flutter ${subcommand}`;
+    }
+    return `${pathExport} && flutter ${subcommand}`;
   };
+
 
   // Primary action executed when clicking the Play+Bug button
   const handleRunPrimary = async () => {
