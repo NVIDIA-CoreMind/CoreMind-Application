@@ -1,58 +1,19 @@
-import React, { useState } from 'react';
-import { X, Circle, Play, Loader2, Image as ImageIcon } from 'lucide-react';
+import React from 'react';
+import { X, Circle, Image as ImageIcon } from 'lucide-react';
 import { useTabsStore, isImageFileName } from '../stores/tabsStore';
-import { useWorkspaceStore } from '../stores/workspaceStore';
-import { useTerminalStore } from '../stores/terminalStore';
 import { editorModelManager } from './EditorModelManager';
-import { isMacClient, isWindowsClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
+import { isMacClient, getShortcutDisplay } from '../../shared/utils/shortcuts';
+import { RunDebugButton } from '../components/RunDebugButton';
 
 export const EditorTabs: React.FC = () => {
   const tabs = useTabsStore((s) => s.tabs);
   const activeTabId = useTabsStore((s) => s.activeTabId);
   const setActiveTab = useTabsStore((s) => s.setActiveTab);
   const closeTab = useTabsStore((s) => s.closeTab);
-  const saveActiveTab = useTabsStore((s) => s.saveActiveTab);
-  const rootPath = useWorkspaceStore((s) => s.rootPath);
-  const runCommand = useTerminalStore((s) => s.runCommand);
-  const [isRunning, setIsRunning] = useState(false);
 
   const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
-  const isWindows = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isWindows : isWindowsClient();
 
   if (tabs.length === 0) return null;
-
-  const activeTab = tabs.find((t) => t.id === activeTabId);
-  const ext = activeTab?.fileName.split('.').pop()?.toLowerCase();
-  const isImage = isImageFileName(activeTab?.fileName || '') || activeTab?.language === 'image';
-  const isPython = activeTab?.language === 'python' || ext === 'py';
-  const isRunnable = !isImage && (isPython || ext === 'js' || ext === 'ts' || ext === 'sh' || ext === 'bash');
-
-  const handleRun = async () => {
-    if (!activeTab || isRunning) return;
-    setIsRunning(true);
-    try {
-      if (activeTab.isDirty && rootPath) {
-        await saveActiveTab(rootPath);
-      }
-
-      let cmd = '';
-      if (isPython) {
-        cmd = isWindows ? `python "${activeTab.filePath}"` : `python3 "${activeTab.filePath}"`;
-      } else if (ext === 'js' || ext === 'mjs' || ext === 'cjs') {
-        cmd = `node "${activeTab.filePath}"`;
-      } else if (ext === 'ts') {
-        cmd = `npx tsx "${activeTab.filePath}"`;
-      } else if (ext === 'sh' || ext === 'bash') {
-        cmd = `bash "${activeTab.filePath}"`;
-      }
-
-      if (cmd) {
-        await runCommand(cmd);
-      }
-    } finally {
-      setTimeout(() => setIsRunning(false), 500);
-    }
-  };
 
   const handleClose = (e: React.MouseEvent, tabId: string, isDirty: boolean, fileName: string) => {
     e.stopPropagation();
@@ -65,6 +26,7 @@ export const EditorTabs: React.FC = () => {
     closeTab(tabId);
     editorModelManager.disposeModel(tabId);
   };
+
 
   const handleMouseDown = (e: React.MouseEvent, tabId: string, isDirty: boolean, fileName: string) => {
     // Middle click (button 1) to close tab
@@ -169,48 +131,22 @@ export const EditorTabs: React.FC = () => {
         })}
       </div>
 
-      {/* Editor Action Toolbar (Run Button) */}
-      {isRunnable && activeTab && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '0 10px',
-            height: '100%',
-            flexShrink: 0,
-            borderLeft: '1px solid var(--border-color)',
-            backgroundColor: 'var(--bg-app)',
-          }}
-        >
-          <button
-            onClick={handleRun}
-            disabled={isRunning}
-            title={isPython ? 'Run Python File in Terminal' : `Run ${activeTab.fileName} in Terminal`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '5px',
-              padding: '3px 8px',
-              borderRadius: '4px',
-              fontSize: '11.5px',
-              fontWeight: 500,
-              backgroundColor: 'var(--accent-bg, rgba(138, 180, 248, 0.12))',
-              color: 'var(--accent, #8AB4F8)',
-              border: '1px solid rgba(138, 180, 248, 0.35)',
-              cursor: isRunning ? 'default' : 'pointer',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            {isRunning ? (
-              <Loader2 size={13} className="animate-spin" color="var(--accent, #8AB4F8)" />
-            ) : (
-              <Play size={12} fill="var(--accent, #8AB4F8)" color="var(--accent, #8AB4F8)" />
-            )}
-            <span>{isPython ? 'Run Python' : 'Run File'}</span>
-          </button>
-        </div>
-      )}
+      {/* Editor Action Toolbar (Run and Debug Button) */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '0 8px',
+          height: '100%',
+          flexShrink: 0,
+          borderLeft: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-app)',
+        }}
+      >
+        <RunDebugButton />
+      </div>
     </div>
   );
 };
+

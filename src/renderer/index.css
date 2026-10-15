@@ -9,8 +9,10 @@
   --bg-hover: #323438;
   --bg-selected: #37393D;
   --bg-active: #37393D;
+  --bg-menu: #252628;
   --border-color: #3A3C40;
   --border-subtle: #303236;
+
 
   --text-primary: #E6E6E6;
   --text-secondary: #A6A8AB;
@@ -58,8 +60,10 @@
   --bg-card: #ffffff;
   --bg-hover: #e8e8e8;
   --bg-active: #e0e0e0;
+  --bg-menu: #ffffff;
   --border-color: #d8d8d8;
   --border-subtle: #e4e4e4;
+
 
   /* Light Theme Antigravity Blue */
   --accent: #2563EB;

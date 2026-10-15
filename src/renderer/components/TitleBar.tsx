@@ -18,8 +18,10 @@ import { useUiStore } from '../stores/uiStore';
 import coreMindLogo from '../assets/icon.png';
 import { TitleBarMenu } from './TitleBarMenu';
 import { UserProfileButton } from './UserProfileButton';
+import { RunDebugButton } from './RunDebugButton';
 
 export const TitleBar: React.FC = () => {
+
   const isMac = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isMac : isMacClient();
   const isWindows = window.coreMindAPI?.platform ? window.coreMindAPI.platform.isWindows : isWindowsClient();
 
@@ -180,12 +182,16 @@ export const TitleBar: React.FC = () => {
           }}
         />
 
-        {/* 7. Chrome / Web Preview */}
+        {/* 7. Run and Debug Control (Antigravity & VS Code style) */}
+        <RunDebugButton compact />
+
+        {/* 8. Chrome / Web Preview */}
         <button
           onClick={handleOpenChrome}
           title="Open Web Preview in Chrome"
           aria-label="Open Web Preview in Chrome"
           style={btnStyle(false)}
+
           onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
             e.currentTarget.style.color = '#FFFFFF';
