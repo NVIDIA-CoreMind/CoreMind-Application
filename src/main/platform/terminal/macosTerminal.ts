@@ -1,4 +1,6 @@
 import fs from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 import { IPlatformTerminal, ShellInfo } from './types';
 
 export class MacOSTerminal implements IPlatformTerminal {
@@ -55,8 +57,35 @@ export class MacOSTerminal implements IPlatformTerminal {
   }
 
   public getTerminalEnv(): Record<string, string> {
+    const home = os.homedir();
+    const candidateDirs = [
+      path.join(home, 'flutter', 'bin'),
+      path.join(home, 'development', 'flutter', 'bin'),
+      path.join(home, '.flutter', 'bin'),
+      path.join(home, 'fvm', 'default', 'bin'),
+      '/opt/homebrew/bin',
+      '/opt/homebrew/sbin',
+      '/usr/local/bin',
+      path.join(home, '.pub-cache', 'bin'),
+      path.join(home, 'Library', 'Android', 'sdk', 'platform-tools'),
+      path.join(home, 'Library', 'Android', 'sdk', 'emulator'),
+      path.join(home, '.local', 'bin'),
+      path.join(home, '.cargo', 'bin'),
+      '/Library/Frameworks/Python.framework/Versions/Current/bin',
+    ];
+
+    const currentPath = process.env.PATH || '/usr/bin:/bin:/usr/sbin:/sbin';
+    const pathSegments = currentPath.split(':');
+
+    for (const dir of candidateDirs) {
+      if (fs.existsSync(dir) && !pathSegments.includes(dir)) {
+        pathSegments.unshift(dir);
+      }
+    }
+
     return {
       ...process.env,
+      PATH: pathSegments.join(':'),
       TERM: 'xterm-256color',
       COLORTERM: 'truecolor',
       LANG: process.env.LANG || 'en_US.UTF-8',

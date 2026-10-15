@@ -92,6 +92,14 @@ export const RunDebugButton: React.FC<RunDebugButtonProps> = ({ compact = false 
     }
   };
 
+  // Helper to ensure Flutter binary in ~/flutter/bin is in PATH across all terminal sessions
+  const getFlutterCommand = (subcommand: string) => {
+    if (isWindows) {
+      return `flutter ${subcommand}`;
+    }
+    return `export PATH="$HOME/flutter/bin:$HOME/development/flutter/bin:$PATH" && flutter ${subcommand}`;
+  };
+
   // Primary action executed when clicking the Play+Bug button
   const handleRunPrimary = async () => {
     if (isExecuting) return;
@@ -104,8 +112,9 @@ export const RunDebugButton: React.FC<RunDebugButtonProps> = ({ compact = false 
       if (isFlutter) {
         // Run Flutter in Integrated Terminal
         const target = selectedSerial ? `-d "${selectedSerial}"` : '';
-        await runCommand(`flutter run ${target}`.trim());
+        await runCommand(getFlutterCommand(`run ${target}`.trim()));
       } else if (isPython && filePath) {
+
         // Run Python with virtual environment auto-detection
         if (isWindows) {
           const cmd = `if (Test-Path .venv\\Scripts\\python.exe) { .venv\\Scripts\\python.exe "${filePath}" } else { python "${filePath}" }`;
@@ -173,14 +182,14 @@ export const RunDebugButton: React.FC<RunDebugButtonProps> = ({ compact = false 
   const handleFlutterChrome = async () => {
     setIsOpen(false);
     await ensureSaved();
-    await runCommand('flutter run -d chrome');
+    await runCommand(getFlutterCommand('run -d chrome'));
   };
 
   // Run Flutter on Connected Device / Emulator
   const handleFlutterDevice = async (serial: string) => {
     setIsOpen(false);
     await ensureSaved();
-    await runCommand(`flutter run -d "${serial}"`);
+    await runCommand(getFlutterCommand(`run -d "${serial}"`));
   };
 
   // Flutter Hot Reload
@@ -216,21 +225,22 @@ export const RunDebugButton: React.FC<RunDebugButtonProps> = ({ compact = false 
   // Flutter Pub Get
   const handleFlutterPubGet = async () => {
     setIsOpen(false);
-    await runCommand('flutter pub get');
+    await runCommand(getFlutterCommand('pub get'));
     await flutterPubGet();
   };
 
   // Flutter Clean & Rebuild
   const handleFlutterClean = async () => {
     setIsOpen(false);
-    await runCommand('flutter clean && flutter pub get');
+    await runCommand(getFlutterCommand('clean && flutter pub get'));
   };
 
   // Flutter Test
   const handleFlutterTest = async () => {
     setIsOpen(false);
-    await runCommand('flutter test');
+    await runCommand(getFlutterCommand('test'));
   };
+
 
   // Compute primary button tooltip
   const getPrimaryTooltip = () => {
@@ -483,7 +493,7 @@ export const RunDebugButton: React.FC<RunDebugButtonProps> = ({ compact = false 
                   const ui = useUiStore.getState();
                   if (!ui.isTerminalOpen) ui.toggleTerminal();
                   useTerminalStore.getState().addTab('flutter');
-                  await runCommand('flutter run');
+                  await runCommand(getFlutterCommand('run'));
                 }}
               />
               <MenuItem label="Run Flutter on Chrome" onClick={handleFlutterChrome} />
