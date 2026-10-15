@@ -34,7 +34,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ isOpen, onClos
   });
 
   const [model, setModel] = useState(() => {
-    return selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3.5 Lightning';
+    return selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3 Ultra';
   });
 
   const [baseUrl, setBaseUrl] = useState(() => {
@@ -50,7 +50,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ isOpen, onClos
     if (isOpen) {
       const storedKey = localStorage.getItem('coremind:ai-api-key') || '';
       const storedProv = (localStorage.getItem('coremind:ai-provider') as any) || 'nebius';
-      const storedModel = selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3.5 Lightning';
+      const storedModel = selectedModel || localStorage.getItem('coremind:ai-model') || 'NVIDIA Nemotron 3 Ultra';
       const storedUrl = localStorage.getItem('coremind:ai-base-url') || (storedProv === 'nebius' ? 'https://api.tokenfactory.nebius.com/v1' : '');
 
       setApiKey(storedKey);
@@ -66,7 +66,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ isOpen, onClos
   const handleProviderChange = (newProvider: 'gemini' | 'openai' | 'anthropic' | 'nebius' | 'custom') => {
     setProvider(newProvider);
     setTestResult(null);
-    setModel('NVIDIA Nemotron 3.5 Lightning');
+    setModel('NVIDIA Nemotron 3 Ultra');
     if (newProvider === 'nebius') {
       setBaseUrl('https://api.tokenfactory.nebius.com/v1');
     } else if (newProvider === 'custom') {

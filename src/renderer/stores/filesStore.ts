@@ -67,7 +67,27 @@ export const useFilesStore = create<FilesStore>((set, get) => ({
       }
       const result = await window.coreMindAPI.readDirectory(rootPath, rootPath);
       if (result.success) {
-        set({ fileTree: result.data, error: null });
+        let tree = result.data;
+        const { expandedPaths } = get();
+
+        // Preserve all expanded directories and their children so open folders and files never collapse
+        if (expandedPaths.size > 0) {
+          const sortedPaths = Array.from(expandedPaths).sort(
+            (a, b) => a.split('/').length - b.split('/').length
+          );
+          for (const folderPath of sortedPaths) {
+            try {
+              const subResult = await window.coreMindAPI.readDirectory(folderPath, rootPath);
+              if (subResult.success) {
+                tree = updateNodeChildren(tree, folderPath, subResult.data);
+              }
+            } catch {
+              // Ignore folders that may no longer exist
+            }
+          }
+        }
+
+        set({ fileTree: tree, error: null });
       } else {
         set({ error: result.error.message });
       }

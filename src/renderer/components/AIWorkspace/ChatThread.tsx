@@ -6,6 +6,7 @@ import ReactMarkdown from 'react-markdown';
 import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import {
   Copy,
+  Check,
   Sparkles,
   Bot,
   ThumbsUp,
@@ -13,7 +14,6 @@ import {
 } from 'lucide-react';
 import { extractToolCalls } from '../../services/aiToolExecution';
 import { RunningIndicator } from './RunningIndicator';
-import { ImplementationPlan } from './ImplementationPlan';
 import { QuestionCard } from './QuestionCard';
 import { AntigravityActivityStream } from './CoreMindActivityStream';
 import { TerminalEvent } from '../../types/aiWorkspace';
@@ -209,12 +209,165 @@ function renderMarkdownContent(rawText: string, isDark: boolean = true, isUser: 
   return <ReactMarkdown components={markdownComponents}>{text}</ReactMarkdown>;
 }
 
+
+interface UserPromptCardProps {
+  content: string;
+  isDark: boolean;
+  tokens: any;
+}
+
+const UserPromptCard: React.FC<UserPromptCardProps> = ({ content, isDark, tokens }) => {
+  const [copied, setCopied] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const [isLongPrompt, setIsLongPrompt] = React.useState(false);
+  const cardRef = React.useRef<HTMLDivElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
+
+  // Detect whether the prompt is long enough to compress initially (Antigravity style)
+  React.useEffect(() => {
+    if (contentRef.current) {
+      const scrollH = contentRef.current.scrollHeight;
+      if (scrollH > 72 || content.length > 140 || content.split('\n').length > 3) {
+        setIsLongPrompt(true);
+      }
+    }
+  }, [content]);
+
+  // Antigravity style: clicking anywhere outside closes/collapses the expanded prompt
+  React.useEffect(() => {
+    if (!isExpanded) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExpanded]);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
+  const handleCardClick = () => {
+    if (isLongPrompt && !isExpanded) {
+      setIsExpanded(true);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        position: 'sticky',
+        top: '-16px',
+        zIndex: 25,
+        paddingTop: '6px',
+        paddingBottom: '8px',
+        backgroundColor: tokens.bgMain,
+        width: '100%',
+      }}
+    >
+      <div
+        ref={cardRef}
+        onClick={handleCardClick}
+        style={{
+          backgroundColor: isDark ? '#262626' : '#f0f2f5',
+          border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.08)'}`,
+          borderRadius: '16px',
+          padding: '10px 18px',
+          paddingRight: '44px',
+          color: isDark ? '#f4f4f5' : '#111827',
+          fontSize: '13.5px',
+          lineHeight: 1.5,
+          width: '100%',
+          wordBreak: 'break-word',
+          boxShadow: isDark
+            ? '0 4px 16px rgba(0, 0, 0, 0.35)'
+            : '0 2px 10px rgba(0, 0, 0, 0.06)',
+          position: 'relative',
+          cursor: isLongPrompt && !isExpanded ? 'pointer' : 'default',
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+        title={isLongPrompt && !isExpanded ? 'Click to expand prompt' : undefined}
+      >
+        {/* Copy Prompt Button */}
+        <button
+          onClick={handleCopy}
+          style={{
+            position: 'absolute',
+            top: '8px',
+            right: '10px',
+            background: 'transparent',
+            border: 'none',
+            color: isDark ? '#8c8c8c' : '#9ca3af',
+            cursor: 'pointer',
+            padding: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '4px',
+            transition: 'all 0.15s ease',
+            zIndex: 3,
+          }}
+          title={copied ? 'Copied prompt!' : 'Copy prompt'}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = isDark ? '#ffffff' : '#111827';
+            e.currentTarget.style.backgroundColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = isDark ? '#8c8c8c' : '#9ca3af';
+            e.currentTarget.style.backgroundColor = 'transparent';
+          }}
+        >
+          {copied ? <Check size={14} color="#22c55e" /> : <Copy size={14} />}
+        </button>
+
+        {/* Prompt Content with Antigravity-style max-height and bottom fade when collapsed */}
+        <div
+          ref={contentRef}
+          style={{
+            maxHeight: isLongPrompt && !isExpanded ? '68px' : 'none',
+            overflow: 'hidden',
+            position: 'relative',
+            transition: 'max-height 0.25s ease',
+          }}
+        >
+          {renderMarkdownContent(content, isDark, true)}
+
+          {/* Smooth Bottom Fade when compressed in Antigravity style */}
+          {isLongPrompt && !isExpanded && (
+            <div
+              style={{
+                position: 'absolute',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: '32px',
+                background: isDark
+                  ? 'linear-gradient(to bottom, transparent, #262626)'
+                  : 'linear-gradient(to bottom, transparent, #f0f2f5)',
+                pointerEvents: 'none',
+              }}
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const ChatThread: React.FC = () => {
   const {
     chatHistory,
     currentState,
     events,
-    taskGraph,
     trackedChanges,
     pendingQuestion,
     activeTurnStartTime,
@@ -363,32 +516,12 @@ export const ChatThread: React.FC = () => {
 
         if (isUser) {
           return (
-            <div
+            <UserPromptCard
               key={msg.id}
-              style={{
-                display: 'flex',
-                width: '100%',
-                margin: '4px 0 16px 0',
-              }}
-            >
-              {/* User prompt pill card matching screenshot */}
-              <div
-                style={{
-                  backgroundColor: isDark ? '#262626' : '#f0f2f5',
-                  border: `1px solid ${isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'}`,
-                  borderRadius: '20px',
-                  padding: '10px 18px',
-                  color: isDark ? '#f4f4f5' : '#111827',
-                  fontSize: '13.5px',
-                  lineHeight: 1.5,
-                  width: '100%',
-                  wordBreak: 'break-word',
-                  boxShadow: isDark ? '0 1px 2px rgba(0, 0, 0, 0.2)' : '0 1px 2px rgba(0, 0, 0, 0.04)',
-                }}
-              >
-                {renderMarkdownContent(msg.content, isDark, true)}
-              </div>
-            </div>
+              content={msg.content}
+              isDark={isDark}
+              tokens={tokens}
+            />
           );
         }
 
@@ -519,57 +652,78 @@ export const ChatThread: React.FC = () => {
               margin: '2px 0 16px 0',
             }}
           >
-            {/* Worked for <duration> > header */}
-            <div
-              onClick={() => toggleActivity(msg.id)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                userSelect: 'none',
-                color: isDark ? '#8c8c8c' : '#64748b',
-                fontSize: '12.5px',
-                fontWeight: 500,
-                marginBottom: '10px',
-                transition: 'color 0.15s ease',
-                width: 'fit-content',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e5e5e5' : '#111827')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#64748b')}
-            >
-              <span>{durationText}</span>
-              <span
-                style={{
-                  fontSize: '11px',
-                  display: 'inline-block',
-                  transform: isActivityOpen ? 'rotate(90deg)' : 'none',
-                  transition: 'transform 0.15s ease',
-                }}
-              >
-                &gt;
-              </span>
-            </div>
-
-            {/* Collapsible Activity Stream */}
-            {isActivityOpen && (
-              <div
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: isDark ? '#202020' : '#ffffff',
-                  borderRadius: '6px',
-                  border: `1px solid ${isDark ? '#303030' : '#e2e8f0'}`,
-                  marginBottom: '14px',
-                }}
-              >
-                <AntigravityActivityStream
-                  events={isGenerating ? runningTurnEvents : msg.activityEvents}
-                  filesChanged={isGenerating ? realtimeFiles : msg.filesChanged}
-                  terminalEvents={isGenerating ? runningTurnTerminalEvents : msg.terminalEvents}
-                  thoughtText={isGenerating ? agentPhaseDetail : msg.thoughtSummary}
-                  isRunning={isGenerating}
-                />
+            {/* While generating: show RunningIndicator (one at a time, no duplicate "Working..."). Once finished: show "Worked for Xs >" */}
+            {isGenerating ? (
+              <div style={{ marginBottom: '10px' }}>
+                <RunningIndicator />
+                {(runningTurnEvents.length > 0 || runningTurnTerminalEvents.length > 0 || realtimeFiles.length > 0) && (
+                  <div
+                    style={{
+                      padding: '4px 0',
+                      marginTop: '4px',
+                      marginBottom: '10px',
+                    }}
+                  >
+                    <AntigravityActivityStream
+                      events={runningTurnEvents}
+                      filesChanged={realtimeFiles}
+                      terminalEvents={runningTurnTerminalEvents}
+                      thoughtText={agentPhaseDetail}
+                      isRunning={true}
+                    />
+                  </div>
+                )}
               </div>
+            ) : (
+              <>
+                <div
+                  onClick={() => toggleActivity(msg.id)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    color: isDark ? '#8c8c8c' : '#64748b',
+                    fontSize: '12.5px',
+                    fontWeight: 500,
+                    marginBottom: '10px',
+                    transition: 'color 0.15s ease',
+                    width: 'fit-content',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e5e5e5' : '#111827')}
+                  onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#64748b')}
+                >
+                  <span>{durationText}</span>
+                  <span
+                    style={{
+                      fontSize: '11px',
+                      display: 'inline-block',
+                      transform: isActivityOpen ? 'rotate(90deg)' : 'none',
+                      transition: 'transform 0.15s ease',
+                    }}
+                  >
+                    &gt;
+                  </span>
+                </div>
+
+                {isActivityOpen && (
+                  <div
+                    style={{
+                      padding: '4px 0',
+                      marginBottom: '12px',
+                    }}
+                  >
+                    <AntigravityActivityStream
+                      events={msg.activityEvents}
+                      filesChanged={msg.filesChanged}
+                      terminalEvents={msg.terminalEvents}
+                      thoughtText={msg.thoughtSummary}
+                      isRunning={false}
+                    />
+                  </div>
+                )}
+              </>
             )}
 
             {/* Markdown Content directly on the canvas */}
@@ -666,8 +820,8 @@ export const ChatThread: React.FC = () => {
         );
       })}
 
-      {/* Real-time Inline Cards During Agent Execution */}
-      {currentState === 'running' && (
+      {/* Fallback Real-time Indicator if no assistant message exists yet */}
+      {currentState === 'running' && (!chatHistory.length || chatHistory[chatHistory.length - 1].role !== 'assistant') && (
         <div
           style={{
             display: 'flex',
@@ -676,31 +830,6 @@ export const ChatThread: React.FC = () => {
             width: '100%',
           }}
         >
-          {/* Active Implementation Plan Card (if available) */}
-          {taskGraph && (taskGraph.tasks?.length || taskGraph.nodes?.length) ? (
-            <div
-              style={{
-                borderRadius: '6px',
-                border: isDark ? '1px solid #27272A' : '1px solid #E4E4E7',
-                overflow: 'hidden',
-              }}
-            >
-              <ImplementationPlan compact={true} />
-            </div>
-          ) : null}
-
-          {/* Only render live activity stream at bottom if the last message is NOT already rendering it */}
-          {(!chatHistory.length || chatHistory[chatHistory.length - 1].role !== 'assistant') && (
-            <AntigravityActivityStream
-              events={runningTurnEvents}
-              filesChanged={realtimeFiles}
-              terminalEvents={runningTurnTerminalEvents}
-              thoughtText={agentPhaseDetail}
-              isRunning={true}
-            />
-          )}
-
-          {/* Running Indicator with Active Phase */}
           <RunningIndicator />
         </div>
       )}

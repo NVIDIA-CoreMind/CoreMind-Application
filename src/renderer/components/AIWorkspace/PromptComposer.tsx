@@ -17,8 +17,8 @@ import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { getAITheme } from './themeTokens';
 
 const BACKEND_MODEL = {
-  id: 'nvidia/Nemotron-3_5-Lightning',
-  name: 'NVIDIA Nemotron 3.5 Lightning',
+  id: 'nvidia/Nemotron-3-Ultra-550b-a55b',
+  name: 'NVIDIA Nemotron 3 Ultra',
   desc: 'CoreMind Backend Model (Nebius Token Factory)',
 };
 
@@ -475,7 +475,7 @@ export const PromptComposer: React.FC<{ onSubmit: (prompt: string) => void }> = 
               <Plus size={15} />
             </button>
 
-            {/* Model Pill: NVIDIA Nemotron 3.5 Lightning with Chevron */}
+            {/* Model Pill: NVIDIA Nemotron 3 Ultra with Chevron */}
             <div
               style={{
                 display: 'inline-flex',

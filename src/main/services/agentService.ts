@@ -28,7 +28,7 @@ export interface AIProvider {
 export const DEFAULT_NEBIUS_API_KEY =
   '***REMOVED-CREDENTIAL***';
 export const DEFAULT_NEBIUS_BASE_URL = 'https://api.tokenfactory.nebius.com/v1';
-export const DEFAULT_NEBIUS_MODEL = 'nvidia/Nemotron-3_5-Lightning';
+export const DEFAULT_NEBIUS_MODEL = 'nvidia/Nemotron-3-Ultra-550b-a55b';
 
 if (!process.env.NEBIUS_API_KEY && process.env.NODE_ENV !== 'test') {
   process.env.NEBIUS_API_KEY = DEFAULT_NEBIUS_API_KEY;
@@ -39,8 +39,11 @@ if (!process.env.NEBIUS_API_KEY && process.env.NODE_ENV !== 'test') {
  */
 function resolveModelIdentifier(model: string, provider: string): string {
   const m = model.toLowerCase();
-  if (m.includes('ultra') || m.includes('550b')) {
+  if (m.includes('ultra') || m.includes('550b') || m.includes('a55b')) {
     return 'nvidia/Nemotron-3-Ultra-550b-a55b';
+  }
+  if (m.includes('lightning') || m.includes('3.5') || m.includes('3_5')) {
+    return 'nvidia/Nemotron-3_5-Lightning';
   }
   if (m.includes('super') || m.includes('120b')) {
     return 'nvidia/nemotron-3-super-120b-a12b';
@@ -49,7 +52,7 @@ function resolveModelIdentifier(model: string, provider: string): string {
     return 'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B';
   }
   if (m.includes('nemotron') || m.includes('nvidia') || provider === 'nebius') {
-    return 'nvidia/Nemotron-3_5-Lightning';
+    return 'nvidia/Nemotron-3-Ultra-550b-a55b';
   }
   if (provider === 'gemini' || m.includes('gemini')) {
     if (m.includes('pro')) return 'gemini-1.5-pro';
@@ -61,7 +64,7 @@ function resolveModelIdentifier(model: string, provider: string): string {
   }
   if (m.includes('gpt-4o-mini')) return 'gpt-4o-mini';
   if (m.includes('gpt-4o') || m.includes('gpt')) return 'gpt-4o';
-  return 'nvidia/Nemotron-3_5-Lightning';
+  return 'nvidia/Nemotron-3-Ultra-550b-a55b';
 }
 
 /**

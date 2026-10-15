@@ -384,7 +384,7 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
     executionState: 'idle',
     agentPhase: 'thinking',
     agentPhaseDetail: undefined,
-    selectedModel: 'NVIDIA Nemotron 3.5 Lightning',
+    selectedModel: 'NVIDIA Nemotron 3 Ultra',
     agentMode: 'agent',
     activeView: 'chat',
     abortController: null,
@@ -1165,10 +1165,24 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
         }
 
         case 'tool.completed': {
+          const tool = event.data?.tool || 'tool';
+          const result = event.data?.result;
+          if (result && /terminal|run_terminal|sandbox_execute|run_tests|run_build/i.test(tool)) {
+            const out = result.stdout || result.output || '';
+            const err = result.stderr || '';
+            const combined = [out, err].filter(Boolean).join('\n');
+            if (combined) {
+              const currentEvents = get().events;
+              const lastCmd = [...currentEvents].reverse().find((e) => e.type === 'TerminalEvent') as TerminalEvent | undefined;
+              if (lastCmd && (!lastCmd.output || !lastCmd.output.trim())) {
+                get().updateEvent(lastCmd.id, { output: combined });
+              }
+            }
+          }
           get().addEvent({
             id: `evt-tool-done-${now}`,
             type: 'ToolCallEvent',
-            tool: event.data?.tool || 'tool',
+            tool,
             args: {},
             result: event.data?.result,
             success: event.data?.success !== false,
@@ -1259,7 +1273,11 @@ export const useAIWorkspaceStore = create<AIWorkspaceStore>((set, get) => {
           const currentEvents = get().events;
           const lastCmd = [...currentEvents].reverse().find((e) => e.type === 'TerminalEvent') as TerminalEvent | undefined;
           if (lastCmd) {
+            const compOut = event.data?.output || event.data?.stdout || '';
+            const existingOut = lastCmd.output || '';
+            const finalOut = existingOut.trim() ? existingOut : compOut;
             get().updateEvent(lastCmd.id, {
+              output: finalOut,
               status: event.data?.exit_code === 0 ? 'completed' : 'failed',
               exitCode: event.data?.exit_code,
               durationMs: event.data?.duration_ms,

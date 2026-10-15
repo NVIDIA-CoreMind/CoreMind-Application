@@ -6,6 +6,7 @@ import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
 import { TerminalActivity } from './TerminalActivity';
+import { LanguageFileIcon } from './LanguageFileIcon';
 import { getAITheme } from './themeTokens';
 
 interface AntigravityActivityStreamProps {
@@ -27,6 +28,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
 }) => {
   const [exploringOpen, setExploringOpen] = useState(true);
   const [thinkingOpen, setThinkingOpen] = useState(false);
+  const [commandsGroupOpen, setCommandsGroupOpen] = useState(true);
 
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
@@ -44,32 +46,6 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
     } catch (err) {
       console.warn('[ActivityStream] Failed to open file:', err);
     }
-  };
-
-  // Helper to render language badge matching reference screenshot (e.g., PY in yellow)
-  const renderFileBadge = (filename: string) => {
-    const ext = filename.split('.').pop()?.toLowerCase() || '';
-    let color = tokens.textSecondary;
-    if (ext === 'py') color = isDark ? '#E5C07B' : '#B45309';
-    else if (ext === 'ts' || ext === 'tsx') color = isDark ? '#8AB4F8' : '#2563EB';
-    else if (ext === 'js' || ext === 'jsx') color = isDark ? '#FACC15' : '#D97706';
-    else if (ext === 'rs') color = isDark ? '#F97316' : '#C2410C';
-    else if (ext === 'go') color = isDark ? '#38BDF8' : '#0284C7';
-
-    return (
-      <span
-        style={{
-          color,
-          fontWeight: 700,
-          fontSize: '11px',
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-          textTransform: 'uppercase',
-          lineHeight: 1,
-        }}
-      >
-        {ext}
-      </span>
-    );
   };
 
   // Group events into explored files, searches, thoughts, and terminals
@@ -115,7 +91,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
     }
   }
 
-  // Deduplicate terminal execution cards: do not display duplicate execution cards for the same command
+  // Deduplicate terminal execution cards
   const rawTerminals: TerminalEvent[] = [...terminalEvents];
   for (const ev of events) {
     if (ev.type === 'TerminalEvent') {
@@ -173,7 +149,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
   const totalSearches = searchQueries.length;
   const hasExploringGroup = totalExploredFiles > 0 || totalSearches > 0;
 
-  // Active thought text to show in the Thinking block
+  // Active thought text to show
   const activeThinkingText =
     thoughtText ||
     (thoughts.length > 0 ? thoughts[thoughts.length - 1].summary : undefined);
@@ -191,7 +167,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         color: isDark ? '#E4E4E7' : '#18181B',
       }}
     >
-      {/* 1. Edited Files List */}
+      {/* 1. Edited Files: e.g. Edited 🐍 planner.py +52 -9 */}
       {editedFilesList.map((ef) => {
         const basename = ef.file.split('/').pop() || ef.file;
         const additions = ef.additions ?? ef.lines ?? 0;
@@ -209,23 +185,38 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
               cursor: 'pointer',
               userSelect: 'none',
               transition: 'opacity 0.15s ease',
+              width: 'fit-content',
             }}
             title={`Open ${ef.file}`}
           >
             <span style={{ color: tokens.textSecondary, fontWeight: 400 }}>
               Edited
             </span>
-            {renderFileBadge(basename)}
+            <LanguageFileIcon filename={basename} size={14} />
             <span style={{ color: tokens.textPrimary, fontWeight: 600 }}>
               {basename}
             </span>
             {additions > 0 && (
-              <span style={{ color: tokens.accentSuccess, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>
+              <span
+                style={{
+                  color: tokens.accentSuccess,
+                  fontWeight: 600,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  fontSize: '12px',
+                }}
+              >
                 +{additions}
               </span>
             )}
             {deletions > 0 && (
-              <span style={{ color: tokens.accentError, fontWeight: 600, fontFamily: 'ui-monospace, monospace' }}>
+              <span
+                style={{
+                  color: tokens.accentError,
+                  fontWeight: 600,
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                  fontSize: '12px',
+                }}
+              >
                 -{deletions}
               </span>
             )}
@@ -233,7 +224,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         );
       })}
 
-      {/* 2. Exploring Group */}
+      {/* 2. Explored files Group: e.g. Explored 1 file ⌵ containing Thought and Analyzed files */}
       {hasExploringGroup && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
           <div
@@ -246,10 +237,11 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
               userSelect: 'none',
               color: tokens.textSecondary,
               padding: '2px 0',
+              width: 'fit-content',
             }}
           >
             <span>
-              Exploring{' '}
+              Explored{' '}
               <strong style={{ color: tokens.textPrimary, fontWeight: 600 }}>
                 {totalExploredFiles} {totalExploredFiles === 1 ? 'file' : 'files'}
                 {totalSearches > 0
@@ -270,10 +262,55 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '5px',
-                paddingLeft: '4px',
+                paddingLeft: '12px',
               }}
             >
-              {/* Analyzed Files */}
+              {/* Thought block inside Explored group (as in Screenshot 2) */}
+              {activeThinkingText && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                  <div
+                    onClick={() => setThinkingOpen((prev) => !prev)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      cursor: 'pointer',
+                      userSelect: 'none',
+                      color: tokens.textSecondary,
+                      fontSize: '12px',
+                      padding: '1px 0',
+                      width: 'fit-content',
+                    }}
+                  >
+                    <span>
+                      {isRunning
+                        ? `Thinking for ${thoughtDurationSeconds}s`
+                        : `Thought for ${thoughtDurationSeconds}s`}
+                    </span>
+                    {thinkingOpen ? (
+                      <ChevronDown size={12} color="currentColor" />
+                    ) : (
+                      <ChevronRight size={12} color="currentColor" />
+                    )}
+                  </div>
+
+                  {thinkingOpen && (
+                    <div
+                      style={{
+                        padding: '4px 0 6px 0',
+                        color: tokens.textSecondary,
+                        lineHeight: 1.5,
+                        fontSize: '12px',
+                        whiteSpace: 'pre-wrap',
+                      }}
+                    >
+                      {activeThinkingText}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Analyzed Files inside Explored files */}
               {analyzedFiles.map((af, idx) => {
                 const basename = af.file.split('/').pop() || af.file;
                 const hasRange = af.startLine !== undefined && af.endLine !== undefined;
@@ -290,11 +327,13 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                       userSelect: 'none',
                       color: tokens.textSecondary,
                       fontSize: '12.5px',
+                      padding: '1px 0',
+                      width: 'fit-content',
                     }}
-                    title={`Open ${af.file}`}
+                    title={`Open ${af.file}${hasRange ? ` at line ${af.startLine}` : ''}`}
                   >
                     <span>Analyzed</span>
-                    {renderFileBadge(basename)}
+                    <LanguageFileIcon filename={basename} size={14} />
                     <span style={{ color: tokens.textPrimary, fontWeight: 600 }}>
                       {basename}
                     </span>
@@ -303,7 +342,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                         style={{
                           color: tokens.textMuted,
                           fontSize: '11.5px',
-                          fontFamily: 'ui-monospace, monospace',
+                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                         }}
                       >
                         #L{af.startLine}-{af.endLine}
@@ -323,6 +362,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
                     gap: '7px',
                     color: tokens.textSecondary,
                     fontSize: '12.5px',
+                    padding: '1px 0',
                   }}
                 >
                   <span>Searched</span>
@@ -348,9 +388,9 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         </div>
       )}
 
-      {/* 3. Thinking Block */}
-      {activeThinkingText && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+      {/* Standalone Thinking Block if no explored files exist */}
+      {!hasExploringGroup && activeThinkingText && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
           <div
             onClick={() => setThinkingOpen((prev) => !prev)}
             style={{
@@ -361,6 +401,7 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
               userSelect: 'none',
               color: tokens.textSecondary,
               padding: '2px 0',
+              width: 'fit-content',
             }}
           >
             <span>
@@ -380,8 +421,8 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
               style={{
                 padding: '4px 0 6px 0',
                 color: tokens.textSecondary,
-                lineHeight: 1.6,
-                fontSize: '12.5px',
+                lineHeight: 1.5,
+                fontSize: '12px',
                 whiteSpace: 'pre-wrap',
               }}
             >
@@ -391,10 +432,53 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
         </div>
       )}
 
-      {/* 4. Terminal Runs (deduplicated) */}
-      {deduplicatedTerminals.map((termEv) => (
-        <TerminalActivity key={termEv.id} event={termEv} />
-      ))}
+      {/* 3. Terminal Runs (Ran X commands group or single command) */}
+      {deduplicatedTerminals.length > 1 ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div
+            onClick={() => setCommandsGroupOpen((prev) => !prev)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              color: tokens.textSecondary,
+              padding: '2px 0',
+              width: 'fit-content',
+            }}
+          >
+            <span>
+              Ran{' '}
+              <strong style={{ color: tokens.textPrimary, fontWeight: 600 }}>
+                {deduplicatedTerminals.length} commands
+              </strong>
+            </span>
+            {commandsGroupOpen ? (
+              <ChevronDown size={13} color="currentColor" />
+            ) : (
+              <ChevronRight size={13} color="currentColor" />
+            )}
+          </div>
+
+          {commandsGroupOpen && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                paddingLeft: '8px',
+              }}
+            >
+              {deduplicatedTerminals.map((termEv) => (
+                <TerminalActivity key={termEv.id} event={termEv} />
+              ))}
+            </div>
+          )}
+        </div>
+      ) : deduplicatedTerminals.length === 1 ? (
+        <TerminalActivity key={deduplicatedTerminals[0].id} event={deduplicatedTerminals[0]} />
+      ) : null}
     </div>
   );
 };

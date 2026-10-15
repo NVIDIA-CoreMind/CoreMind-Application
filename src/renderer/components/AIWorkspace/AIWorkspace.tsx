@@ -2,9 +2,6 @@ import React, { useCallback, useEffect } from 'react';
 import { WorkspaceHeader } from './WorkspaceHeader';
 import { PromptComposer } from './PromptComposer';
 import { ChatThread } from './ChatThread';
-import { ImplementationPlan } from './ImplementationPlan';
-import { ActivityTimeline } from './ActivityTimeline';
-import { DiffViewer } from './DiffViewer';
 import { ChatHistory } from './ChatHistory';
 import { FileChangesCard } from './FileChangesCard';
 import { ApprovalCard } from './ApprovalCard';
@@ -303,11 +300,7 @@ export const AIWorkspace: React.FC = () => {
 
       {/* Main Active Panel View */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden', position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: tokens.bgMain }}>
-        {activeView === 'chat' && <ChatThread />}
-        {activeView === 'plan' && <ImplementationPlan />}
-        {activeView === 'activity' && <ActivityTimeline />}
-        {activeView === 'changes' && <DiffViewer />}
-
+        <ChatThread />
       </div>
 
       {/* Docked Approval Card - pinned at bottom, right above the chat composer like Antigravity */}
