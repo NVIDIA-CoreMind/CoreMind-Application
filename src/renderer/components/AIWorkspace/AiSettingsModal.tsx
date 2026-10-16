@@ -109,7 +109,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ isOpen, onClos
 
       const latency = Date.now() - start;
 
-      if (res?.success && res.data?.message?.content && !res.data.message.content.includes('AI Provider Error:')) {
+      if (res?.success && res.data?.message?.content) {
         setTestResult({
           success: true,
           message: `Connection successful! Response latency: ${latency}ms`,
@@ -281,7 +281,7 @@ export const AiSettingsModal: React.FC<AiSettingsModalProps> = ({ isOpen, onClos
               type="text"
               value={model}
               onChange={(e) => setModel(e.target.value)}
-              placeholder="e.g. NVIDIA Nemotron 3 Ultra, nvidia/llama-3.3-nemotron-super-49b-v1"
+              placeholder="e.g. NVIDIA Nemotron 3 Ultra, nvidia/nemotron-3-super-120b-a12b"
               style={{
                 width: '100%',
                 padding: '9px 12px',

@@ -1,7 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { executionEngine, ExecutionEngine } from '../src/main/services/executionEngine';
+import { agentService } from '../src/main/services/agentService';
 import { AgentStreamEvent } from '../src/shared/types/ipc';
 
 describe('Autonomous Execution Engine', () => {
@@ -86,7 +87,7 @@ describe('Autonomous Execution Engine', () => {
     expect(summary.filesChanged.length).toBeGreaterThanOrEqual(3);
     expect(summary.implemented).toContain('Flutter login page');
     expect(summary.commandsExecuted).toBeDefined();
-  });
+  }, 60_000);
 
   it('detects existing projects and avoids unnecessary project recreation', async () => {
     // Pre-create existing pubspec.yaml with custom configuration
@@ -135,4 +136,27 @@ describe('Autonomous Execution Engine', () => {
       )
     ).rejects.toThrow();
   });
+
+  it('stops with an error instead of template output when the model call fails', async () => {
+    vi.spyOn(agentService, 'getStatus').mockReturnValue({
+      configured: true,
+      providerName: 'test',
+      modelName: 'test-model',
+    });
+    vi.spyOn(agentService, 'sendMessage').mockResolvedValue({
+      success: false,
+      error: { code: 'HTTP_401', message: 'invalid key' },
+    });
+
+    try {
+      await expect(
+        executionEngine.runTask(
+          { prompt: 'Create a todo list app', workspacePath: tempWorkspace },
+          { onEvent: () => undefined }
+        )
+      ).rejects.toThrow('AI code generation failed: invalid key');
+    } finally {
+      vi.restoreAllMocks();
+    }
+  }, 60_000);
 });

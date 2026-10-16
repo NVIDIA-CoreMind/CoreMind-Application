@@ -1,11 +1,24 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
   AgentService,
   StandardAIProvider,
   AIProvider,
+  AIProviderError,
+  resolveModelIdentifier,
 } from '../src/main/services/agentService';
+
+// Every variable the provider reads. Cleared per test so results do not depend on the developer's shell.
+const PROVIDER_ENV_VARS = [
+  'COREMIND_API_KEY',
+  'NEBIUS_API_KEY',
+  'OPENAI_API_KEY',
+  'GEMINI_API_KEY',
+  'ANTHROPIC_API_KEY',
+  'COREMIND_MODEL',
+  'COREMIND_API_ENDPOINT',
+];
 import {
   AgentMessage,
   AgentContext,
@@ -14,8 +27,11 @@ import {
 
 describe('AgentService & AI Provider Architecture', () => {
   let tempWorkspace: string;
+  let savedEnv: Record<string, string | undefined> = {};
 
   beforeEach(async () => {
+    savedEnv = Object.fromEntries(PROVIDER_ENV_VARS.map((name) => [name, process.env[name]]));
+    for (const name of PROVIDER_ENV_VARS) delete process.env[name];
     tempWorkspace = await fs.mkdtemp(path.join(process.cwd(), '.coremind-agent-test-'));
   });
 
@@ -25,6 +41,11 @@ describe('AgentService & AI Provider Architecture', () => {
     } catch {
       // ignore
     }
+    for (const name of PROVIDER_ENV_VARS) {
+      if (savedEnv[name] === undefined) delete process.env[name];
+      else process.env[name] = savedEnv[name];
+    }
+    vi.unstubAllGlobals();
   });
 
   it('unconfigured provider returns diagnostic status and context instead of fake AI responses', async () => {
@@ -156,5 +177,72 @@ describe('AgentService & AI Provider Architecture', () => {
 
     expect(result.success).toBe(false);
     if (!result.success) expect(result.error.code).toBe('ACTION_NOT_APPROVED');
+  });
+
+  const sampleMessages: AgentMessage[] = [{ id: '1', role: 'user', content: 'Ping', timestamp: Date.now() }];
+
+  function stubProviderResponse(response: Response): void {
+    vi.stubGlobal('fetch', vi.fn(async () => response));
+  }
+
+  function configuredService(): AgentService {
+    const provider = new StandardAIProvider();
+    provider.setConfig({ apiKey: 'test-key', baseUrl: 'https://example.test/v1' });
+    return new AgentService(provider);
+  }
+
+  it('refuses to call any provider when the user has not configured a key', async () => {
+    const fetchSpy = vi.fn();
+    vi.stubGlobal('fetch', fetchSpy);
+
+    const result = await new AgentService().sendMessage(sampleMessages);
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.code).toBe('NOT_CONFIGURED');
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns a successful result when the provider replies with text', async () => {
+    stubProviderResponse(
+      new Response(JSON.stringify({ choices: [{ message: { content: 'PONG' } }] }), { status: 200 })
+    );
+
+    const result = await configuredService().sendMessage(sampleMessages);
+
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.message.content).toBe('PONG');
+  });
+
+  it('reports a provider HTTP failure as a failed result instead of reply text', async () => {
+    stubProviderResponse(new Response('invalid api key', { status: 401 }));
+
+    const result = await configuredService().sendMessage(sampleMessages);
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe('HTTP_401');
+      expect(result.error.message).toContain('401');
+    }
+  });
+
+  it('treats an empty model reply as a failure', async () => {
+    stubProviderResponse(new Response(JSON.stringify({ choices: [{ message: { content: '' } }] }), { status: 200 }));
+
+    const result = await configuredService().sendMessage(sampleMessages);
+
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.code).toBe('EMPTY_RESPONSE');
+  });
+
+  it('resolves Nebius model names to exact identifiers and rejects unknown ones', () => {
+    expect(resolveModelIdentifier('NVIDIA Nemotron 3 Ultra', 'nebius')).toBe('nvidia/Nemotron-3-Ultra-550b-a55b');
+    expect(resolveModelIdentifier('nvidia/nemotron-3-super-120b-a12b', 'nebius')).toBe(
+      'nvidia/nemotron-3-super-120b-a12b'
+    );
+    expect(() => resolveModelIdentifier('nvidia/llama-3.3-nemotron-super-49b-v1', 'nebius')).toThrow(AIProviderError);
+  });
+
+  it('passes non-Nebius model names through unchanged', () => {
+    expect(resolveModelIdentifier('gemini-2.5-pro', 'gemini')).toBe('gemini-2.5-pro');
   });
 });

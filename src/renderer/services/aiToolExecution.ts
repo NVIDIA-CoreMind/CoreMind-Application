@@ -87,7 +87,8 @@ export function extractToolCalls(text: string): { toolCalls: ParsedToolCall[]; f
         ? `\n\n\`\`\`${lang}\n${tc.content.trimEnd()}\n\`\`\``
         : '';
 
-      const replacement = `I've created **\`${fileName}\`**:${codeSection}`;
+      // Only a proposal: nothing is written to disk when a message is rendered.
+      const replacement = `Proposed file **\`${fileName}\`**:${codeSection}`;
 
       if (formattedText.trim() === tc.rawMatched) {
         formattedText = replacement;
