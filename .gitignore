@@ -35,3 +35,6 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+
+# Local databases (may contain user data)
+data/*.db

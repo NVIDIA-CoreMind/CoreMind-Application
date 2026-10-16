@@ -25,46 +25,56 @@ export interface AIProvider {
   ): Promise<AgentResponse>;
 }
 
-export const DEFAULT_NEBIUS_API_KEY =
-  '***REMOVED-CREDENTIAL***';
 export const DEFAULT_NEBIUS_BASE_URL = 'https://api.tokenfactory.nebius.com/v1';
 export const DEFAULT_NEBIUS_MODEL = 'nvidia/Nemotron-3-Ultra-550b-a55b';
 
-if (!process.env.NEBIUS_API_KEY && process.env.NODE_ENV !== 'test') {
-  process.env.NEBIUS_API_KEY = DEFAULT_NEBIUS_API_KEY;
+
+/** Failure with a machine-readable code, surfaced to callers instead of being rendered as reply text. */
+export class AIProviderError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string
+  ) {
+    super(message);
+    this.name = 'AIProviderError';
+  }
 }
 
+/** Upper bound for a single provider HTTP call so a stalled endpoint cannot hang the UI. */
+const PROVIDER_REQUEST_TIMEOUT_MS = 120_000;
+
+/** Exact Nebius model IDs, plus the friendly names the UI displays. Keys are lowercased. */
+const NEBIUS_MODEL_IDS: Record<string, string> = {
+  'nvidia/nemotron-3-ultra-550b-a55b': 'nvidia/Nemotron-3-Ultra-550b-a55b',
+  'nvidia/nemotron-3-super-120b-a12b': 'nvidia/nemotron-3-super-120b-a12b',
+  'nvidia/nemotron-3_5-lightning': 'nvidia/Nemotron-3_5-Lightning',
+  'nvidia/nvidia-nemotron-3-nano-30b-a3b': 'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B',
+  'nvidia nemotron 3 ultra': 'nvidia/Nemotron-3-Ultra-550b-a55b',
+  'nvidia nemotron 3.5 lightning': 'nvidia/Nemotron-3_5-Lightning',
+  'nvidia nemotron 3 super': 'nvidia/nemotron-3-super-120b-a12b',
+  'nvidia nemotron 3 nano': 'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B',
+};
+
+const SUPPORTED_NEBIUS_MODELS = [...new Set(Object.values(NEBIUS_MODEL_IDS))];
+
 /**
- * Maps friendly user-selected model names to actual LLM API identifiers.
+ * Resolves the model the user selected to the exact identifier sent to the provider.
+ * Nebius models must match the allow-list exactly; anything else is rejected rather than
+ * silently replaced. Other providers receive the model string unchanged.
  */
-function resolveModelIdentifier(model: string, provider: string): string {
-  const m = model.toLowerCase();
-  if (m.includes('ultra') || m.includes('550b') || m.includes('a55b')) {
-    return 'nvidia/Nemotron-3-Ultra-550b-a55b';
+export function resolveModelIdentifier(model: string, provider: string): string {
+  const trimmed = model.trim();
+  if (provider !== 'nebius') {
+    return trimmed;
   }
-  if (m.includes('lightning') || m.includes('3.5') || m.includes('3_5')) {
-    return 'nvidia/Nemotron-3_5-Lightning';
+  const canonical = NEBIUS_MODEL_IDS[trimmed.toLowerCase()];
+  if (!canonical) {
+    throw new AIProviderError(
+      'UNKNOWN_MODEL',
+      `"${trimmed}" is not a supported Nebius model. Choose one of: ${SUPPORTED_NEBIUS_MODELS.join(', ')}.`
+    );
   }
-  if (m.includes('super') || m.includes('120b')) {
-    return 'nvidia/nemotron-3-super-120b-a12b';
-  }
-  if (m.includes('nano') || m.includes('30b')) {
-    return 'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B';
-  }
-  if (m.includes('nemotron') || m.includes('nvidia') || provider === 'nebius') {
-    return 'nvidia/Nemotron-3-Ultra-550b-a55b';
-  }
-  if (provider === 'gemini' || m.includes('gemini')) {
-    if (m.includes('pro')) return 'gemini-1.5-pro';
-    if (m.includes('2.0') || m.includes('2.5')) return 'gemini-2.0-flash';
-    return 'gemini-1.5-flash';
-  }
-  if (provider === 'anthropic' || m.includes('claude')) {
-    return 'claude-3-5-sonnet-20241022';
-  }
-  if (m.includes('gpt-4o-mini')) return 'gpt-4o-mini';
-  if (m.includes('gpt-4o') || m.includes('gpt')) return 'gpt-4o';
-  return 'nvidia/Nemotron-3-Ultra-550b-a55b';
+  return canonical;
 }
 
 /**
@@ -125,7 +135,7 @@ export class StandardAIProvider implements AIProvider {
     const apiKey = key || this.getApiKey() || '';
     if (apiKey.startsWith('AIzaSy') || this.getModelName().toLowerCase().includes('gemini')) return 'gemini';
     if (apiKey.startsWith('sk-ant-') || this.getModelName().toLowerCase().includes('claude')) return 'anthropic';
-    if (apiKey.startsWith('v1.Cm') || apiKey === DEFAULT_NEBIUS_API_KEY || process.env.NEBIUS_API_KEY) return 'nebius';
+    if (apiKey.startsWith('v1.Cm') || process.env.NEBIUS_API_KEY) return 'nebius';
     if (apiKey.startsWith('sk-')) return 'openai';
     return 'nebius';
   }
@@ -236,6 +246,7 @@ Detected Workspace Context:${workspaceNotice}${activeFileNotice}`;
 
         const geminiRes = await fetch(geminiUrl, {
           method: 'POST',
+          signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{ role: 'user', parts: [{ text: `${systemContent}\n\n${userPrompt}` }] }],
@@ -245,11 +256,14 @@ Detected Workspace Context:${workspaceNotice}${activeFileNotice}`;
 
         if (!geminiRes.ok) {
           const errText = await geminiRes.text();
-          throw new Error(`Gemini API error ${geminiRes.status}: ${errText}`);
+          throw new AIProviderError(`HTTP_${geminiRes.status}`, `Gemini API error ${geminiRes.status}: ${errText}`);
         }
 
         const data = (await geminiRes.json()) as any;
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || 'No response returned from Gemini.';
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+        if (!text) {
+          throw new AIProviderError('EMPTY_RESPONSE', 'Gemini returned no text.');
+        }
         return {
           message: {
             id: `msg-${Date.now()}`,
@@ -264,6 +278,7 @@ Detected Workspace Context:${workspaceNotice}${activeFileNotice}`;
       if (provider === 'anthropic') {
         const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
           method: 'POST',
+          signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
           headers: {
             'Content-Type': 'application/json',
             'x-api-key': apiKey,
@@ -283,11 +298,14 @@ Detected Workspace Context:${workspaceNotice}${activeFileNotice}`;
 
         if (!claudeRes.ok) {
           const errText = await claudeRes.text();
-          throw new Error(`Anthropic API error ${claudeRes.status}: ${errText}`);
+          throw new AIProviderError(`HTTP_${claudeRes.status}`, `Anthropic API error ${claudeRes.status}: ${errText}`);
         }
 
         const data = (await claudeRes.json()) as any;
-        const text = data.content?.[0]?.text || 'No response returned from Claude.';
+        const text = data.content?.[0]?.text;
+        if (!text) {
+          throw new AIProviderError('EMPTY_RESPONSE', 'Claude returned no text.');
+        }
         return {
           message: {
             id: `msg-${Date.now()}`,
@@ -308,6 +326,7 @@ Detected Workspace Context:${workspaceNotice}${activeFileNotice}`;
 
       const response = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
+        signal: AbortSignal.timeout(PROVIDER_REQUEST_TIMEOUT_MS),
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,
@@ -322,11 +341,14 @@ Detected Workspace Context:${workspaceNotice}${activeFileNotice}`;
 
       if (!response.ok) {
         const errText = await response.text();
-        throw new Error(`AI Provider error ${response.status}: ${errText}`);
+        throw new AIProviderError(`HTTP_${response.status}`, `AI Provider error ${response.status}: ${errText}`);
       }
 
       const json = (await response.json()) as any;
-      const responseText = json.choices?.[0]?.message?.content || 'No response returned from model.';
+      const responseText = json.choices?.[0]?.message?.content;
+      if (!responseText) {
+        throw new AIProviderError('EMPTY_RESPONSE', 'The model returned no text.');
+      }
 
       return {
         message: {
@@ -337,16 +359,10 @@ Detected Workspace Context:${workspaceNotice}${activeFileNotice}`;
         },
       };
     } catch (err: unknown) {
+      // Rethrow instead of returning the error as reply text, so callers can tell a failed call from a real answer.
       const error = err as Error;
-      logger.error('AI Provider request failed', { message: error.message });
-      return {
-        message: {
-          id: `msg-${Date.now()}`,
-          role: 'assistant',
-          content: `AI Provider Error: ${error.message}. Please verify your API key and network connection.`,
-          timestamp: Date.now(),
-        },
-      };
+      logger.error('AI Provider request failed', { message: error.message, name: error.name });
+      throw err;
     }
   }
 }
@@ -389,18 +405,26 @@ export class AgentService {
         messageCount: messages.length,
         hasContext: Boolean(context),
       });
+      if (!options?.apiKey && !this.provider.isConfigured()) {
+        return {
+          success: false,
+          error: {
+            code: 'NOT_CONFIGURED',
+            message: 'No AI API key is configured. Add one in AI Settings.',
+          },
+        };
+      }
       const response = await this.provider.sendMessage(messages, context, options);
       return { success: true, data: response };
     } catch (err: unknown) {
       const error = err as Error;
-      logger.error('AgentService sendMessage error', { message: error.message });
-      return {
-        success: false,
-        error: {
-          code: 'AGENT_REQUEST_FAILED',
-          message: error.message || 'Failed to process agent message.',
-        },
-      };
+      const isTimeout = error.name === 'TimeoutError';
+      const code = error instanceof AIProviderError ? error.code : isTimeout ? 'AI_TIMEOUT' : 'AGENT_REQUEST_FAILED';
+      const message = isTimeout
+        ? `The AI provider did not respond within ${PROVIDER_REQUEST_TIMEOUT_MS / 1000} seconds.`
+        : error.message || 'Failed to process agent message.';
+      logger.error('AgentService sendMessage error', { code, message });
+      return { success: false, error: { code, message } };
     }
   }
 

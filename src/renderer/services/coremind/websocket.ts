@@ -1,4 +1,5 @@
 import { backendConfig } from './config';
+import { coremindClient } from './client';
 import {
   AgentEventType,
   ClientApproveMessage,
@@ -57,9 +58,13 @@ export class CoreMindWebSocketService {
     this.setStatus(this.reconnectAttempts > 0 ? 'reconnecting' : 'connecting');
 
     const url = backendConfig.getWsUrl();
+    // The backend refuses sockets without a valid access token. It travels as a subprotocol, not in the URL,
+    // so it does not appear in server access logs.
+    const token = coremindClient.getAccessToken();
+    const protocols = token ? ['coremind.auth', token] : undefined;
 
     try {
-      this.ws = new WebSocket(url);
+      this.ws = new WebSocket(url, protocols);
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;

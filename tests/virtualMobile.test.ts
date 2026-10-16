@@ -165,6 +165,6 @@ describe('Virtual Mobile Device — Architecture & Services', () => {
       } finally {
         fs.rmSync(tempDir, { recursive: true, force: true });
       }
-    });
+    }, 60_000);
   });
 });

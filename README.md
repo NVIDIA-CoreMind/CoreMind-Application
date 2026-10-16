@@ -58,7 +58,7 @@ Modern software development tools treat AI as an external chatbot or a simple in
 ## 2. NVIDIA & Nebius Token Factory Integration
 
 CoreMind uses open-source foundation models orchestrated through **Nebius Token Factory** and **Nebius AI Cloud**:
-- **Primary Reasoning & Coding Model**: `nvidia/Llama-3.1-Nemotron-70B-Instruct-HF`
+- **Primary Reasoning & Coding Model**: `nvidia/Nemotron-3-Ultra-550b-a55b` (NVIDIA Nemotron 3 Ultra, open weights). Other supported Nebius IDs: `nvidia/nemotron-3-super-120b-a12b`, `nvidia/Nemotron-3_5-Lightning`, `nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B`. Requests go to `https://api.tokenfactory.nebius.com/v1`. A model name that is not on this list is rejected, not replaced.
 - **Inference Orchestration**: High-throughput streaming via OpenAI-compatible endpoints hosted on Nebius Token Factory.
 - **Architectural Separation**: The Electron desktop interface communicates over secure IPC and WebSocket/REST protocols with the local **CoreMind-AI-Backend** service (`FastAPI`), which manages prompt tokenization, context compression, tool dispatching, and agent execution.
 
@@ -69,7 +69,7 @@ CoreMind uses open-source foundation models orchestrated through **Nebius Token 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
 │                        CoreMind Desktop IDE                            │
-│                 (Electron 34 + React 18 + TypeScript)                  │
+│                 (Electron 44 + React 18 + TypeScript)                  │
 ├────────────────────────────────┬───────────────────────────────────────┤
 │ • Native macOS Window (Traffic │ • Multi-Tab Monaco Code Editor Core   │
 │   lights, hiddenInset layout)  │ • Antigravity Activity & Phase Stream │
@@ -109,8 +109,9 @@ CoreMind uses open-source foundation models orchestrated through **Nebius Token 
 3. **Autonomous Self-Healing Loop**:
    - The agent executes tests (e.g. `pytest`, `vitest`, `npm test`) directly in the shell.
    - If tests fail, the engine captures stdout/stderr, extracts failure traces, devises a corrective patch, and runs verification again (up to 3 automated repair cycles).
-4. **Sandboxed Security**:
+4. **Workspace Path Protection**:
    - Path-traversal protection strictly confines all file reads, writes, and deletions to the active workspace folder.
+   - Agent commands run in your local shell with your permissions. They are not sandboxed.
    - Pre-edit Git snapshotting allows instant one-click rollback if changes are undesirable.
 5. **Native macOS Performance**:
    - Compiled for Apple Silicon (`arm64`), utilizing hardware acceleration and native window padding.
@@ -125,6 +126,7 @@ CoreMind uses open-source foundation models orchestrated through **Nebius Token 
 - **Python**: `3.11` or `3.12` (for the AI Backend engine).
 - **Package Managers**: `npm` (v9+) and `pip` (or `uv`).
 - **Nebius Token Factory API Key**: Required for NVIDIA Nemotron model inference.
+- **Backend JWT signing key**: `JWT_SECRET_KEY` in the backend `.env`, at least 32 characters. The backend has no default and will not start without it.
 
 ---
 
@@ -158,14 +160,15 @@ cp .env.example .env
 Edit `.env` to supply your credentials:
 ```env
 NEBIUS_API_KEY=your_nebius_token_factory_key
-NVIDIA_MODEL=nvidia/Llama-3.1-Nemotron-70B-Instruct-HF
-BACKEND_PORT=8000
+NEBIUS_MODEL=nvidia/Nemotron-3-Ultra-550b-a55b
+JWT_SECRET_KEY=replace-with-at-least-32-random-characters
+COREMIND_BACKEND_PORT=43110
 ```
 
 Start the backend server:
 ```bash
 python3 main.py
-# Server starts on http://127.0.0.1:8000 with WebSocket support at ws://127.0.0.1:8000/ws
+# Server listens on http://127.0.0.1:43110 (loopback only) with WebSocket support at ws://127.0.0.1:43110/ws
 ```
 
 ### Step 3: Install & Launch CoreMind Desktop IDE
@@ -183,6 +186,8 @@ npm run dev
 ```
 
 The CoreMind desktop application window will open immediately.
+
+Sign in with Google in the app before using chat or agent features. The backend rejects HTTP requests and WebSocket connections that lack a valid session.
 
 ---
 
@@ -220,12 +225,12 @@ Follow this flow to demonstrate the full hackathon agentic workflow:
 | `npm run test` | Executes unit test suites using Vitest |
 | `npm run package` | Builds standalone macOS `CoreMind.app` and `CoreMind.dmg` installer |
 
-### Verified Release Artifacts (macOS Apple Silicon)
+### Release Artifacts (macOS Apple Silicon)
 
 - **Installer Binary**: `CoreMind-0.1.0-arm64.dmg` (162.1 MB)
 - **SHA-256 Checksum**:
   ```text
-  232d3d9fc685b369a345c63bae472ce238cf5799e083bd7bda16db233ce49a5a
+  (Published with the final build. The checksum previously listed here did not match the built installer and was removed.)
   ```
 - **Terminal Verification Command**:
   ```bash
@@ -236,12 +241,12 @@ Follow this flow to demonstrate the full hackathon agentic workflow:
 
 ## 9. Technology Stack
 
-- **Desktop Core**: [Electron 34](https://www.electronjs.org/) (Strict context isolation, zero node integration in renderer).
+- **Desktop Core**: [Electron 44](https://www.electronjs.org/) (Strict context isolation, zero node integration in renderer).
 - **Editor Engine**: [Monaco Editor](https://microsoft.github.io/monaco-editor/) via `@monaco-editor/react`.
 - **Frontend UI**: [React 18](https://react.dev/), [TypeScript 5](https://www.typescriptlang.org/), [Zustand 5](https://github.com/pmndrs/zustand).
 - **Terminal Emulator**: [xterm.js](https://xtermjs.org/) & `xterm-addon-fit`.
 - **AI Backend**: [FastAPI](https://fastapi.tiangolo.com/), Python 3.11, WebSocket streaming.
-- **Model Provider**: [NVIDIA Nemotron](https://huggingface.co/nvidia/Llama-3.1-Nemotron-70B-Instruct-HF) via [Nebius Token Factory](https://nebius.com/).
+- **Model Provider**: [NVIDIA Nemotron 3 Ultra](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Ultra-550B-A55B-BF16) via [Nebius Token Factory](https://tokenfactory.nebius.com/).
 - **Desktop Packager**: [electron-builder](https://www.electron.build/).
 
 ---

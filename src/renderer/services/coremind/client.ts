@@ -4,6 +4,40 @@ import { ApiErrorResponse, AuthTokens } from './types';
 
 const STORAGE_KEY_AUTH = 'coremind_auth';
 
+/** Upper bound for a JSON request, including reading its body. */
+const REQUEST_TIMEOUT_MS = 60_000;
+/** Maximum silence allowed between chunks of a streaming response. */
+const STREAM_IDLE_TIMEOUT_MS = 60_000;
+
+function timeoutError(): CoreMindApiError {
+  return new CoreMindApiError(0, {
+    code: 'REQUEST_TIMEOUT',
+    message: `The CoreMind backend did not respond within ${REQUEST_TIMEOUT_MS / 1000} seconds.`,
+  });
+}
+
+/** Reads the next chunk, failing if the stream stays silent for longer than the idle timeout. */
+function readChunkWithIdleTimeout(
+  reader: ReadableStreamDefaultReader<Uint8Array>
+): Promise<ReadableStreamReadResult<Uint8Array>> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reader.cancel().catch(() => undefined);
+      reject(timeoutError());
+    }, STREAM_IDLE_TIMEOUT_MS);
+    reader.read().then(
+      (result) => {
+        clearTimeout(timer);
+        resolve(result);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
+
 export class CoreMindClient {
   private token: string | null = null;
   private refreshToken: string | null = null;
@@ -121,13 +155,20 @@ export class CoreMindClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
+    const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+    const requestSignal = options.signal ? AbortSignal.any([options.signal, timeoutSignal]) : timeoutSignal;
+
     let response: Response;
     try {
       response = await fetch(url, {
         ...options,
         headers,
+        signal: requestSignal,
       });
     } catch (networkError: unknown) {
+      if (timeoutSignal.aborted) {
+        throw timeoutError();
+      }
       // Auto-fallback between localhost and 127.0.0.1
       let fallbackUrl: string | null = null;
       if (baseUrl.includes('localhost')) {
@@ -141,6 +182,7 @@ export class CoreMindClient {
           response = await fetch(fallbackUrl, {
             ...options,
             headers,
+            signal: requestSignal,
           });
           // Update config to working base url
           if (baseUrl.includes('localhost')) {
@@ -174,6 +216,7 @@ export class CoreMindClient {
           response = await fetch(url, {
             ...options,
             headers,
+            signal: requestSignal,
           });
         }
       }
@@ -253,16 +296,34 @@ export class CoreMindClient {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
-    const response = await fetch(url, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        query,
-        project_path: projectPath,
-        history,
-      }),
-      signal,
-    });
+    // Bound only the wait for response headers. An overall timeout would cut off a long, healthy stream.
+    const headerTimeout = new AbortController();
+    let headersTimedOut = false;
+    const headerTimer = setTimeout(() => {
+      headersTimedOut = true;
+      headerTimeout.abort();
+    }, REQUEST_TIMEOUT_MS);
+
+    let response: Response;
+    try {
+      response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          query,
+          project_path: projectPath,
+          history,
+        }),
+        signal: signal ? AbortSignal.any([signal, headerTimeout.signal]) : headerTimeout.signal,
+      });
+    } catch (err: unknown) {
+      if (headersTimedOut) {
+        throw timeoutError();
+      }
+      throw err;
+    } finally {
+      clearTimeout(headerTimer);
+    }
 
     if (!response.ok) {
       const errText = await response.text().catch(() => '');
@@ -280,7 +341,7 @@ export class CoreMindClient {
 
     try {
       while (true) {
-        const { done, value } = await reader.read();
+        const { done, value } = await readChunkWithIdleTimeout(reader);
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });

@@ -786,18 +786,22 @@ CRITICAL INSTRUCTIONS:
           { model: requestModel, apiKey: requestApiKey, provider: requestProvider, baseUrl: requestBaseUrl }
         );
 
-        if (response.success && response.data?.message?.content) {
-          const parsed = this.parseFilesFromContent(response.data.message.content);
-          if (parsed.length > 0) {
-            emit({
-              type: 'thought',
-              text: `AI generated ${parsed.length} complete project files.`,
-            });
-            return parsed;
-          }
+        // A failed model call stops the task. Template output must not stand in for a real generation.
+        if (!response.success) {
+          throw new Error(`AI code generation failed: ${response.error.message}`);
         }
+        const parsed = this.parseFilesFromContent(response.data.message.content);
+        if (parsed.length === 0) {
+          throw new Error('AI code generation failed: the model response contained no project files.');
+        }
+        emit({
+          type: 'thought',
+          text: `AI generated ${parsed.length} complete project files.`,
+        });
+        return parsed;
       } catch (err) {
-        logger.warn('AI Provider fallback generation error, using contextual synthesizer', { err });
+        logger.error('AI code generation failed', { err: (err as Error).message });
+        throw err;
       }
     }
 

@@ -88,8 +88,8 @@ export class GoogleOAuthService {
           };
         }
 
-        // Check state verification if provided
-        if (authData.state && data.state && authData.state !== data.state) {
+        // The callback must echo the state that was issued with the authorization request
+        if (authData.state && data.state !== authData.state) {
           return {
             success: false,
             error: 'OAuth state mismatch verification failed. Please try again.',
