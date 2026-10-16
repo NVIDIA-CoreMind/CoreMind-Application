@@ -60,61 +60,51 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
   const folderName =
     (event.cwd && event.cwd.split('/').filter(Boolean).pop()) ||
     (rootPath && rootPath.split('/').filter(Boolean).pop()) ||
-    'CoreMind';
+    'CoreMind-AI-Backend';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', margin: '3px 0' }}>
-      {/* Header Toggle: Ran <command> ⌵ / > */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', margin: '2px 0' }}>
+      {/* Header Toggle: Ran <command> v / > */}
       <div
         onClick={() => setExpanded((prev) => !prev)}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
-          gap: '6px',
-          fontSize: '12.5px',
-          color: tokens.textSecondary,
+          gap: '5px',
+          fontSize: '13px',
+          color: isDark ? '#8c8c8c' : '#64748b',
           cursor: 'pointer',
           fontWeight: 400,
           userSelect: 'none',
-          padding: '2px 0',
+          padding: '1px 0',
           width: 'fit-content',
+          transition: 'color 0.15s ease',
         }}
+        onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e4e4e7' : '#18181b')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#64748b')}
         title={expanded ? 'Click to collapse output' : 'Click to expand output'}
       >
         <span>
           Ran{' '}
           <strong
             style={{
-              color: tokens.textPrimary,
+              color: isDark ? '#f4f4f5' : '#18181b',
               fontWeight: 600,
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-              fontSize: '12px',
+              fontSize: '12.5px',
             }}
           >
             {event.command}
           </strong>
         </span>
         {expanded ? (
-          <ChevronDown size={13} color="currentColor" />
+          <ChevronDown size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
         ) : (
-          <ChevronRight size={13} color="currentColor" />
-        )}
-        {isRunning && (
-          <span
-            style={{
-              width: '6px',
-              height: '6px',
-              borderRadius: '50%',
-              backgroundColor: tokens.accentRunning,
-              animation: 'pulse 1.5s infinite ease-in-out',
-              display: 'inline-block',
-              marginLeft: '2px',
-            }}
-          />
+          <ChevronRight size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
         )}
       </div>
 
-      {/* Terminal Card: Top Command Input, Bottom Command Output */}
+      {/* Terminal Card: Exactly matching Screenshot 1 */}
       {expanded && (
         <div
           style={{
@@ -122,12 +112,12 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
             flexDirection: 'column',
             backgroundColor: isDark ? '#141416' : '#ffffff',
             border: `1px solid ${isDark ? '#27272a' : '#e4e4e7'}`,
-            borderRadius: '6px',
+            borderRadius: '8px',
             overflow: 'hidden',
-            marginTop: '3px',
-            marginBottom: '6px',
+            margin: '4px 0 8px 0',
+            width: '100%',
             boxShadow: isDark
-              ? '0 1px 3px rgba(0, 0, 0, 0.3)'
+              ? '0 1px 3px rgba(0, 0, 0, 0.35)'
               : '0 1px 2px rgba(0, 0, 0, 0.05)',
           }}
         >
@@ -135,10 +125,10 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
           <div
             style={{
               display: 'flex',
-              alignItems: 'flex-start',
+              alignItems: 'baseline',
               justifyContent: 'space-between',
-              padding: '8px 10px',
-              backgroundColor: isDark ? '#1a1a1d' : '#f8fafc',
+              padding: '8px 12px',
+              backgroundColor: isDark ? '#18181b' : '#f8fafc',
               borderBottom: `1px solid ${isDark ? '#27272a' : '#e4e4e7'}`,
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
               fontSize: '11.5px',
@@ -193,7 +183,7 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
                     borderRadius: '3px',
                     transition: 'color 0.15s ease',
                   }}
-                  title={copied ? 'Copied to clipboard' : 'Copy command & output'}
+                  title={copied ? 'Copied' : 'Copy command & output'}
                   onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e4e4e7' : '#1e293b')}
                   onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#71717a' : '#94a3b8')}
                 >
@@ -207,13 +197,13 @@ export const TerminalActivity: React.FC<{ event: TerminalEvent }> = ({ event }) 
           <div
             ref={outputRef}
             style={{
-              padding: '9px 11px',
+              padding: '10px 12px',
               fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-              fontSize: '11px',
+              fontSize: '11.5px',
               lineHeight: 1.45,
-              color: isDark ? '#d4d4d8' : '#1e293b',
+              color: isDark ? '#e4e4e7' : '#1e293b',
               backgroundColor: isDark ? '#121214' : '#ffffff',
-              maxHeight: '280px',
+              maxHeight: '260px',
               overflowY: 'auto',
               whiteSpace: 'pre-wrap',
               wordBreak: 'break-word',

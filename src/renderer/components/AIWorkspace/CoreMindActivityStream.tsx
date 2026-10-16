@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ChevronDown, ChevronRight, CheckCircle2, CircleDot } from 'lucide-react';
 import { AIWorkspaceEvent, TerminalEvent, FileReadEvent } from '../../types/aiWorkspace';
-import { FileChangeInfo } from '../../services/aiWorkspaceService';
+import { FileChangeInfo, useAIWorkspaceStore } from '../../services/aiWorkspaceService';
 import { useWorkspaceStore } from '../../stores/workspaceStore';
 import { useTabsStore } from '../../stores/tabsStore';
 import { useThemeStore, resolveEffectiveTheme } from '../../stores/themeStore';
@@ -26,15 +26,32 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
   thoughtDurationSeconds = 1,
   isRunning = false,
 }) => {
-  const [exploringOpen, setExploringOpen] = useState(true);
-  const [thinkingOpen, setThinkingOpen] = useState(false);
-  const [commandsGroupOpen, setCommandsGroupOpen] = useState(true);
+  // Collapsible section toggles
+  const [initialThoughtOpen, setInitialThoughtOpen] = useState(false);
+  const [activeThinkingOpen, setActiveThinkingOpen] = useState(true);
+  const [commandsGroupOpen, setCommandsGroupOpen] = useState(false);
+  const [exploredGroupOpen, setExploredGroupOpen] = useState(false);
+  const [tasksGroupOpen, setTasksGroupOpen] = useState(false);
+
+  // Live timer for active thinking duration
+  const [liveSeconds, setLiveSeconds] = useState(thoughtDurationSeconds || 1);
+
+  useEffect(() => {
+    if (!isRunning) return;
+    const interval = setInterval(() => {
+      setLiveSeconds((prev) => prev + 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [isRunning]);
 
   const rootPath = useWorkspaceStore((s) => s.rootPath);
   const openFile = useTabsStore((s) => s.openFile);
   const theme = useThemeStore((s) => s.theme);
   const isDark = resolveEffectiveTheme(theme) === 'dark';
   const tokens = getAITheme(isDark);
+
+  const taskGraph = useAIWorkspaceStore((s) => s.taskGraph);
+  const tasks = taskGraph?.tasks || taskGraph?.nodes || [];
 
   const handleOpenFile = async (filePath: string, _line?: number) => {
     if (!rootPath) return;
@@ -154,20 +171,302 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
     thoughtText ||
     (thoughts.length > 0 ? thoughts[thoughts.length - 1].summary : undefined);
 
+  // In Screenshot 1 & 2: earlier commands are grouped (e.g. "Ran 18 commands >"),
+  // and the most recent or running command is shown individually
+  const hasMultipleCommands = deduplicatedTerminals.length > 1;
+  const earlierCommands = hasMultipleCommands ? deduplicatedTerminals.slice(0, -1) : [];
+  const latestCommand = deduplicatedTerminals.length > 0
+    ? deduplicatedTerminals[deduplicatedTerminals.length - 1]
+    : null;
+
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px',
+        gap: '9px',
         width: '100%',
         margin: '2px 0 6px 0',
         fontFamily: 'var(--font-sans)',
-        fontSize: '12.5px',
-        color: isDark ? '#E4E4E7' : '#18181B',
+        fontSize: '13px',
+        color: isDark ? '#8c8c8c' : '#64748b',
+        lineHeight: 1.4,
       }}
     >
-      {/* 1. Edited Files: e.g. Edited 🐍 planner.py +52 -9 */}
+      {/* 1. Initial Thought: e.g. "Thought for 1s >" (Screenshot 1 & 2) */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <div
+          onClick={() => setInitialThoughtOpen((prev) => !prev)}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '5px',
+            cursor: 'pointer',
+            userSelect: 'none',
+            color: isDark ? '#8c8c8c' : '#64748b',
+            width: 'fit-content',
+            transition: 'color 0.15s ease',
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e4e4e7' : '#18181b')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#64748b')}
+        >
+          <span>
+            Thought for <strong style={{ color: isDark ? '#f4f4f5' : '#18181b', fontWeight: 600 }}>{isRunning ? '1s' : `${Math.max(1, thoughtDurationSeconds)}s`}</strong>
+          </span>
+          {initialThoughtOpen ? (
+            <ChevronDown size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+          ) : (
+            <ChevronRight size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+          )}
+        </div>
+
+        {initialThoughtOpen && activeThinkingText && (
+          <div
+            style={{
+              padding: '4px 0 6px 12px',
+              color: isDark ? '#a1a1aa' : '#4b5563',
+              lineHeight: 1.55,
+              fontSize: '12.5px',
+              whiteSpace: 'pre-wrap',
+            }}
+          >
+            {activeThinkingText}
+          </div>
+        )}
+      </div>
+
+      {/* 2. Grouped Earlier Commands: e.g. "Ran 18 commands >" (Screenshot 1 & 2) */}
+      {hasMultipleCommands && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div
+            onClick={() => setCommandsGroupOpen((prev) => !prev)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              color: isDark ? '#8c8c8c' : '#64748b',
+              width: 'fit-content',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e4e4e7' : '#18181b')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#64748b')}
+          >
+            <span>
+              Ran <strong style={{ color: isDark ? '#f4f4f5' : '#18181b', fontWeight: 600 }}>{earlierCommands.length} commands</strong>
+            </span>
+            {commandsGroupOpen ? (
+              <ChevronDown size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+            ) : (
+              <ChevronRight size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+            )}
+          </div>
+
+          {commandsGroupOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', paddingLeft: '10px' }}>
+              {earlierCommands.map((term) => (
+                <TerminalActivity key={term.id} event={term} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 3. Explored files & searches: e.g. "Explored 1 file, 1 search >" (Screenshot 1 & 2) */}
+      {hasExploringGroup && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div
+            onClick={() => setExploredGroupOpen((prev) => !prev)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              color: isDark ? '#8c8c8c' : '#64748b',
+              width: 'fit-content',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e4e4e7' : '#18181b')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#64748b')}
+          >
+            <span>
+              Explored{' '}
+              <strong style={{ color: isDark ? '#f4f4f5' : '#18181b', fontWeight: 600 }}>
+                {totalExploredFiles > 0 && totalSearches > 0
+                  ? `${totalExploredFiles} file${totalExploredFiles > 1 ? 's' : ''}, ${totalSearches} search${totalSearches > 1 ? 'es' : ''}`
+                  : totalExploredFiles > 0
+                  ? `${totalExploredFiles} file${totalExploredFiles > 1 ? 's' : ''}`
+                  : `${totalSearches} search${totalSearches > 1 ? 'es' : ''}`}
+              </strong>
+            </span>
+            {exploredGroupOpen ? (
+              <ChevronDown size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+            ) : (
+              <ChevronRight size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+            )}
+          </div>
+
+          {exploredGroupOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', paddingLeft: '12px' }}>
+              {analyzedFiles.map((af, idx) => {
+                const basename = af.file.split('/').pop() || af.file;
+                const hasRange = af.startLine !== undefined && af.endLine !== undefined;
+                return (
+                  <div
+                    key={`${af.file}-${idx}`}
+                    onClick={() => handleOpenFile(af.file, af.startLine)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      color: tokens.textSecondary,
+                    }}
+                  >
+                    <span>Analyzed</span>
+                    <LanguageFileIcon filename={basename} size={14} />
+                    <span style={{ color: tokens.textPrimary, fontWeight: 500 }}>{basename}</span>
+                    {hasRange && (
+                      <span style={{ color: tokens.textMuted, fontSize: '11px', fontFamily: 'monospace' }}>
+                        #L{af.startLine}-{af.endLine}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
+
+              {searchQueries.map((sq, idx) => (
+                <div
+                  key={`${sq.query}-${idx}`}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontSize: '12px',
+                    color: tokens.textSecondary,
+                  }}
+                >
+                  <span>Searched</span>
+                  <span style={{ color: tokens.textPrimary, fontWeight: 500 }}>{sq.query}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 4. Active or Most Recent Command (Screenshot 1: expanded with terminal card) */}
+      {latestCommand && (
+        <TerminalActivity event={latestCommand} />
+      )}
+
+      {/* 5. Explored Tasks: e.g. "Explored 5 tasks >" (Screenshot 2) */}
+      {tasks.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div
+            onClick={() => setTasksGroupOpen((prev) => !prev)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              color: isDark ? '#8c8c8c' : '#64748b',
+              width: 'fit-content',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e4e4e7' : '#18181b')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#64748b')}
+          >
+            <span>
+              Explored <strong style={{ color: isDark ? '#f4f4f5' : '#18181b', fontWeight: 600 }}>{tasks.length} tasks</strong>
+            </span>
+            {tasksGroupOpen ? (
+              <ChevronDown size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+            ) : (
+              <ChevronRight size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+            )}
+          </div>
+
+          {tasksGroupOpen && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', paddingLeft: '12px' }}>
+              {tasks.map((task) => (
+                <div
+                  key={task.id}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '7px',
+                    fontSize: '12px',
+                    color: tokens.textSecondary,
+                  }}
+                >
+                  {task.status === 'completed' ? (
+                    <CheckCircle2 size={13} color="#22c55e" />
+                  ) : task.status === 'in_progress' ? (
+                    <CircleDot size={13} color="#3b82f6" />
+                  ) : (
+                    <CircleDot size={13} color={tokens.textMuted} />
+                  )}
+                  <span style={{ color: task.status === 'completed' ? tokens.textSecondary : tokens.textPrimary }}>
+                    {task.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 6. Active Thinking Stream: e.g. "Thinking for 20s v" (Screenshot 2) */}
+      {isRunning && activeThinkingText && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+          <div
+            onClick={() => setActiveThinkingOpen((prev) => !prev)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              cursor: 'pointer',
+              userSelect: 'none',
+              color: isDark ? '#8c8c8c' : '#64748b',
+              width: 'fit-content',
+              transition: 'color 0.15s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e4e4e7' : '#18181b')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#64748b')}
+          >
+            <span>
+              Thinking for <strong style={{ color: isDark ? '#f4f4f5' : '#18181b', fontWeight: 600 }}>{liveSeconds}s</strong>
+            </span>
+            {activeThinkingOpen ? (
+              <ChevronDown size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+            ) : (
+              <ChevronRight size={13} style={{ color: isDark ? '#71717a' : '#94a3b8' }} />
+            )}
+          </div>
+
+          {activeThinkingOpen && (
+            <div
+              style={{
+                padding: '4px 0 8px 12px',
+                color: isDark ? '#a1a1aa' : '#4b5563',
+                fontSize: '13px',
+                lineHeight: 1.6,
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+              }}
+            >
+              {activeThinkingText}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 7. Edited Files */}
       {editedFilesList.map((ef) => {
         const basename = ef.file.split('/').pop() || ef.file;
         const additions = ef.additions ?? ef.lines ?? 0;
@@ -180,305 +479,40 @@ export const AntigravityActivityStream: React.FC<AntigravityActivityStreamProps>
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '7px',
-              padding: '2px 0',
+              gap: '6px',
               cursor: 'pointer',
               userSelect: 'none',
-              transition: 'opacity 0.15s ease',
+              color: isDark ? '#8c8c8c' : '#64748b',
               width: 'fit-content',
+              fontSize: '12.5px',
             }}
-            title={`Open ${ef.file}`}
           >
-            <span style={{ color: tokens.textSecondary, fontWeight: 400 }}>
-              Edited
-            </span>
+            <span>Edited</span>
             <LanguageFileIcon filename={basename} size={14} />
-            <span style={{ color: tokens.textPrimary, fontWeight: 600 }}>
-              {basename}
-            </span>
-            {additions > 0 && (
-              <span
-                style={{
-                  color: tokens.accentSuccess,
-                  fontWeight: 600,
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                  fontSize: '12px',
-                }}
-              >
-                +{additions}
-              </span>
-            )}
+            <span style={{ color: isDark ? '#f4f4f5' : '#18181b', fontWeight: 500 }}>{basename}</span>
+            <span style={{ color: '#22c55e', fontSize: '11px', fontFamily: 'monospace' }}>+{additions}</span>
             {deletions > 0 && (
-              <span
-                style={{
-                  color: tokens.accentError,
-                  fontWeight: 600,
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                  fontSize: '12px',
-                }}
-              >
-                -{deletions}
-              </span>
+              <span style={{ color: '#ef4444', fontSize: '11px', fontFamily: 'monospace' }}>-{deletions}</span>
             )}
           </div>
         );
       })}
 
-      {/* 2. Explored files Group: e.g. Explored 1 file ⌵ containing Thought and Analyzed files */}
-      {hasExploringGroup && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div
-            onClick={() => setExploringOpen((prev) => !prev)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              userSelect: 'none',
-              color: tokens.textSecondary,
-              padding: '2px 0',
-              width: 'fit-content',
-            }}
-          >
-            <span>
-              Explored{' '}
-              <strong style={{ color: tokens.textPrimary, fontWeight: 600 }}>
-                {totalExploredFiles} {totalExploredFiles === 1 ? 'file' : 'files'}
-                {totalSearches > 0
-                  ? `, ${totalSearches} ${totalSearches === 1 ? 'search' : 'searches'}`
-                  : ''}
-              </strong>
-            </span>
-            {exploringOpen ? (
-              <ChevronDown size={13} color="currentColor" />
-            ) : (
-              <ChevronRight size={13} color="currentColor" />
-            )}
-          </div>
-
-          {exploringOpen && (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '5px',
-                paddingLeft: '12px',
-              }}
-            >
-              {/* Thought block inside Explored group (as in Screenshot 2) */}
-              {activeThinkingText && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                  <div
-                    onClick={() => setThinkingOpen((prev) => !prev)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      color: tokens.textSecondary,
-                      fontSize: '12px',
-                      padding: '1px 0',
-                      width: 'fit-content',
-                    }}
-                  >
-                    <span>
-                      {isRunning
-                        ? `Thinking for ${thoughtDurationSeconds}s`
-                        : `Thought for ${thoughtDurationSeconds}s`}
-                    </span>
-                    {thinkingOpen ? (
-                      <ChevronDown size={12} color="currentColor" />
-                    ) : (
-                      <ChevronRight size={12} color="currentColor" />
-                    )}
-                  </div>
-
-                  {thinkingOpen && (
-                    <div
-                      style={{
-                        padding: '4px 0 6px 0',
-                        color: tokens.textSecondary,
-                        lineHeight: 1.5,
-                        fontSize: '12px',
-                        whiteSpace: 'pre-wrap',
-                      }}
-                    >
-                      {activeThinkingText}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Analyzed Files inside Explored files */}
-              {analyzedFiles.map((af, idx) => {
-                const basename = af.file.split('/').pop() || af.file;
-                const hasRange = af.startLine !== undefined && af.endLine !== undefined;
-
-                return (
-                  <div
-                    key={`${af.file}-${idx}`}
-                    onClick={() => handleOpenFile(af.file, af.startLine)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '7px',
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                      color: tokens.textSecondary,
-                      fontSize: '12.5px',
-                      padding: '1px 0',
-                      width: 'fit-content',
-                    }}
-                    title={`Open ${af.file}${hasRange ? ` at line ${af.startLine}` : ''}`}
-                  >
-                    <span>Analyzed</span>
-                    <LanguageFileIcon filename={basename} size={14} />
-                    <span style={{ color: tokens.textPrimary, fontWeight: 600 }}>
-                      {basename}
-                    </span>
-                    {hasRange && (
-                      <span
-                        style={{
-                          color: tokens.textMuted,
-                          fontSize: '11.5px',
-                          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-                        }}
-                      >
-                        #L{af.startLine}-{af.endLine}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* Searched Queries */}
-              {searchQueries.map((sq, idx) => (
-                <div
-                  key={`${sq.query}-${idx}`}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '7px',
-                    color: tokens.textSecondary,
-                    fontSize: '12.5px',
-                    padding: '1px 0',
-                  }}
-                >
-                  <span>Searched</span>
-                  <span style={{ color: tokens.textPrimary, fontWeight: 600 }}>
-                    {sq.query}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
-                      backgroundColor: tokens.bgCard,
-                      border: `1px solid ${tokens.border}`,
-                      color: tokens.textSecondary,
-                    }}
-                  >
-                    {sq.resultsCount || 1} {sq.resultsCount === 1 ? 'result' : 'results'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
+      {/* 8. Working... indicator at bottom while generating (Screenshot 1 & 2) */}
+      {isRunning && (
+        <div
+          style={{
+            fontSize: '13px',
+            color: isDark ? '#a1a1aa' : '#64748b',
+            fontWeight: 400,
+            marginTop: '3px',
+            userSelect: 'none',
+            letterSpacing: '-0.01em',
+          }}
+        >
+          Working...
         </div>
       )}
-
-      {/* Standalone Thinking Block if no explored files exist */}
-      {!hasExploringGroup && activeThinkingText && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-          <div
-            onClick={() => setThinkingOpen((prev) => !prev)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              userSelect: 'none',
-              color: tokens.textSecondary,
-              padding: '2px 0',
-              width: 'fit-content',
-            }}
-          >
-            <span>
-              {isRunning
-                ? `Thinking for ${thoughtDurationSeconds}s`
-                : `Thought for ${thoughtDurationSeconds}s`}
-            </span>
-            {thinkingOpen ? (
-              <ChevronDown size={13} color="currentColor" />
-            ) : (
-              <ChevronRight size={13} color="currentColor" />
-            )}
-          </div>
-
-          {thinkingOpen && (
-            <div
-              style={{
-                padding: '4px 0 6px 0',
-                color: tokens.textSecondary,
-                lineHeight: 1.5,
-                fontSize: '12px',
-                whiteSpace: 'pre-wrap',
-              }}
-            >
-              {activeThinkingText}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* 3. Terminal Runs (Ran X commands group or single command) */}
-      {deduplicatedTerminals.length > 1 ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-          <div
-            onClick={() => setCommandsGroupOpen((prev) => !prev)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              cursor: 'pointer',
-              userSelect: 'none',
-              color: tokens.textSecondary,
-              padding: '2px 0',
-              width: 'fit-content',
-            }}
-          >
-            <span>
-              Ran{' '}
-              <strong style={{ color: tokens.textPrimary, fontWeight: 600 }}>
-                {deduplicatedTerminals.length} commands
-              </strong>
-            </span>
-            {commandsGroupOpen ? (
-              <ChevronDown size={13} color="currentColor" />
-            ) : (
-              <ChevronRight size={13} color="currentColor" />
-            )}
-          </div>
-
-          {commandsGroupOpen && (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '4px',
-                paddingLeft: '8px',
-              }}
-            >
-              {deduplicatedTerminals.map((termEv) => (
-                <TerminalActivity key={termEv.id} event={termEv} />
-              ))}
-            </div>
-          )}
-        </div>
-      ) : deduplicatedTerminals.length === 1 ? (
-        <TerminalActivity key={deduplicatedTerminals[0].id} event={deduplicatedTerminals[0]} />
-      ) : null}
     </div>
   );
 };

@@ -13,7 +13,6 @@ import {
   ThumbsDown,
 } from 'lucide-react';
 import { extractToolCalls } from '../../services/aiToolExecution';
-import { RunningIndicator } from './RunningIndicator';
 import { QuestionCard } from './QuestionCard';
 import { AntigravityActivityStream } from './CoreMindActivityStream';
 import { TerminalEvent } from '../../types/aiWorkspace';
@@ -393,14 +392,7 @@ export const ChatThread: React.FC = () => {
       (activeTurnStartTime ? e.timestamp >= activeTurnStartTime - 2000 : true)
   );
 
-  const [expandedActivities, setExpandedActivities] = React.useState<Record<string, boolean>>({});
 
-  const toggleActivity = (id: string) => {
-    setExpandedActivities((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
-  };
 
   const scrollToBottom = (behavior: 'smooth' | 'auto' = 'smooth') => {
     const container = scrollContainerRef.current;
@@ -627,20 +619,9 @@ export const ChatThread: React.FC = () => {
 
         // Regular Assistant Message
         const prevUserMsg = chatHistory.slice(0, index).reverse().find((m) => m.role === 'user');
-        let durationText = 'Worked for 1s';
-        if (prevUserMsg && msg.timestamp > prevUserMsg.timestamp) {
-          const diffSec = Math.max(1, Math.round((msg.timestamp - prevUserMsg.timestamp) / 1000));
-          if (diffSec >= 60) {
-            durationText = `Worked for ${Math.round(diffSec / 60)}m`;
-          } else {
-            durationText = `Worked for ${diffSec}s`;
-          }
-        }
-        if (isGenerating) {
-          durationText = 'Working...';
-        }
-
-        const isActivityOpen = expandedActivities[msg.id] ?? false;
+        const durationSec = prevUserMsg && msg.timestamp > prevUserMsg.timestamp
+          ? Math.max(1, Math.round((msg.timestamp - prevUserMsg.timestamp) / 1000))
+          : 1;
 
         return (
           <div
@@ -652,78 +633,30 @@ export const ChatThread: React.FC = () => {
               margin: '2px 0 16px 0',
             }}
           >
-            {/* While generating: show RunningIndicator (one at a time, no duplicate "Working..."). Once finished: show "Worked for Xs >" */}
+            {/* Activity Stream: Always displayed directly in the response turn (Antigravity style) */}
             {isGenerating ? (
-              <div style={{ marginBottom: '10px' }}>
-                <RunningIndicator />
-                {(runningTurnEvents.length > 0 || runningTurnTerminalEvents.length > 0 || realtimeFiles.length > 0) && (
-                  <div
-                    style={{
-                      padding: '4px 0',
-                      marginTop: '4px',
-                      marginBottom: '10px',
-                    }}
-                  >
-                    <AntigravityActivityStream
-                      events={runningTurnEvents}
-                      filesChanged={realtimeFiles}
-                      terminalEvents={runningTurnTerminalEvents}
-                      thoughtText={agentPhaseDetail}
-                      isRunning={true}
-                    />
-                  </div>
-                )}
+              <div style={{ marginBottom: '12px' }}>
+                <AntigravityActivityStream
+                  events={runningTurnEvents}
+                  filesChanged={realtimeFiles}
+                  terminalEvents={runningTurnTerminalEvents}
+                  thoughtText={agentPhaseDetail}
+                  isRunning={true}
+                />
               </div>
             ) : (
-              <>
-                <div
-                  onClick={() => toggleActivity(msg.id)}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    cursor: 'pointer',
-                    userSelect: 'none',
-                    color: isDark ? '#8c8c8c' : '#64748b',
-                    fontSize: '12.5px',
-                    fontWeight: 500,
-                    marginBottom: '10px',
-                    transition: 'color 0.15s ease',
-                    width: 'fit-content',
-                  }}
-                  onMouseEnter={(e) => (e.currentTarget.style.color = isDark ? '#e5e5e5' : '#111827')}
-                  onMouseLeave={(e) => (e.currentTarget.style.color = isDark ? '#8c8c8c' : '#64748b')}
-                >
-                  <span>{durationText}</span>
-                  <span
-                    style={{
-                      fontSize: '11px',
-                      display: 'inline-block',
-                      transform: isActivityOpen ? 'rotate(90deg)' : 'none',
-                      transition: 'transform 0.15s ease',
-                    }}
-                  >
-                    &gt;
-                  </span>
+              (msg.activityEvents?.length || msg.terminalEvents?.length || msg.filesChanged?.length || msg.thoughtSummary) ? (
+                <div style={{ marginBottom: '12px' }}>
+                  <AntigravityActivityStream
+                    events={msg.activityEvents}
+                    filesChanged={msg.filesChanged}
+                    terminalEvents={msg.terminalEvents}
+                    thoughtText={msg.thoughtSummary}
+                    thoughtDurationSeconds={durationSec}
+                    isRunning={false}
+                  />
                 </div>
-
-                {isActivityOpen && (
-                  <div
-                    style={{
-                      padding: '4px 0',
-                      marginBottom: '12px',
-                    }}
-                  >
-                    <AntigravityActivityStream
-                      events={msg.activityEvents}
-                      filesChanged={msg.filesChanged}
-                      terminalEvents={msg.terminalEvents}
-                      thoughtText={msg.thoughtSummary}
-                      isRunning={false}
-                    />
-                  </div>
-                )}
-              </>
+              ) : null
             )}
 
             {/* Markdown Content directly on the canvas */}
@@ -820,17 +753,16 @@ export const ChatThread: React.FC = () => {
         );
       })}
 
-      {/* Fallback Real-time Indicator if no assistant message exists yet */}
+      {/* Fallback Real-time Stream if no assistant message exists yet */}
       {currentState === 'running' && (!chatHistory.length || chatHistory[chatHistory.length - 1].role !== 'assistant') && (
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            width: '100%',
-          }}
-        >
-          <RunningIndicator />
+        <div style={{ width: '100%', marginBottom: '12px' }}>
+          <AntigravityActivityStream
+            events={runningTurnEvents}
+            terminalEvents={runningTurnTerminalEvents}
+            filesChanged={realtimeFiles}
+            thoughtText={agentPhaseDetail}
+            isRunning={true}
+          />
         </div>
       )}
 
