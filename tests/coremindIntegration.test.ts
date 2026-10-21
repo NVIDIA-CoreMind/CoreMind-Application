@@ -11,9 +11,9 @@ describe('CoreMind Backend Integration Services', () => {
   });
 
   describe('Configuration Manager', () => {
-    it('defaults to port 43110 for HTTP and WebSocket', () => {
-      expect(backendConfig.getHttpUrl()).toBe('http://127.0.0.1:43110');
-      expect(backendConfig.getWsUrl()).toBe('ws://127.0.0.1:43110/ws');
+    it('defaults to the hosted backend for HTTP and WebSocket', () => {
+      expect(backendConfig.getHttpUrl()).toBe('https://coremind-ai-backend.onrender.com');
+      expect(backendConfig.getWsUrl()).toBe('wss://coremind-ai-backend.onrender.com/ws');
     });
 
     it('updates URLs dynamically and trims trailing slashes', () => {
@@ -50,7 +50,7 @@ describe('CoreMind Backend Integration Services', () => {
       await client.get('/health');
 
       expect(global.fetch).toHaveBeenCalledWith(
-        'http://127.0.0.1:43110/health',
+        'https://coremind-ai-backend.onrender.com/health',
         expect.objectContaining({
           headers: expect.objectContaining({
             Authorization: 'Bearer test-token-xyz',

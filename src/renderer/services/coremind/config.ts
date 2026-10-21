@@ -6,8 +6,12 @@
 const STORAGE_KEY_HTTP_URL = 'coremind:api-base-url';
 const STORAGE_KEY_WS_URL = 'coremind:ws-base-url';
 
-export const DEFAULT_HTTP_BASE_URL = 'http://127.0.0.1:43110';
-export const DEFAULT_WS_BASE_URL = 'ws://127.0.0.1:43110/ws';
+// Hosted backend by default. For local development, set VITE_BACKEND_URL and VITE_BACKEND_WS_URL
+// (for example http://127.0.0.1:43110 and ws://127.0.0.1:43110/ws) before running Vite.
+export const DEFAULT_HTTP_BASE_URL: string =
+  import.meta.env.VITE_BACKEND_URL || 'https://coremind-ai-backend.onrender.com';
+export const DEFAULT_WS_BASE_URL: string =
+  import.meta.env.VITE_BACKEND_WS_URL || 'wss://coremind-ai-backend.onrender.com/ws';
 
 export interface BackendConfig {
   httpUrl: string;

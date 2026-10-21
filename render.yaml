@@ -1,0 +1,21 @@
+# Render Blueprint for the CoreMind web page (the download page shown to browser visitors).
+# Create it in the Render dashboard: New → Blueprint → select this repo and the branch.
+# No secrets here. Only public build-time settings are stored in this file.
+services:
+  - type: web
+    name: coremind-web
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Skip the Electron binary download. The web build does not need it.
+      - key: ELECTRON_SKIP_BINARY_DOWNLOAD
+        value: "1"
+      - key: VITE_BACKEND_URL
+        value: https://coremind-ai-backend.onrender.com
+      - key: VITE_BACKEND_WS_URL
+        value: wss://coremind-ai-backend.onrender.com/ws
+      - key: VITE_DOWNLOAD_MAC_URL
+        value: https://github.com/NVIDIA-CoreMind/CoreMind-Application/releases
