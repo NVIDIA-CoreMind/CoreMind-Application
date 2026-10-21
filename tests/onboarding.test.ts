@@ -144,6 +144,8 @@ describe('CoreMind IDE — Three-Page Onboarding Experience', () => {
     });
 
     it('clears state and routes to Continue with Google on sign out', async () => {
+      // Sign-out calls the backend. Stub it so the test never waits on the hosted service.
+      global.fetch = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({}) } as any);
       featureAuthService.bypassDevAuth();
       expect(featureAuthService.isAuthenticated()).toBe(true);
 
