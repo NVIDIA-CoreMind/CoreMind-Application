@@ -189,6 +189,14 @@ The CoreMind desktop application window will open immediately.
 
 Sign in with Google in the app before using chat or agent features. The backend rejects HTTP requests and WebSocket connections that lack a valid session.
 
+The app uses the hosted backend (`https://coremind-ai-backend.onrender.com`) by default. To develop against a local backend, override the URLs before starting Vite:
+
+```bash
+VITE_BACKEND_URL=http://127.0.0.1:43110 VITE_BACKEND_WS_URL=ws://127.0.0.1:43110/ws npm run dev
+```
+
+Opening the frontend in a regular browser shows the download page. Add `?ide=1` in development to preview the editor in a browser.
+
 ---
 
 ## 7. Running the End-to-End Demo
