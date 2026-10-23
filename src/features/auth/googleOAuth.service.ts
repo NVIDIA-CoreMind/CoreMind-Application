@@ -1,5 +1,6 @@
 import { authService as coremindAuthService } from '@/services/coremind/auth';
 import { backendConfig } from '@/services/coremind/config';
+import { isWebBridgeInstalled } from '@/services/webBridge';
 import { AuthTokens, OAuthResult } from './auth.types';
 
 export class GoogleOAuthService {
@@ -23,6 +24,14 @@ export class GoogleOAuthService {
         error.message.includes('ECONNREFUSED')
       ) {
         const url = backendConfig.getHttpUrl();
+        if (isWebBridgeInstalled()) {
+          // A browser gets a blocked request for two reasons: the backend is still waking up,
+          // or its FRONTEND_ORIGIN does not list this site.
+          throw new Error(
+            `Could not reach the CoreMind backend at ${url} from ${window.location.origin}. ` +
+              'If the backend was idle, wait a minute and retry. Otherwise, the backend FRONTEND_ORIGIN must include this site.'
+          );
+        }
         throw new Error(
           `Unable to reach CoreMind backend service at ${url}. Ensure the service is active or use Development Bypass.`
         );
@@ -35,15 +44,30 @@ export class GoogleOAuthService {
    * Opens the Google OAuth consent URL directly in Google Chrome.
    */
   public async openInGoogleChrome(redirectUri?: string): Promise<{ success: boolean; authUrl: string; state?: string }> {
-    const authData = await this.getAuthorizationUrl(redirectUri);
-    if (typeof window !== 'undefined' && window.coreMindAPI?.openInChrome) {
+    const hasDesktopBrowser = typeof window !== 'undefined' && Boolean(window.coreMindAPI?.openInChrome);
+
+    // Browsers allow a popup only during the click that caused it, and the backend call below can
+    // take longer than that. Open a blank tab now, then send it to Google once the URL arrives.
+    const popup = typeof window !== 'undefined' && !hasDesktopBrowser ? window.open('about:blank', '_blank') : null;
+    if (typeof window !== 'undefined' && !hasDesktopBrowser && !popup) {
+      throw new Error('Your browser blocked the Google sign-in window. Allow pop-ups for this site, then try again.');
+    }
+
+    const authData = await this.getAuthorizationUrl(redirectUri).catch((err: unknown) => {
+      popup?.close();
+      throw err;
+    });
+
+    if (hasDesktopBrowser) {
       const res = await window.coreMindAPI.openInChrome(authData.auth_url);
       if (res.success) {
         return { success: true, authUrl: authData.auth_url, state: authData.state };
       }
-    }
-    if (typeof window !== 'undefined') {
       window.open(authData.auth_url, '_blank');
+      return { success: true, authUrl: authData.auth_url, state: authData.state };
+    }
+    if (popup) {
+      popup.location.href = authData.auth_url;
       return { success: true, authUrl: authData.auth_url, state: authData.state };
     }
     return { success: false, authUrl: authData.auth_url };

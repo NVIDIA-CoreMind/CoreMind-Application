@@ -9,7 +9,7 @@ export function DesktopDownloadBanner() {
   return (
     <aside className="dl-banner" role="region" aria-label="Get the desktop app">
       <p className="dl-banner-text">
-        <strong>Browser preview.</strong> File access, the terminal, and full AI tools run in the desktop app.
+        <strong>Browser preview.</strong> Folders open in Chrome or Edge. The terminal, Git, and device tools run in the desktop app.
       </p>
       <a className="dl-banner-button" href={MAC_DOWNLOAD_URL} target="_blank" rel="noopener noreferrer">
         Download for desktop

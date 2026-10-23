@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useUiStore } from '../stores/uiStore';
 import { useThemeStore, resolveEffectiveTheme } from '../stores/themeStore';
+import { isWebBridgeInstalled } from '../services/webBridge';
 import { useWorkspaceStore } from '../stores/workspaceStore';
 import { useTerminalStore, TopPanelTab } from '../stores/terminalStore';
 
@@ -394,6 +395,27 @@ export const PtyTerminal: React.FC = () => {
     { id: 'ports', label: 'Ports' },
     { id: 'postgres', label: 'PostgreSQL Query Results' },
   ];
+
+  // A browser has no shell to attach to, so skip the xterm sessions and explain where a terminal runs.
+  if (isWebBridgeInstalled()) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '100%',
+          padding: '16px',
+          textAlign: 'center',
+          fontSize: '13px',
+          backgroundColor: isDark ? '#121212' : '#ffffff',
+          color: isDark ? '#9ca3af' : '#6b7280',
+        }}
+      >
+        The terminal runs in the CoreMind desktop app. A browser cannot start a shell on your machine.
+      </div>
+    );
+  }
 
   return (
     <div
