@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ArrowLeft, AlertCircle, HelpCircle, X, ExternalLink, RefreshCw, CheckCircle2 } from 'lucide-react';
 import coreMindLogo from '@/assets/icon.png';
+import { isWebBridgeInstalled } from '@/services/webBridge';
 import { GoogleSignInButton } from './GoogleSignInButton';
 import { GoogleLoginPageProps } from './onboarding.types';
 import { featureAuthService } from '../auth/auth.service';
@@ -57,6 +58,12 @@ export const GoogleLoginPage: React.FC<GoogleLoginPageProps> = ({
             // keep polling silently
           }
         }, 1500);
+        return;
+      }
+
+      // A browser has no desktop OAuth window to fall back to. Show why the sign-in tab did not open.
+      if (isWebBridgeInstalled()) {
+        setErrorMessage(chromeResult.error ?? 'Google sign-in could not be started.');
         return;
       }
 

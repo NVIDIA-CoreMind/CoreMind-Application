@@ -13,14 +13,17 @@ describe('browser bridge stand-in', () => {
     vi.unstubAllGlobals();
   });
 
-  it('reports desktop-only for file, terminal, and dialog calls', async () => {
+  it('routes file calls to the browser file layer and keeps terminal calls desktop-only', async () => {
     stubBrowser('MacIntel');
     const bridge = createWebBridge() as Record<string, (...args: unknown[]) => Promise<unknown>>;
 
-    const result = (await bridge.readFile('/x', '/y')) as { success: boolean; error: { code: string } };
-    expect(result.success).toBe(false);
-    expect(result.error.code).toBe('DESKTOP_ONLY');
-    expect(await bridge.openDirectoryDialog()).toMatchObject({ success: false });
+    // No folder is open, so the browser file layer answers instead of the desktop-only stand-in.
+    const files = (await bridge.readFile('/x', '/y')) as { success: boolean; error: { code: string } };
+    expect(files.success).toBe(false);
+    expect(files.error.code).toBe('NOT_OPEN');
+    expect(await bridge.getAvailableShells()).toMatchObject({ success: false, error: { code: 'DESKTOP_ONLY' } });
+    // Without showDirectoryPicker, the dialog explains the browser requirement.
+    expect(await bridge.openDirectoryDialog()).toMatchObject({ success: false, error: { code: 'UNSUPPORTED' } });
   });
 
   it('returns an unsubscribe function for event subscriptions', () => {
